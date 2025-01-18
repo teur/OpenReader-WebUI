@@ -32,16 +32,16 @@ export function PDFUploader({ className = '' }: PDFUploaderProps) {
       {...getRootProps()}
       className={`
         w-full p-8 border-2 border-dashed rounded-lg
-        ${isDragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300'}
+        ${isDragActive ? 'border-accent bg-base' : 'border-muted'}
         transition-colors duration-200 ease-in-out cursor-pointer
-        hover:border-blue-400 hover:bg-gray-50
+        hover:border-accent hover:bg-base
         ${className}
       `}
     >
       <input {...getInputProps()} />
       <div className="flex flex-col items-center justify-center text-center">
         <svg
-          className="w-12 h-12 mb-4 text-gray-400"
+          className="w-12 h-12 mb-4 text-muted"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -55,10 +55,10 @@ export function PDFUploader({ className = '' }: PDFUploaderProps) {
           />
         </svg>
 
-        <p className="mb-2 text-lg font-semibold text-gray-700">
+        <p className="mb-2 text-lg font-semibold text-foreground">
           Drop your PDF here, or click to select
         </p>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-muted">
           Only PDF files are accepted
         </p>
       </div>

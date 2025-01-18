@@ -13,6 +13,8 @@ export default {
         foreground: "var(--foreground)",
         base: "var(--base)",
         offbase: "var(--offbase)",
+        accent: "var(--accent)",
+        muted: "var(--muted)",
       },
     },
   },

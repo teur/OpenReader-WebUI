@@ -43,7 +43,7 @@ export function PDFProvider({ children }: { children: ReactNode }) {
       reader.onloadend = () => {
         const base64Data = reader.result as string;
         const newDoc: PDFDocument = {
-          id: `${file.name}-${Date.now()}`,
+          id: `${file.name.replace(/[^a-zA-Z0-9]/g, '-').replace(/-+/g, '-')}-${Date.now()}`,
           name: file.name,
           size: file.size,
           lastModified: file.lastModified,
