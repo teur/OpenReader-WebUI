@@ -3,8 +3,9 @@
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { PDFSkeleton } from './PDFSkeleton';
+import { useTTS } from '@/context/TTSContext';
 
 // Set worker from public directory
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.mjs';
@@ -15,10 +16,41 @@ interface PDFViewerProps {
 
 export function PDFViewer({ pdfFile }: PDFViewerProps) {
   const [numPages, setNumPages] = useState<number>();
+  const { setText } = useTTS();
+  const [pdfText, setPdfText] = useState('');
 
   function onDocumentLoadSuccess({ numPages }: { numPages: number }): void {
     setNumPages(numPages);
   }
+
+  useEffect(() => {
+    if (pdfFile) {
+      // Load PDF text when file changes
+      const loadPdfText = async () => {
+        try {
+          const pdf = await pdfjs.getDocument(pdfFile).promise;
+          let fullText = '';
+          
+          // Get text from all pages
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const textContent = await page.getTextContent();
+            const pageText = textContent.items
+              .map((item: any) => item.str)
+              .join(' ');
+            fullText += pageText + ' ';
+          }
+          
+          setPdfText(fullText);
+          setText(fullText);
+        } catch (error) {
+          console.error('Error loading PDF text:', error);
+        }
+      };
+
+      loadPdfText();
+    }
+  }, [pdfFile, setText]);
 
   return (
     <div className="flex flex-col items-center">

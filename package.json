@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@headlessui/react": "^2.2.0",
+    "compromise": "^14.14.4",
     "next": "15.1.5",
     "pdfjs-dist": "4.8.69",
     "react": "^19.0.0",

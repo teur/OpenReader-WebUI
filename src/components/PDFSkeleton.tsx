@@ -23,7 +23,7 @@ export function PDFSkeleton() {
         {[1, 2, 3].map((index) => (
           <div key={`skeleton_${index}`}>
             {/* Page content skeleton */}
-            <div className="flex justify-center my-4">
+            <div className="flex flex-col justify-center my-4">
               <div className="bg-gray-200 shadow-lg">
                 {/* Approximate dimensions of a PDF page */}
                 <div className="w-[595px] h-[842px]"></div>
