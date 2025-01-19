@@ -12,6 +12,11 @@ OpenReader WebUI is a modern, user-friendly web interface for reading and analyz
 - Drop-in support for OpenAI-compatible TTS APIs
 - Responsive design for various screen sizes
 
+## Demo
+
+https://github.com/user-attachments/assets/cd645dd6-65f1-4ef1-81be-9cc26fdf8aca
+
+
 ## Tech Stack
 
 - **Framework**: [Next.js 15](https://nextjs.org/)
