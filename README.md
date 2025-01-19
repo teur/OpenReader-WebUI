@@ -2,6 +2,10 @@
 
 OpenReader WebUI is a modern, user-friendly web interface for reading and analyzing PDF documents. Built with Next.js and React, it provides an intuitive interface for document viewing, analysis, and interaction. The application features drop-in support for any OpenAI-compatible Text-to-Speech (TTS) API, making it highly flexible for various voice synthesis implementations.
 
+## Demo
+
+https://github.com/user-attachments/assets/cd645dd6-65f1-4ef1-81be-9cc26fdf8aca
+
 ## Features
 
 - PDF document viewing and navigation
@@ -11,11 +15,6 @@ OpenReader WebUI is a modern, user-friendly web interface for reading and analyz
 - PDF text analysis capabilities
 - Drop-in support for OpenAI-compatible TTS APIs
 - Responsive design for various screen sizes
-
-## Demo
-
-https://github.com/user-attachments/assets/cd645dd6-65f1-4ef1-81be-9cc26fdf8aca
-
 
 ## Tech Stack
 
