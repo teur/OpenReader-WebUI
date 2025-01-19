@@ -244,7 +244,7 @@ export function PDFViewer({ pdfData }: PDFViewerProps) {
       });
       
       bestMatch.elements.forEach(element => {
-        element.style.backgroundColor = 'yellow';
+        element.style.backgroundColor = 'grey';
         element.style.opacity = '0.4';
       });
 

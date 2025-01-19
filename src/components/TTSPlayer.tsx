@@ -10,9 +10,18 @@ import {
   SkipBackwardIcon,
 } from './icons/Icons';
 
+// Loading spinner component
+function LoadingSpinner() {
+  return (
+    <div className="absolute inset-0 flex items-center justify-center">
+      <div className="animate-spin h-4 w-4 border-2 border-foreground border-t-transparent rounded-full" />
+    </div>
+  );
+}
+
 export default function TTSPlayer() {
   const [isVisible, setIsVisible] = useState(true);
-  const { isPlaying, togglePlay, skipForward, skipBackward } = useTTS();
+  const { isPlaying, togglePlay, skipForward, skipBackward, isProcessing } = useTTS();
 
   return (
     <div 
@@ -23,10 +32,11 @@ export default function TTSPlayer() {
       <div className="bg-base dark:bg-base rounded-full shadow-lg px-2 py-1 flex items-center space-x-2 relative">
         <Button
           onClick={skipBackward}
-          className="relative p-2 rounded-full text-foreground hover:bg-offbase data-[hover]:bg-offbase data-[active]:bg-offbase/80 transition-colors duration-200 focus:outline-none"
+          className="relative p-2 rounded-full text-foreground hover:bg-offbase data-[hover]:bg-offbase data-[active]:bg-offbase/80 transition-colors duration-200 focus:outline-none disabled:opacity-50"
           aria-label="Skip backward"
+          disabled={isProcessing}
         >
-          <SkipBackwardIcon />
+          {isProcessing ? <LoadingSpinner /> : <SkipBackwardIcon />}
         </Button>
         
         <Button
@@ -39,10 +49,11 @@ export default function TTSPlayer() {
 
         <Button
           onClick={skipForward}
-          className="relative p-2 rounded-full text-foreground hover:bg-offbase data-[hover]:bg-offbase data-[active]:bg-offbase/80 transition-colors duration-200 focus:outline-none"
+          className="relative p-2 rounded-full text-foreground hover:bg-offbase data-[hover]:bg-offbase data-[active]:bg-offbase/80 transition-colors duration-200 focus:outline-none disabled:opacity-50"
           aria-label="Skip forward"
+          disabled={isProcessing}
         >
-          <SkipForwardIcon />
+          {isProcessing ? <LoadingSpinner /> : <SkipForwardIcon />}
         </Button>
       </div>
     </div>

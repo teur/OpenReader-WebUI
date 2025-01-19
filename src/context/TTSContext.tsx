@@ -37,6 +37,7 @@ interface TTSContextType {
   setCurrentIndex: (index: number) => void;
   stopAndPlayFromIndex: (index: number) => void;
   sentences: string[];
+  isProcessing: boolean;
 }
 
 const TTSContext = createContext<TTSContextType | undefined>(undefined);
@@ -123,9 +124,14 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
 
   const processAndPlaySentence = async (sentence: string) => {
     if (!audioContext || isProcessing) return;
-    setIsProcessing(true);
 
     try {
+      // Only set processing if we need to fetch from API
+      const cleanedSentence = preprocessText(sentence);
+      if (!audioCacheRef.current.has(cleanedSentence)) {
+        setIsProcessing(true);
+      }
+
       // Cancel any existing request
       if (currentRequestRef.current) {
         currentRequestRef.current.abort();
@@ -140,8 +146,6 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
         setActiveSource(null);
       }
 
-      // Clean the sentence before processing
-      const cleanedSentence = preprocessText(sentence);
       let audioBuffer = audioCacheRef.current.get(cleanedSentence);
 
       if (!audioBuffer) {
@@ -161,9 +165,10 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
 
         // Store in cache
         audioCacheRef.current.set(cleanedSentence, audioBuffer);
+        setIsProcessing(false);
       }
 
-      // If the request was aborted, do not proceed
+      // If the request was aborted or component unmounted, do not proceed
       if (!currentRequestRef.current) return;
 
       const source = audioContext.createBufferSource();
@@ -174,7 +179,6 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
       // Set up onended handler before starting
       source.onended = () => {
         setActiveSource(null);
-        setIsProcessing(false);
         // Only advance if we're playing and not pausing or skipping
         if (isPlaying && !skipTriggeredRef.current && !isPausingRef.current) {
           processNextSentence();
@@ -218,6 +222,7 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     }
 
     skipTriggeredRef.current = true;
+    setIsProcessing(true);
     // Cancel any ongoing request
     if (currentRequestRef.current) {
       currentRequestRef.current.abort();
@@ -239,6 +244,7 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     // Reset skip flag after a short delay
     skipTimeoutRef.current = setTimeout(() => {
       skipTriggeredRef.current = false;
+      setIsProcessing(false);
     }, 100);
   }, [sentences, activeSource]);
 
@@ -248,6 +254,7 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     }
 
     skipTriggeredRef.current = true;
+    setIsProcessing(true);
     // Cancel any ongoing request
     if (currentRequestRef.current) {
       currentRequestRef.current.abort();
@@ -269,6 +276,7 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     // Reset skip flag after a short delay
     skipTimeoutRef.current = setTimeout(() => {
       skipTriggeredRef.current = false;
+      setIsProcessing(false);
     }, 100);
   }, [sentences, activeSource]);
 
@@ -309,10 +317,39 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     preloadAdjacentSentences();
   }, [currentIndex, sentences]);
 
+  const isMounted = useRef(false);
+
   useEffect(() => {
-    if (isPlaying && sentences[currentIndex] && !isProcessing) {
-      processAndPlaySentence(sentences[currentIndex]);
+    // Skip the first mount in development
+    if (process.env.NODE_ENV === 'development') {
+      if (!isMounted.current) {
+        isMounted.current = true;
+        return;
+      }
     }
+
+    let isEffectActive = true;
+
+    const playAudio = async () => {
+      if (isPlaying && sentences[currentIndex] && !isProcessing && isEffectActive) {
+        await processAndPlaySentence(sentences[currentIndex]);
+      }
+    };
+
+    playAudio();
+
+    return () => {
+      isEffectActive = false;
+      // Clean up any playing audio when the effect is cleaned up
+      if (activeSource) {
+        activeSource.stop();
+        setActiveSource(null);
+      }
+      if (currentRequestRef.current) {
+        currentRequestRef.current.abort();
+        currentRequestRef.current = null;
+      }
+    };
   }, [isPlaying, currentIndex, sentences, isProcessing]);
 
   const preloadSentence = async (sentence: string) => {
@@ -424,6 +461,7 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     setCurrentIndex: setCurrentIndexWithoutPlay,
     stopAndPlayFromIndex,
     sentences,
+    isProcessing,
   };
 
   return (
