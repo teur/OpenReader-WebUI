@@ -3,7 +3,7 @@
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { PDFSkeleton } from './PDFSkeleton';
 import { useTTS } from '@/context/TTSContext';
 import stringSimilarity from 'string-similarity';
@@ -12,7 +12,7 @@ import stringSimilarity from 'string-similarity';
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.mjs';
 
 interface PDFViewerProps {
-  pdfFile: string | undefined;
+  pdfData: Blob | undefined;
 }
 
 interface TextHighlight {
@@ -23,11 +23,98 @@ interface TextHighlight {
   };
 }
 
-export function PDFViewer({ pdfFile }: PDFViewerProps) {
+export function PDFViewer({ pdfData }: PDFViewerProps) {
   const [numPages, setNumPages] = useState<number>();
   const { setText, currentSentence } = useTTS();
   const [pdfText, setPdfText] = useState('');
   const [highlights, setHighlights] = useState<TextHighlight[]>([]);
+  const [pdfDataUrl, setPdfDataUrl] = useState<string>();
+  const [loadingError, setLoadingError] = useState<string>();
+
+  // Convert Blob to data URL when pdfData changes
+  useEffect(() => {
+    if (!pdfData) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setPdfDataUrl(reader.result as string);
+    };
+    reader.onerror = () => {
+      console.error('Error reading file:', reader.error);
+      setLoadingError('Failed to load PDF');
+    };
+    reader.readAsDataURL(pdfData);
+
+    return () => {
+      setPdfDataUrl(undefined);
+    };
+  }, [pdfData]);
+
+  // Load PDF text content
+  useEffect(() => {
+    if (!pdfDataUrl) return;
+
+    let isCurrentPdf = true;
+    let currentLoadingTask: any = null;
+    setLoadingError(undefined);
+
+    const loadPdfText = async () => {
+      try {
+        // Create a typed array from the base64 data
+        const base64Data = pdfDataUrl.split(',')[1];
+        const binaryData = atob(base64Data);
+        const length = binaryData.length;
+        const bytes = new Uint8Array(length);
+        
+        for (let i = 0; i < length; i++) {
+          bytes[i] = binaryData.charCodeAt(i);
+        }
+
+        const loadingTask = pdfjs.getDocument({
+          data: bytes,
+          disableAutoFetch: true,
+          disableStream: false,
+        });
+        
+        currentLoadingTask = loadingTask;
+        const pdf = await loadingTask.promise;
+        
+        if (!isCurrentPdf) return;
+
+        let fullText = '';
+        for (let i = 1; i <= pdf.numPages; i++) {
+          if (!isCurrentPdf) break;
+          
+          const page = await pdf.getPage(i);
+          const textContent = await page.getTextContent();
+          const pageText = textContent.items
+            .map((item: any) => item.str)
+            .join(' ');
+          fullText += pageText + ' ';
+        }
+        
+        if (!isCurrentPdf) return;
+
+        console.log('Loaded PDF text sample:', fullText.substring(0, 100));
+        setPdfText(fullText);
+        setText(fullText);
+      } catch (error) {
+        if (!isCurrentPdf) return;
+        console.error('Error loading PDF text:', error);
+        setLoadingError('Failed to extract PDF text');
+      }
+    };
+
+    loadPdfText();
+
+    return () => {
+      isCurrentPdf = false;
+      if (currentLoadingTask) {
+        currentLoadingTask.destroy();
+      }
+      setPdfText('');
+    };
+  }, [pdfDataUrl, setText]);
 
   // Function to clear all highlights
   const clearHighlights = useCallback(() => {
@@ -137,12 +224,12 @@ export function PDFViewer({ pdfFile }: PDFViewerProps) {
         const lengthPenalty = lengthDiff / patternLength; // Normalized length difference
         const adjustedRating = similarity * (1 - lengthPenalty * 0.5); // Reduce score based on length difference
 
-        console.log('Comparing:', {
-          text: combinedText,
-          similarity,
-          lengthDiff,
-          adjustedRating
-        });
+        // console.log('Comparing:', {
+        //   text: combinedText,
+        //   similarity,
+        //   lengthDiff,
+        //   adjustedRating
+        // });
 
         // Update best match if we have better adjusted rating
         if (adjustedRating > bestMatch.rating) {
@@ -181,37 +268,6 @@ export function PDFViewer({ pdfFile }: PDFViewerProps) {
     }
   }, [clearHighlights]);
 
-  useEffect(() => {
-    if (pdfFile) {
-      const loadPdfText = async () => {
-        try {
-          const pdf = await pdfjs.getDocument(pdfFile).promise;
-          let fullText = '';
-          
-          for (let i = 1; i <= pdf.numPages; i++) {
-            const page = await pdf.getPage(i);
-            const textContent = await page.getTextContent();
-            const pageText = textContent.items
-              .map((item: any) => item.str)
-              .join(' ');
-            fullText += pageText + ' ';
-          }
-          
-          console.log('Loaded PDF text sample:', fullText.substring(0, 100));
-          setPdfText(fullText);
-          setText(fullText);
-        } catch (error) {
-          console.error('Error loading PDF text:', error);
-        }
-      };
-
-      loadPdfText();
-    }
-
-    // Clear highlights when PDF changes
-    return () => clearHighlights();
-  }, [pdfFile, setText, clearHighlights]);
-
   // Update highlights when current sentence changes
   useEffect(() => {
     console.log('Current sentence changed:', currentSentence);
@@ -229,11 +285,14 @@ export function PDFViewer({ pdfFile }: PDFViewerProps) {
 
   return (
     <div className="flex flex-col items-center">
+      {loadingError ? (
+        <div className="text-red-500 mb-4">{loadingError}</div>
+      ) : null}
       <Document 
-        file={pdfFile} 
-        onLoadSuccess={onDocumentLoadSuccess}
         loading={<PDFSkeleton />}
         noData={<PDFSkeleton />}
+        file={pdfDataUrl}
+        onLoadSuccess={onDocumentLoadSuccess}
         className="flex flex-col items-center"
       >
         {Array.from(

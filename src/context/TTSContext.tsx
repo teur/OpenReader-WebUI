@@ -49,6 +49,8 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
   const [currentAudioIndex, setCurrentAudioIndex] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const skipTriggeredRef = useRef(false);
+  const skipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isPausingRef = useRef(false);
 
   // Create OpenAI instance
   const [openai] = useState(
@@ -151,9 +153,11 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
       source.onended = () => {
         setActiveSource(null);
         setIsProcessing(false);
-        if (isPlaying && !skipTriggeredRef.current) {
+        // Only advance if we're playing and not pausing or skipping
+        if (isPlaying && !skipTriggeredRef.current && !isPausingRef.current) {
           processNextSentence();
         }
+        isPausingRef.current = false; // Reset pause flag
       };
 
       source.start(0);
@@ -173,19 +177,24 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
   const togglePlay = useCallback(() => {
     setIsPlaying((prev) => {
       if (!prev) {
-        return true; // Start playing
+        isPausingRef.current = false;
+        return true;
       } else {
-        // Pause playback
         if (activeSource) {
-          activeSource.stop(); // Stop the audio source
-          setActiveSource(null); // Clear the active source
+          isPausingRef.current = true;
+          activeSource.stop();
+          setActiveSource(null);
         }
-        return false; // Set isPlaying to false
+        return false;
       }
     });
   }, [activeSource]);
 
   const skipForward = useCallback(() => {
+    if (skipTimeoutRef.current) {
+      clearTimeout(skipTimeoutRef.current);
+    }
+
     skipTriggeredRef.current = true;
     // Cancel any ongoing request
     if (currentRequestRef.current) {
@@ -206,12 +215,16 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     });
 
     // Reset skip flag after a short delay
-    setTimeout(() => {
+    skipTimeoutRef.current = setTimeout(() => {
       skipTriggeredRef.current = false;
     }, 100);
   }, [sentences, activeSource]);
 
   const skipBackward = useCallback(() => {
+    if (skipTimeoutRef.current) {
+      clearTimeout(skipTimeoutRef.current);
+    }
+
     skipTriggeredRef.current = true;
     // Cancel any ongoing request
     if (currentRequestRef.current) {
@@ -232,7 +245,7 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     });
 
     // Reset skip flag after a short delay
-    setTimeout(() => {
+    skipTimeoutRef.current = setTimeout(() => {
       skipTriggeredRef.current = false;
     }, 100);
   }, [sentences, activeSource]);

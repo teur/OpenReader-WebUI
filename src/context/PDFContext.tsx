@@ -1,72 +1,90 @@
 'use client';
 
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-
-interface PDFDocument {
-  id: string;
-  name: string;
-  size: number;
-  lastModified: number;
-  data: string; // Base64 encoded file data
-}
+import { indexedDBService, type PDFDocument } from '@/services/indexedDB';
+import { v4 as uuidv4 } from 'uuid';
 
 interface PDFContextType {
   documents: PDFDocument[];
   addDocument: (file: File) => Promise<string>;
-  getDocument: (id: string) => PDFDocument | undefined;
-  removeDocument: (id: string) => void;
+  getDocument: (id: string) => Promise<PDFDocument | undefined>;
+  removeDocument: (id: string) => Promise<void>;
+  isLoading: boolean;
+  error: string | null;
 }
 
 const PDFContext = createContext<PDFContextType | undefined>(undefined);
 
-const LOCAL_STORAGE_KEY = 'pdf-documents';
-
 export function PDFProvider({ children }: { children: ReactNode }) {
   const [documents, setDocuments] = useState<PDFDocument[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Load documents from local storage on mount
   useEffect(() => {
-    const storedDocs = localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (storedDocs) {
-      setDocuments(JSON.parse(storedDocs));
-    }
+    const loadDocuments = async () => {
+      try {
+        setError(null);
+        await indexedDBService.init();
+        const docs = await indexedDBService.getAllDocuments();
+        setDocuments(docs);
+      } catch (error) {
+        console.error('Failed to load documents:', error);
+        setError('Failed to initialize document storage. Please check if your browser supports IndexedDB.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadDocuments();
   }, []);
 
-  // Save documents to local storage whenever they change
-  useEffect(() => {
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(documents));
-  }, [documents]);
-
   const addDocument = async (file: File): Promise<string> => {
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64Data = reader.result as string;
-        const newDoc: PDFDocument = {
-          id: `${file.name.replace(/[^a-zA-Z0-9]/g, '-').replace(/-+/g, '-')}-${Date.now()}`,
-          name: file.name,
-          size: file.size,
-          lastModified: file.lastModified,
-          data: base64Data
-        };
-        
-        setDocuments(prev => [...prev, newDoc]);
-        resolve(newDoc.id);
-      };
-      reader.readAsDataURL(file);
-    });
+    setError(null);
+    const id = uuidv4();
+    const newDoc: PDFDocument = {
+      id,
+      name: file.name,
+      size: file.size,
+      lastModified: file.lastModified,
+      data: new Blob([file], { type: file.type })
+    };
+
+    try {
+      await indexedDBService.addDocument(newDoc);
+      setDocuments(prev => [...prev, newDoc]);
+      return id;
+    } catch (error) {
+      console.error('Failed to add document:', error);
+      setError('Failed to save the document. Please try again.');
+      throw error;
+    }
   };
 
-  const getDocument = (id: string) => {
-    return documents.find(doc => doc.id === id);
+  const getDocument = async (id: string): Promise<PDFDocument | undefined> => {
+    setError(null);
+    try {
+      return await indexedDBService.getDocument(id);
+    } catch (error) {
+      console.error('Failed to get document:', error);
+      setError('Failed to retrieve the document. Please try again.');
+      return undefined;
+    }
   };
 
-  const removeDocument = (id: string) => {
-    setDocuments(prev => prev.filter(doc => doc.id !== id));
+  const removeDocument = async (id: string): Promise<void> => {
+    setError(null);
+    try {
+      await indexedDBService.removeDocument(id);
+      setDocuments(prev => prev.filter(doc => doc.id !== id));
+    } catch (error) {
+      console.error('Failed to remove document:', error);
+      setError('Failed to remove the document. Please try again.');
+      throw error;
+    }
   };
 
   return (
-    <PDFContext.Provider value={{ documents, addDocument, getDocument, removeDocument }}>
+    <PDFContext.Provider value={{ documents, addDocument, getDocument, removeDocument, isLoading, error }}>
       {children}
     </PDFContext.Provider>
   );

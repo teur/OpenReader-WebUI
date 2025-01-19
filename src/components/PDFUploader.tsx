@@ -9,22 +9,33 @@ interface PDFUploaderProps {
 }
 
 export function PDFUploader({ className = '' }: PDFUploaderProps) {
-  const { addDocument } = usePDF();
-  const [isDragging, setIsDragging] = useState(false);
+  const { addDocument, error: contextError } = usePDF();
+  const [isUploading, setIsUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
     if (file && file.type === 'application/pdf') {
-      await addDocument(file);
+      setIsUploading(true);
+      setError(null);
+      try {
+        await addDocument(file);
+      } catch (err) {
+        setError(contextError || 'Failed to upload PDF. Please try again.');
+        console.error('Upload error:', err);
+      } finally {
+        setIsUploading(false);
+      }
     }
-  }, [addDocument]);
+  }, [addDocument, contextError]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
       'application/pdf': ['.pdf']
     },
-    multiple: false
+    multiple: false,
+    disabled: isUploading
   });
 
   return (
@@ -33,8 +44,8 @@ export function PDFUploader({ className = '' }: PDFUploaderProps) {
       className={`
         w-full p-8 border-2 border-dashed rounded-lg
         ${isDragActive ? 'border-accent bg-base' : 'border-muted'}
-        transition-colors duration-200 ease-in-out cursor-pointer
-        hover:border-accent hover:bg-base
+        transition-colors duration-200 ease-in-out
+        ${isUploading ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:border-accent hover:bg-base'}
         ${className}
       `}
     >
@@ -55,12 +66,21 @@ export function PDFUploader({ className = '' }: PDFUploaderProps) {
           />
         </svg>
 
-        <p className="mb-2 text-lg font-semibold text-foreground">
-          Drop your PDF here, or click to select
-        </p>
-        <p className="text-sm text-muted">
-          Only PDF files are accepted
-        </p>
+        {isUploading ? (
+          <p className="text-lg font-semibold text-foreground">
+            Uploading PDF...
+          </p>
+        ) : (
+          <>
+            <p className="mb-2 text-lg font-semibold text-foreground">
+              {isDragActive ? 'Drop your PDF here' : 'Drop your PDF here, or click to select'}
+            </p>
+            <p className="text-sm text-muted">
+              Only PDF files are accepted
+            </p>
+            {error && <p className="mt-2 text-sm text-red-500">{error}</p>}
+          </>
+        )}
       </div>
     </div>
   );
