@@ -1,36 +1,89 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# OpenReader WebUI
+
+OpenReader WebUI is a modern, user-friendly web interface for reading and analyzing PDF documents. Built with Next.js and React, it provides an intuitive interface for document viewing, analysis, and interaction. The application features drop-in support for any OpenAI-compatible Text-to-Speech (TTS) API, making it highly flexible for various voice synthesis implementations.
+
+## Features
+
+- PDF document viewing and navigation
+- Interactive document interface
+- Modern UI with Tailwind CSS
+- Fast performance with Next.js and Turbopack
+- PDF text analysis capabilities
+- Drop-in support for OpenAI-compatible TTS APIs
+- Responsive design for various screen sizes
+
+## Tech Stack
+
+- **Framework**: [Next.js 15](https://nextjs.org/)
+- **UI Library**: [React 19](https://react.dev/)
+- **Styling**: [Tailwind CSS](https://tailwindcss.com/)
+- **PDF Processing**: [React-PDF](https://react-pdf.org/) and [PDF.js](https://mozilla.github.io/pdf.js/)
+- **UI Components**: [Headless UI](https://headlessui.com/)
+- **Type Safety**: [TypeScript](https://www.typescriptlang.org/)
+
+## Prerequisites
+
+- Node.js 18.x or higher
+- npm or yarn package manager
 
 ## Getting Started
 
-First, run the development server:
+1. Clone the repository:
+```bash
+git clone [repository-url]
+cd openreader-webui
+```
 
+2. Install dependencies:
+```bash
+npm install
+# or
+yarn install
+```
+
+3. Set up environment variables:
+```bash
+cp .env.template .env
+```
+Edit the `.env` file with your configuration settings.
+
+4. Start the development server:
 ```bash
 npm run dev
 # or
 yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The application will be available at [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Available Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `npm run dev` - Start development server with Turbopack
+- `npm run build` - Create production build
+- `npm run start` - Start production server
+- `npm run lint` - Run ESLint for code quality
 
-## Learn More
+## Project Structure
 
-To learn more about Next.js, take a look at the following resources:
+```
+openreader-webui/
+├── src/
+│   ├── app/          # Next.js app router pages
+│   ├── components/   # Reusable React components
+│   ├── contexts/     # React context providers
+│   └── services/     # Business logic and services
+├── public/           # Static assets
+└── scripts/         # Utility scripts
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Contributing
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-## Deploy on Vercel
+## License
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+This project is licensed under the terms of the license included in the repository.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+Built with ❤️ using [Next.js](https://nextjs.org/)

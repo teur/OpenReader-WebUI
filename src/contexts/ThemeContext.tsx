@@ -43,6 +43,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   // Handle system theme changes
   useEffect(() => {
+    /*
+     * Handles system theme changes by listening to prefers-color-scheme media query.
+     * Updates the theme when system preferences change and theme is set to 'system'.
+     * Cleans up event listener on unmount.
+     * 
+     * Dependencies:
+     * - theme: Re-runs when the theme changes to update system preference handling
+     */
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     
     const handleChange = () => {

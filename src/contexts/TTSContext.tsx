@@ -71,7 +71,14 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
   const audioCacheRef = useRef(new LRUCache<string, AudioBuffer>({ max: 50 }));
 
   useEffect(() => {
-    // Initialize AudioContext on client side only
+    /*
+     * Initializes the AudioContext for text-to-speech playback.
+     * Creates a new AudioContext instance if one doesn't exist.
+     * Only runs on the client side to avoid SSR issues.
+     * 
+     * Dependencies:
+     * - audioContext: Re-runs if the audioContext is null or changes
+     */
     if (typeof window !== 'undefined' && !audioContext) {
       const AudioContextClass = window.AudioContext || window.webkitAudioContext;
       if (AudioContextClass) {
@@ -303,6 +310,14 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
 
   // Preload adjacent sentences when currentIndex changes
   useEffect(() => {
+    /*
+     * Preloads the next sentence in the queue to improve playback performance.
+     * Only preloads the next sentence to reduce API load.
+     * 
+     * Dependencies:
+     * - currentIndex: Re-runs when the currentIndex changes
+     * - sentences: Re-runs when the sentences array changes
+     */
     const preloadAdjacentSentences = async () => {
       try {
         // Only preload next sentence to reduce API load
@@ -320,6 +335,16 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
   const isMounted = useRef(false);
 
   useEffect(() => {
+    /*
+     * Plays the current sentence when the component is mounted or the currentIndex changes.
+     * Handles audio playback and auto-advances to the next sentence when finished.
+     * 
+     * Dependencies:
+     * - isPlaying: Re-runs when the isPlaying state changes
+     * - currentIndex: Re-runs when the currentIndex changes
+     * - sentences: Re-runs when the sentences array changes
+     * - isProcessing: Re-runs when the isProcessing state changes
+     */
     // Skip the first mount in development
     if (process.env.NODE_ENV === 'development') {
       if (!isMounted.current) {
