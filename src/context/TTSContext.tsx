@@ -33,6 +33,10 @@ interface TTSContextType {
   currentSentence: string;
   audioQueue: AudioBuffer[];
   currentAudioIndex: number;
+  stop: () => void;
+  setCurrentIndex: (index: number) => void;
+  stopAndPlayFromIndex: (index: number) => void;
+  sentences: string[];
 }
 
 const TTSContext = createContext<TTSContextType | undefined>(undefined);
@@ -79,9 +83,25 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     }
   }, [audioContext]);
 
+  // Text preprocessing function to clean and normalize text
+  const preprocessText = (text: string): string => {
+    return text
+      // Replace URLs with descriptive text including domain
+      .replace(/\S*(?:https?:\/\/|www\.)([^\/\s]+)(?:\/\S*)?/gi, '- (link to $1) -')
+      // Remove special characters except basic punctuation
+      .replace(/[^\w\s.,!?;:'"()-]/g, ' ')
+      // Fix hyphenated words at line breaks (word- word -> wordword)
+      .replace(/(\w+)-\s+(\w+)/g, '$1$2')
+      // Replace multiple spaces with single space
+      .replace(/\s+/g, ' ')
+      // Trim whitespace
+      .trim();
+  };
+
   const splitIntoSentences = (text: string): string[] => {
-    const doc = nlp(text);
-    // Convert to array and ensure we get strings
+    // Preprocess the text before splitting into sentences
+    const cleanedText = preprocessText(text);
+    const doc = nlp(cleanedText);
     return doc.sentences().out('array') as string[];
   };
 
@@ -120,15 +140,17 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
         setActiveSource(null);
       }
 
-      let audioBuffer = audioCacheRef.current.get(sentence);
+      // Clean the sentence before processing
+      const cleanedSentence = preprocessText(sentence);
+      let audioBuffer = audioCacheRef.current.get(cleanedSentence);
 
       if (!audioBuffer) {
-        console.log(' Processing TTS for sentence:', sentence.substring(0, 50) + '...');
+        console.log(' Processing TTS for sentence:', cleanedSentence.substring(0, 50) + '...');
         const startTime = Date.now();
         const response = await openai.audio.speech.create({
           model: 'tts-1',
           voice: 'alloy',
-          input: sentence,
+          input: cleanedSentence,
         });
 
         const duration = Date.now() - startTime;
@@ -138,7 +160,7 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
         audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
 
         // Store in cache
-        audioCacheRef.current.set(sentence, audioBuffer);
+        audioCacheRef.current.set(cleanedSentence, audioBuffer);
       }
 
       // If the request was aborted, do not proceed
@@ -323,6 +345,71 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const stop = useCallback(() => {
+    // Cancel any ongoing request
+    if (currentRequestRef.current) {
+      currentRequestRef.current.abort();
+      currentRequestRef.current = null;
+    }
+
+    // Stop current audio
+    if (activeSource) {
+      activeSource.stop();
+      setActiveSource(null);
+    }
+
+    setIsPlaying(false);
+    setCurrentIndex(0);
+    setCurrentText('');
+    setIsProcessing(false);
+  }, [activeSource]);
+
+  const stopAndPlayFromIndex = useCallback((index: number) => {
+    // Cancel any ongoing request
+    if (currentRequestRef.current) {
+      currentRequestRef.current.abort();
+      currentRequestRef.current = null;
+    }
+
+    // Stop current audio
+    if (activeSource) {
+      activeSource.stop();
+      setActiveSource(null);
+    }
+
+    // Set skip flag to prevent immediate auto-advance
+    skipTriggeredRef.current = true;
+
+    // Set new index and start playing
+    setCurrentIndex(index);
+    setIsPlaying(true);
+
+    // Reset skip flag after a short delay to allow future auto-advance
+    if (skipTimeoutRef.current) {
+      clearTimeout(skipTimeoutRef.current);
+    }
+    skipTimeoutRef.current = setTimeout(() => {
+      skipTriggeredRef.current = false;
+    }, 100);
+  }, [activeSource]);
+
+  const setCurrentIndexWithoutPlay = useCallback((index: number) => {
+    // Cancel any ongoing request
+    if (currentRequestRef.current) {
+      currentRequestRef.current.abort();
+      currentRequestRef.current = null;
+    }
+
+    // Stop current audio
+    if (activeSource) {
+      activeSource.stop();
+      setActiveSource(null);
+    }
+
+    setCurrentIndex(index);
+    skipTriggeredRef.current = false;
+  }, [activeSource]);
+
   const value = {
     isPlaying,
     currentText,
@@ -333,9 +420,17 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     currentSentence: sentences[currentIndex] || '',
     audioQueue,
     currentAudioIndex,
+    stop,
+    setCurrentIndex: setCurrentIndexWithoutPlay,
+    stopAndPlayFromIndex,
+    sentences,
   };
 
-  return <TTSContext.Provider value={value}>{children}</TTSContext.Provider>;
+  return (
+    <TTSContext.Provider value={value}>
+      {children}
+    </TTSContext.Provider>
+  );
 }
 
 export function useTTS() {

@@ -6,11 +6,14 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { PDFSkeleton } from '@/components/PDFSkeleton';
+import TTSPlayer from '@/components/TTSPlayer';
+import { useTTS } from '@/context/TTSContext';
 
 export default function PDFViewerPage() {
   const { id } = useParams();
   const { getDocument } = usePDF();
   const router = useRouter();
+  const { setText, stop } = useTTS();
   const [document, setDocument] = useState<{ name: string; data: Blob } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -41,6 +44,10 @@ export default function PDFViewerPage() {
         <p className="text-red-500 mb-4">{error}</p>
         <Link
           href="/"
+          onClick={() => {
+            setText('');
+            stop();
+          }}
           className="inline-flex items-center px-3 py-1 bg-base text-foreground rounded-lg hover:bg-offbase transition-colors"
         >
           <svg className="w-4 h-4 mr-2 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -54,10 +61,15 @@ export default function PDFViewerPage() {
 
   return (
     <>
+      <TTSPlayer />
       <div className="p-2 pb-2 border-b border-offbase">
         <div className="flex items-center justify-between">
           <Link
             href="/"
+            onClick={() => {
+              setText('');
+              stop();
+            }}
             className="inline-flex items-center px-3 py-1 bg-base text-foreground rounded-lg hover:bg-offbase transition-colors"
           >
             <svg className="w-4 h-4 mr-2 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -3,10 +3,11 @@
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { PDFSkeleton } from './PDFSkeleton';
 import { useTTS } from '@/context/TTSContext';
 import stringSimilarity from 'string-similarity';
+import nlp from 'compromise';
 
 // Set worker from public directory
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.mjs';
@@ -25,11 +26,12 @@ interface TextHighlight {
 
 export function PDFViewer({ pdfData }: PDFViewerProps) {
   const [numPages, setNumPages] = useState<number>();
-  const { setText, currentSentence } = useTTS();
+  const { setText, currentSentence, stopAndPlayFromIndex, sentences } = useTTS();
   const [pdfText, setPdfText] = useState('');
   const [highlights, setHighlights] = useState<TextHighlight[]>([]);
   const [pdfDataUrl, setPdfDataUrl] = useState<string>();
   const [loadingError, setLoadingError] = useState<string>();
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Convert Blob to data URL when pdfData changes
   useEffect(() => {
@@ -136,36 +138,19 @@ export function PDFViewer({ pdfData }: PDFViewerProps) {
     }
 
     try {
-      // Split content into chunks roughly the size of the search text
-      const chunkSize = searchText.length + 20; // Add some padding
-      const chunks: string[] = [];
-      
-      // Ensure we have valid content to split
-      const cleanContent = content.trim();
-      if (cleanContent.length < chunkSize) {
-        chunks.push(cleanContent);
-      } else {
-        for (let i = 0; i < cleanContent.length - chunkSize; i += chunkSize / 2) {
-          const chunk = cleanContent.slice(i, i + chunkSize).trim();
-          if (chunk) {
-            chunks.push(chunk);
-          }
-        }
-      }
-
-      // Ensure we have valid chunks before matching
-      if (chunks.length === 0) {
+      // Ensure we have valid sentences before matching
+      if (sentences.length === 0) {
         return null;
       }
 
-      // Find the best matching chunk
-      const matches = stringSimilarity.findBestMatch(searchText.trim(), chunks);
+      // Find the best matching sentence
+      const matches = stringSimilarity.findBestMatch(searchText.trim(), sentences);
       return matches.bestMatch.rating >= 0.5 ? matches.bestMatch : null;
     } catch (error) {
       console.error('Error in findBestMatch:', error);
       return null;
     }
-  }, []);
+  }, [sentences]);
 
   const highlightPattern = useCallback((text: string, pattern: string) => {
     console.log('Highlighting pattern:', pattern);
@@ -183,8 +168,11 @@ export function PDFViewer({ pdfData }: PDFViewerProps) {
     const patternLength = cleanPattern.length;
     console.log('Clean pattern:', cleanPattern, 'Length:', patternLength);
 
-    // Get all text nodes
-    const textNodes = document.querySelectorAll('.react-pdf__Page__textContent span');
+    // Get all text nodes within the container
+    const container = containerRef.current;
+    if (!container) return;
+
+    const textNodes = container.querySelectorAll('.react-pdf__Page__textContent span');
     const allText = Array.from(textNodes).map(node => ({
       element: node as HTMLElement,
       text: (node.textContent || '').trim()
@@ -245,7 +233,7 @@ export function PDFViewer({ pdfData }: PDFViewerProps) {
 
     // Only highlight if we found a good match
     // Adjust threshold based on match quality
-    const similarityThreshold = bestMatch.lengthDiff < patternLength * 0.3 ? 0.4 : 0.6;
+    const similarityThreshold = bestMatch.lengthDiff < patternLength * 0.3 ? 0.3 : 0.5;
     
     if (bestMatch.rating >= similarityThreshold) {
       console.log('Found match:', {
@@ -259,6 +247,25 @@ export function PDFViewer({ pdfData }: PDFViewerProps) {
         element.style.backgroundColor = 'yellow';
         element.style.opacity = '0.4';
       });
+
+      // Scroll the first highlighted element into view with a slight delay
+      if (bestMatch.elements.length > 0) {
+        setTimeout(() => {
+          const element = bestMatch.elements[0];
+          const container = containerRef.current;
+          if (!container || !element) return;
+
+          // Calculate the element's position relative to the container
+          const containerRect = container.getBoundingClientRect();
+          const elementRect = element.getBoundingClientRect();
+          
+          // Scroll the container
+          container.scrollTo({
+            top: container.scrollTop + (elementRect.top - containerRect.top) - containerRect.height / 2,
+            behavior: 'smooth'
+          });
+        }, 100);
+      }
     } else {
       console.log('No good match found:', {
         bestRating: bestMatch.rating,
@@ -267,6 +274,133 @@ export function PDFViewer({ pdfData }: PDFViewerProps) {
       });
     }
   }, [clearHighlights]);
+
+  // Function to handle text span clicks
+  const handleTextClick = useCallback((event: MouseEvent) => {
+    const target = event.target as HTMLElement;
+    if (!target.matches('.react-pdf__Page__textContent span')) return;
+
+    // Get surrounding text for context (combine nearby spans)
+    const parentElement = target.closest('.react-pdf__Page__textContent');
+    if (!parentElement) return;
+
+    const spans = Array.from(parentElement.querySelectorAll('span'));
+    const clickedIndex = spans.indexOf(target);
+    
+    // Get text from clicked span and several spans before/after for context
+    const contextWindow = 3;
+    const startIndex = Math.max(0, clickedIndex - contextWindow);
+    const endIndex = Math.min(spans.length - 1, clickedIndex + contextWindow);
+    
+    const contextText = spans
+      .slice(startIndex, endIndex + 1)
+      .map(span => span.textContent)
+      .join(' ')
+      .trim();
+
+    if (!contextText?.trim()) return;
+
+    // Clean up the context text
+    const cleanContext = contextText.trim().replace(/\s+/g, ' ');
+    const contextLength = cleanContext.length;
+
+    // Get all text nodes within the container
+    const allText = Array.from(parentElement.querySelectorAll('span')).map(node => ({
+      element: node as HTMLElement,
+      text: (node.textContent || '').trim()
+    })).filter(node => node.text.length > 0);
+
+    // Find the best matching position using the same logic as highlightPattern
+    let bestMatch = {
+      elements: [] as HTMLElement[],
+      rating: 0,
+      text: '',
+      lengthDiff: Infinity
+    };
+
+    // Try different combinations of consecutive spans
+    for (let i = 0; i < allText.length; i++) {
+      let combinedText = '';
+      let currentElements = [];
+      
+      // Look ahead up to 10 spans, but stop if we exceed 2x context length
+      for (let j = i; j < Math.min(i + 10, allText.length); j++) {
+        const node = allText[j];
+        const newText = combinedText + (combinedText ? ' ' : '') + node.text;
+        
+        // Stop if we're getting too far from target length
+        if (newText.length > contextLength * 2) {
+          break;
+        }
+
+        combinedText = newText;
+        currentElements.push(node.element);
+
+        // Calculate similarity and length difference
+        const similarity = stringSimilarity.compareTwoStrings(cleanContext, combinedText);
+        const lengthDiff = Math.abs(combinedText.length - contextLength);
+
+        // Score based on both similarity and length difference
+        const lengthPenalty = lengthDiff / contextLength;
+        const adjustedRating = similarity * (1 - lengthPenalty * 0.5);
+
+        if (adjustedRating > bestMatch.rating) {
+          bestMatch = {
+            elements: [...currentElements],
+            rating: adjustedRating,
+            text: combinedText,
+            lengthDiff
+          };
+        }
+      }
+    }
+
+    // Only proceed if we found a good match
+    const similarityThreshold = bestMatch.lengthDiff < contextLength * 0.3 ? 0.3 : 0.5;
+    
+    if (bestMatch.rating >= similarityThreshold) {
+      // Find the corresponding sentence in the full text
+      const matchText = bestMatch.text;
+      const sentences = nlp(pdfText).sentences().out('array') as string[];
+      
+      // Find the sentence that best matches our chunk
+      let bestSentenceMatch = {
+        sentence: '',
+        rating: 0
+      };
+
+      for (const sentence of sentences) {
+        const rating = stringSimilarity.compareTwoStrings(matchText, sentence);
+        if (rating > bestSentenceMatch.rating) {
+          bestSentenceMatch = { sentence, rating };
+        }
+      }
+
+      console.log('Best matched sentence:', bestSentenceMatch.sentence);
+      console.log('Match rating:', bestSentenceMatch.rating);
+
+      if (bestSentenceMatch.rating >= 0.5) {
+        // Update TTS context to this sentence and start playing
+        const sentenceIndex = sentences.findIndex(sentence => sentence === bestSentenceMatch.sentence);
+        console.log('Calculated sentence index:', sentenceIndex);
+        if (sentenceIndex !== -1) {
+          stopAndPlayFromIndex(sentenceIndex);
+          highlightPattern(pdfText, bestSentenceMatch.sentence);
+        }
+      }
+    }
+  }, [pdfText, stopAndPlayFromIndex, highlightPattern]);
+
+  // Add click event listener to the container
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    container.addEventListener('click', handleTextClick);
+    return () => {
+      container.removeEventListener('click', handleTextClick);
+    };
+  }, [handleTextClick]);
 
   // Update highlights when current sentence changes
   useEffect(() => {
@@ -283,8 +417,41 @@ export function PDFViewer({ pdfData }: PDFViewerProps) {
     };
   }, [pdfText, currentSentence, highlightPattern, clearHighlights]);
 
+  // Add useEffect for initializing click styles
+  useEffect(() => {
+    const addClickStyles = () => {
+      const style = document.createElement('style');
+      style.textContent = `
+        .react-pdf__Page__textContent span {
+          cursor: pointer;
+          transition: background-color 0.2s ease;
+        }
+        .react-pdf__Page__textContent span:hover {
+          background-color: rgba(255, 255, 0, 0.2) !important;
+        }
+      `;
+      document.head.appendChild(style);
+    };
+
+    addClickStyles();
+
+    return () => {
+      // Remove any styles with the same selectors on cleanup
+      const styles = document.querySelectorAll('style');
+      styles.forEach(style => {
+        if (style.textContent?.includes('react-pdf__Page__textContent')) {
+          style.remove();
+        }
+      });
+    };
+  }, []);
+
   return (
-    <div className="flex flex-col items-center">
+    <div 
+      ref={containerRef} 
+      className="flex flex-col items-center overflow-auto max-h-[calc(100vh-100px)]"
+      style={{ WebkitTapHighlightColor: 'transparent' }} // Remove tap highlight on mobile
+    >
       {loadingError ? (
         <div className="text-red-500 mb-4">{loadingError}</div>
       ) : null}
