@@ -1,13 +1,13 @@
 'use client';
 
 import { PDFViewer } from '@/components/PDFViewer';
-import { usePDF } from '@/context/PDFContext';
+import { usePDF } from '@/contexts/PDFContext';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { PDFSkeleton } from '@/components/PDFSkeleton';
 import TTSPlayer from '@/components/TTSPlayer';
-import { useTTS } from '@/context/TTSContext';
+import { useTTS } from '@/contexts/TTSContext';
 
 export default function PDFViewerPage() {
   const { id } = useParams();

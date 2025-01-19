@@ -1,4 +1,4 @@
-import { usePDF } from '@/context/PDFContext';
+import { usePDF } from '@/contexts/PDFContext';
 import Link from 'next/link';
 import { Dialog } from '@headlessui/react';
 import { Transition } from '@headlessui/react';

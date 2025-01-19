@@ -5,7 +5,7 @@ import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { PDFSkeleton } from './PDFSkeleton';
-import { useTTS } from '@/context/TTSContext';
+import { useTTS } from '@/contexts/TTSContext';
 import stringSimilarity from 'string-similarity';
 import nlp from 'compromise';
 

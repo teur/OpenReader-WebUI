@@ -1,8 +1,8 @@
 'use client';
 
-import { PDFProvider } from '@/context/PDFContext';
-import { TTSProvider } from '@/context/TTSContext';
-import { ThemeProvider } from '@/context/ThemeContext';
+import { PDFProvider } from '@/contexts/PDFContext';
+import { TTSProvider } from '@/contexts/TTSContext';
+import { ThemeProvider } from '@/contexts/ThemeContext';
 import { ReactNode } from 'react';
 
 export function Providers({ children }: { children: ReactNode }) {

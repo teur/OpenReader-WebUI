@@ -2,7 +2,7 @@
 
 import { Fragment } from 'react';
 import { Dialog, Transition, Listbox } from '@headlessui/react';
-import { useTheme } from '@/context/ThemeContext';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface SettingsModalProps {
   isOpen: boolean;

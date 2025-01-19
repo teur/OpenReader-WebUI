@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { usePDF } from '@/context/PDFContext';
+import { usePDF } from '@/contexts/PDFContext';
 
 interface PDFUploaderProps {
   className?: string;

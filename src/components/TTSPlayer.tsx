@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useTTS } from '@/context/TTSContext';
+import { useTTS } from '@/contexts/TTSContext';
 import { Button } from '@headlessui/react';
 import {
   PlayIcon,
