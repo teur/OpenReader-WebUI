@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
-import { TTSProvider } from "@/context/TTSContext";
 import TTSPlayer from "@/components/TTSPlayer";
 
 const geistSans = Geist({
@@ -31,16 +30,14 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
       >
         <Providers>
-          <TTSProvider>
-            <div className="min-h-screen bg-background p-4">
-              <div className="max-w-6xl mx-auto align-center">
-                <div className="bg-base rounded-lg shadow-lg">
-                  {children}
-                </div>
+          <div className="min-h-screen bg-background p-4">
+            <div className="max-w-6xl mx-auto align-center">
+              <div className="bg-base rounded-lg shadow-lg">
+                {children}
               </div>
             </div>
-            <TTSPlayer />
-          </TTSProvider>
+          </div>
+          <TTSPlayer />
         </Providers>
       </body>
     </html>
