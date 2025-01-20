@@ -1,6 +1,14 @@
 'use client';
 
-import { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
+import {
+  createContext,
+  useContext,
+  useState,
+  ReactNode,
+  useEffect,
+  useCallback,
+  useMemo,
+} from 'react';
 import { indexedDBService, type PDFDocument } from '@/services/indexedDB';
 import { v4 as uuidv4 } from 'uuid';
 import { pdfjs } from 'react-pdf';
@@ -20,7 +28,13 @@ interface PDFContextType {
   extractTextFromPDF: (pdfData: Blob) => Promise<string>;
   highlightPattern: (text: string, pattern: string, containerRef: React.RefObject<HTMLDivElement>) => void;
   clearHighlights: () => void;
-  handleTextClick: (event: MouseEvent, pdfText: string, containerRef: React.RefObject<HTMLDivElement>, stopAndPlayFromIndex: (index: number) => void) => void;
+  handleTextClick: (
+    event: MouseEvent,
+    pdfText: string,
+    containerRef: React.RefObject<HTMLDivElement>,
+    stopAndPlayFromIndex: (index: number) => void,
+    isProcessing: boolean
+  ) => void;
 }
 
 const PDFContext = createContext<PDFContextType | undefined>(undefined);
@@ -30,15 +44,8 @@ export function PDFProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Load documents from IndexedDB on mount
   useEffect(() => {
-    /*
-     * Initializes the PDF document storage and loads existing documents.
-     * Sets up IndexedDB and retrieves all stored documents on component mount.
-     * Handles errors if IndexedDB initialization fails.
-     * 
-     * Dependencies:
-     * - Empty array: Only runs once on mount as initialization should only happen once
-     */
     const loadDocuments = async () => {
       try {
         setError(null);
@@ -56,7 +63,8 @@ export function PDFProvider({ children }: { children: ReactNode }) {
     loadDocuments();
   }, []);
 
-  const addDocument = async (file: File): Promise<string> => {
+  // Add a new document to IndexedDB
+  const addDocument = useCallback(async (file: File): Promise<string> => {
     setError(null);
     const id = uuidv4();
     const newDoc: PDFDocument = {
@@ -69,16 +77,17 @@ export function PDFProvider({ children }: { children: ReactNode }) {
 
     try {
       await indexedDBService.addDocument(newDoc);
-      setDocuments(prev => [...prev, newDoc]);
+      setDocuments((prev) => [...prev, newDoc]);
       return id;
     } catch (error) {
       console.error('Failed to add document:', error);
       setError('Failed to save the document. Please try again.');
       throw error;
     }
-  };
+  }, []);
 
-  const getDocument = async (id: string): Promise<PDFDocument | undefined> => {
+  // Get a document by ID from IndexedDB
+  const getDocument = useCallback(async (id: string): Promise<PDFDocument | undefined> => {
     setError(null);
     try {
       return await indexedDBService.getDocument(id);
@@ -87,20 +96,22 @@ export function PDFProvider({ children }: { children: ReactNode }) {
       setError('Failed to retrieve the document. Please try again.');
       return undefined;
     }
-  };
+  }, []);
 
-  const removeDocument = async (id: string): Promise<void> => {
+  // Remove a document by ID from IndexedDB
+  const removeDocument = useCallback(async (id: string): Promise<void> => {
     setError(null);
     try {
       await indexedDBService.removeDocument(id);
-      setDocuments(prev => prev.filter(doc => doc.id !== id));
+      setDocuments((prev) => prev.filter((doc) => doc.id !== id));
     } catch (error) {
       console.error('Failed to remove document:', error);
       setError('Failed to remove the document. Please try again.');
       throw error;
     }
-  };
+  }, []);
 
+  // Extract text from a PDF file
   const extractTextFromPDF = useCallback(async (pdfData: Blob): Promise<string> => {
     try {
       const reader = new FileReader();
@@ -112,20 +123,15 @@ export function PDFProvider({ children }: { children: ReactNode }) {
 
       const base64Data = dataUrl.split(',')[1];
       const binaryData = atob(base64Data);
-      const length = binaryData.length;
-      const bytes = new Uint8Array(length);
-      for (let i = 0; i < length; i++) {
+      const bytes = new Uint8Array(binaryData.length);
+      for (let i = 0; i < binaryData.length; i++) {
         bytes[i] = binaryData.charCodeAt(i);
       }
 
-      const loadingTask = pdfjs.getDocument({
-        data: bytes,
-        disableAutoFetch: true,
-        disableStream: false,
-      });
-
+      const loadingTask = pdfjs.getDocument({ data: bytes });
       const pdf = await loadingTask.promise;
       let fullText = '';
+
       for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
         const textContent = await page.getTextContent();
@@ -140,6 +146,7 @@ export function PDFProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Clear all highlights in the PDF viewer
   const clearHighlights = useCallback(() => {
     const textNodes = document.querySelectorAll('.react-pdf__Page__textContent span');
     textNodes.forEach((node) => {
@@ -149,25 +156,12 @@ export function PDFProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const highlightPattern = useCallback((text: string, pattern: string, containerRef: React.RefObject<HTMLDivElement>) => {
-    clearHighlights();
-
-    if (!pattern?.trim()) {
-      return;
-    }
-
-    const cleanPattern = pattern.trim().replace(/\s+/g, ' ');
-    const patternLength = cleanPattern.length;
-
-    const container = containerRef.current;
-    if (!container) return;
-
-    const textNodes = container.querySelectorAll('.react-pdf__Page__textContent span');
-    const allText = Array.from(textNodes).map(node => ({
-      element: node as HTMLElement,
-      text: (node.textContent || '').trim(),
-    })).filter(node => node.text.length > 0);
-
+  // Find the best text match using string similarity
+  const findBestTextMatch = useCallback((
+    elements: Array<{ element: HTMLElement; text: string }>,
+    targetText: string,
+    maxCombinedLength: number
+  ) => {
     let bestMatch = {
       elements: [] as HTMLElement[],
       rating: 0,
@@ -175,22 +169,20 @@ export function PDFProvider({ children }: { children: ReactNode }) {
       lengthDiff: Infinity,
     };
 
-    for (let i = 0; i < allText.length; i++) {
+    for (let i = 0; i < elements.length; i++) {
       let combinedText = '';
       let currentElements = [];
-      for (let j = i; j < Math.min(i + 10, allText.length); j++) {
-        const node = allText[j];
-        const newText = combinedText + (combinedText ? ' ' : '') + node.text;
-        if (newText.length > patternLength * 2) {
-          break;
-        }
+      for (let j = i; j < Math.min(i + 10, elements.length); j++) {
+        const node = elements[j];
+        const newText = combinedText ? `${combinedText} ${node.text}` : node.text;
+        if (newText.length > maxCombinedLength) break;
 
         combinedText = newText;
         currentElements.push(node.element);
 
-        const similarity = stringSimilarity.compareTwoStrings(cleanPattern, combinedText);
-        const lengthDiff = Math.abs(combinedText.length - patternLength);
-        const lengthPenalty = lengthDiff / patternLength;
+        const similarity = stringSimilarity.compareTwoStrings(targetText, combinedText);
+        const lengthDiff = Math.abs(combinedText.length - targetText.length);
+        const lengthPenalty = lengthDiff / targetText.length;
         const adjustedRating = similarity * (1 - lengthPenalty * 0.5);
 
         if (adjustedRating > bestMatch.rating) {
@@ -204,9 +196,30 @@ export function PDFProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    const similarityThreshold = bestMatch.lengthDiff < patternLength * 0.3 ? 0.3 : 0.5;
+    return bestMatch;
+  }, []);
+
+  // Highlight matching text in the PDF viewer
+  const highlightPattern = useCallback((text: string, pattern: string, containerRef: React.RefObject<HTMLDivElement>) => {
+    clearHighlights();
+
+    if (!pattern?.trim()) return;
+
+    const cleanPattern = pattern.trim().replace(/\s+/g, ' ');
+    const container = containerRef.current;
+    if (!container) return;
+
+    const textNodes = container.querySelectorAll('.react-pdf__Page__textContent span');
+    const allText = Array.from(textNodes).map((node) => ({
+      element: node as HTMLElement,
+      text: (node.textContent || '').trim(),
+    })).filter((node) => node.text.length > 0);
+
+    const bestMatch = findBestTextMatch(allText, cleanPattern, cleanPattern.length * 2);
+    const similarityThreshold = bestMatch.lengthDiff < cleanPattern.length * 0.3 ? 0.3 : 0.5;
+
     if (bestMatch.rating >= similarityThreshold) {
-      bestMatch.elements.forEach(element => {
+      bestMatch.elements.forEach((element) => {
         element.style.backgroundColor = 'grey';
         element.style.opacity = '0.4';
       });
@@ -226,9 +239,18 @@ export function PDFProvider({ children }: { children: ReactNode }) {
         }, 100);
       }
     }
-  }, [clearHighlights]);
+  }, [clearHighlights, findBestTextMatch]);
 
-  const handleTextClick = useCallback((event: MouseEvent, pdfText: string, containerRef: React.RefObject<HTMLDivElement>, stopAndPlayFromIndex: (index: number) => void) => {
+  // Handle text click events in the PDF viewer
+  const handleTextClick = useCallback((
+    event: MouseEvent,
+    pdfText: string,
+    containerRef: React.RefObject<HTMLDivElement>,
+    stopAndPlayFromIndex: (index: number) => void,
+    isProcessing: boolean
+  ) => {
+    if (isProcessing) return; // Don't process clicks while TTS is processing
+
     const target = event.target as HTMLElement;
     if (!target.matches('.react-pdf__Page__textContent span')) return;
 
@@ -242,64 +264,25 @@ export function PDFProvider({ children }: { children: ReactNode }) {
     const endIndex = Math.min(spans.length - 1, clickedIndex + contextWindow);
     const contextText = spans
       .slice(startIndex, endIndex + 1)
-      .map(span => span.textContent)
+      .map((span) => span.textContent)
       .join(' ')
       .trim();
 
     if (!contextText?.trim()) return;
 
     const cleanContext = contextText.trim().replace(/\s+/g, ' ');
-    const contextLength = cleanContext.length;
-
-    const allText = Array.from(parentElement.querySelectorAll('span')).map(node => ({
+    const allText = Array.from(parentElement.querySelectorAll('span')).map((node) => ({
       element: node as HTMLElement,
       text: (node.textContent || '').trim(),
-    })).filter(node => node.text.length > 0);
+    })).filter((node) => node.text.length > 0);
 
-    let bestMatch = {
-      elements: [] as HTMLElement[],
-      rating: 0,
-      text: '',
-      lengthDiff: Infinity,
-    };
+    const bestMatch = findBestTextMatch(allText, cleanContext, cleanContext.length * 2);
+    const similarityThreshold = bestMatch.lengthDiff < cleanContext.length * 0.3 ? 0.3 : 0.5;
 
-    for (let i = 0; i < allText.length; i++) {
-      let combinedText = '';
-      let currentElements = [];
-      for (let j = i; j < Math.min(i + 10, allText.length); j++) {
-        const node = allText[j];
-        const newText = combinedText + (combinedText ? ' ' : '') + node.text;
-        if (newText.length > contextLength * 2) {
-          break;
-        }
-
-        combinedText = newText;
-        currentElements.push(node.element);
-
-        const similarity = stringSimilarity.compareTwoStrings(cleanContext, combinedText);
-        const lengthDiff = Math.abs(combinedText.length - contextLength);
-        const lengthPenalty = lengthDiff / contextLength;
-        const adjustedRating = similarity * (1 - lengthPenalty * 0.5);
-
-        if (adjustedRating > bestMatch.rating) {
-          bestMatch = {
-            elements: [...currentElements],
-            rating: adjustedRating,
-            text: combinedText,
-            lengthDiff,
-          };
-        }
-      }
-    }
-
-    const similarityThreshold = bestMatch.lengthDiff < contextLength * 0.3 ? 0.3 : 0.5;
     if (bestMatch.rating >= similarityThreshold) {
       const matchText = bestMatch.text;
       const sentences = nlp(pdfText).sentences().out('array') as string[];
-      let bestSentenceMatch = {
-        sentence: '',
-        rating: 0,
-      };
+      let bestSentenceMatch = { sentence: '', rating: 0 };
 
       for (const sentence of sentences) {
         const rating = stringSimilarity.compareTwoStrings(matchText, sentence);
@@ -309,17 +292,45 @@ export function PDFProvider({ children }: { children: ReactNode }) {
       }
 
       if (bestSentenceMatch.rating >= 0.5) {
-        const sentenceIndex = sentences.findIndex(sentence => sentence === bestSentenceMatch.sentence);
+        const sentenceIndex = sentences.findIndex((sentence) => sentence === bestSentenceMatch.sentence);
         if (sentenceIndex !== -1) {
           stopAndPlayFromIndex(sentenceIndex);
           highlightPattern(pdfText, bestSentenceMatch.sentence, containerRef);
         }
       }
     }
-  }, [highlightPattern]);
+  }, [highlightPattern, findBestTextMatch]);
+
+  // Memoize the context value to prevent unnecessary re-renders
+  const contextValue = useMemo(
+    () => ({
+      documents,
+      addDocument,
+      getDocument,
+      removeDocument,
+      isLoading,
+      error,
+      extractTextFromPDF,
+      highlightPattern,
+      clearHighlights,
+      handleTextClick,
+    }),
+    [
+      documents,
+      addDocument,
+      getDocument,
+      removeDocument,
+      isLoading,
+      error,
+      extractTextFromPDF,
+      highlightPattern,
+      clearHighlights,
+      handleTextClick,
+    ]
+  );
 
   return (
-    <PDFContext.Provider value={{ documents, addDocument, getDocument, removeDocument, isLoading, error, extractTextFromPDF, highlightPattern, clearHighlights, handleTextClick }}>
+    <PDFContext.Provider value={contextValue}>
       {children}
     </PDFContext.Provider>
   );

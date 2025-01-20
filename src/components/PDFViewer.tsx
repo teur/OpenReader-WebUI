@@ -15,7 +15,7 @@ interface PDFViewerProps {
 
 export function PDFViewer({ pdfData }: PDFViewerProps) {
   const [numPages, setNumPages] = useState<number>();
-  const { setText, currentSentence, stopAndPlayFromIndex } = useTTS();
+  const { setText, currentSentence, stopAndPlayFromIndex, isProcessing } = useTTS();
   const [pdfText, setPdfText] = useState('');
   const [pdfDataUrl, setPdfDataUrl] = useState<string>();
   const [loadingError, setLoadingError] = useState<string>();
@@ -107,12 +107,18 @@ export function PDFViewer({ pdfData }: PDFViewerProps) {
     const container = containerRef.current;
     if (!container) return;
 
-    const handleClick = (event: MouseEvent) => handleTextClick(event, pdfText, containerRef as RefObject<HTMLDivElement>, stopAndPlayFromIndex);
+    const handleClick = (event: MouseEvent) => handleTextClick(
+      event,
+      pdfText,
+      containerRef as RefObject<HTMLDivElement>,
+      stopAndPlayFromIndex,
+      isProcessing
+    );
     container.addEventListener('click', handleClick);
     return () => {
       container.removeEventListener('click', handleClick);
     };
-  }, [pdfText, handleTextClick, stopAndPlayFromIndex]);
+  }, [pdfText, handleTextClick, stopAndPlayFromIndex, isProcessing]);
 
   useEffect(() => {
     /*
