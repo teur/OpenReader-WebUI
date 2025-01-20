@@ -199,7 +199,7 @@ export function PDFProvider({ children }: { children: ReactNode }) {
     return bestMatch;
   }, []);
 
-  // Highlight matching text in the PDF viewer
+  // Highlight matching text in the PDF viewer with sliding context window
   const highlightPattern = useCallback((text: string, pattern: string, containerRef: React.RefObject<HTMLDivElement>) => {
     clearHighlights();
 
@@ -215,7 +215,27 @@ export function PDFProvider({ children }: { children: ReactNode }) {
       text: (node.textContent || '').trim(),
     })).filter((node) => node.text.length > 0);
 
-    const bestMatch = findBestTextMatch(allText, cleanPattern, cleanPattern.length * 2);
+    // Calculate the visible area of the container
+    const containerRect = container.getBoundingClientRect();
+    const visibleTop = container.scrollTop;
+    const visibleBottom = visibleTop + containerRect.height;
+
+    // Find nodes within the visible area and a buffer zone
+    const bufferSize = containerRect.height; // One screen height buffer
+    const visibleNodes = allText.filter(({ element }) => {
+      const rect = element.getBoundingClientRect();
+      const elementTop = rect.top - containerRect.top + container.scrollTop;
+      return elementTop >= (visibleTop - bufferSize) && elementTop <= (visibleBottom + bufferSize);
+    });
+
+    // Search for the best match within the visible area first
+    let bestMatch = findBestTextMatch(visibleNodes, cleanPattern, cleanPattern.length * 2);
+    
+    // If no good match found in visible area, search the entire document
+    if (bestMatch.rating < 0.3) {
+      bestMatch = findBestTextMatch(allText, cleanPattern, cleanPattern.length * 2);
+    }
+
     const similarityThreshold = bestMatch.lengthDiff < cleanPattern.length * 0.3 ? 0.3 : 0.5;
 
     if (bestMatch.rating >= similarityThreshold) {
@@ -225,18 +245,17 @@ export function PDFProvider({ children }: { children: ReactNode }) {
       });
 
       if (bestMatch.elements.length > 0) {
-        setTimeout(() => {
-          const element = bestMatch.elements[0];
-          const container = containerRef.current;
-          if (!container || !element) return;
+        const element = bestMatch.elements[0];
+        const elementRect = element.getBoundingClientRect();
+        const elementTop = elementRect.top - containerRect.top + container.scrollTop;
 
-          const containerRect = container.getBoundingClientRect();
-          const elementRect = element.getBoundingClientRect();
+        // Only scroll if the element is outside the visible area
+        if (elementTop < visibleTop || elementTop > visibleBottom) {
           container.scrollTo({
-            top: container.scrollTop + (elementRect.top - containerRect.top) - containerRect.height / 2,
+            top: elementTop - containerRect.height / 3, // Position the highlight in the top third
             behavior: 'smooth',
           });
-        }, 100);
+        }
       }
     }
   }, [clearHighlights, findBestTextMatch]);
