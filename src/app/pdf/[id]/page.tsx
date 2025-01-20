@@ -1,6 +1,6 @@
 'use client';
 
-import { PDFViewer } from '@/components/PDFViewer';
+import dynamic from 'next/dynamic';
 import { usePDF } from '@/contexts/PDFContext';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -8,6 +8,15 @@ import { useEffect, useState } from 'react';
 import { PDFSkeleton } from '@/components/PDFSkeleton';
 import TTSPlayer from '@/components/TTSPlayer';
 import { useTTS } from '@/contexts/TTSContext';
+
+// Dynamic import for client-side rendering only
+const PDFViewer = dynamic(
+  () => import('@/components/PDFViewer').then((module) => module.PDFViewer),
+  { 
+    ssr: false,
+    loading: () => <PDFSkeleton />
+  }
+);
 
 export default function PDFViewerPage() {
   const { id } = useParams();
