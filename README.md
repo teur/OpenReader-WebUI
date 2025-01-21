@@ -4,7 +4,7 @@ OpenReader WebUI is a modern, user-friendly web interface for reading and analyz
 
 ## Demo
 
-https://github.com/user-attachments/assets/cd645dd6-65f1-4ef1-81be-9cc26fdf8aca
+https://github.com/user-attachments/assets/12105c1d-3ff9-42c4-8dfc-3aaf2c621ecd
 
 ## Features
 
