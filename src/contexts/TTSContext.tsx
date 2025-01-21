@@ -41,6 +41,10 @@ interface TTSContextType {
   speed: number;
   setSpeed: (speed: number) => void;
   setSpeedAndRestart: (speed: number) => void;
+  voice: string;
+  setVoice: (voice: string) => void;
+  setVoiceAndRestart: (voice: string) => void;
+  availableVoices: string[];
 }
 
 const TTSContext = createContext<TTSContextType | undefined>(undefined);
@@ -60,6 +64,8 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
   const skipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isPausingRef = useRef(false);
   const [speed, setSpeed] = useState(1);
+  const [voice, setVoice] = useState('alloy');
+  const [availableVoices, setAvailableVoices] = useState<string[]>([]);
 
   // Create OpenAI instance
   const [openai] = useState(
@@ -94,6 +100,31 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
       }
     }
   }, [audioContext]);
+
+  useEffect(() => {
+    // Fetch available voices when component mounts
+    const fetchVoices = async () => {
+      try {
+        const response = await fetch(`${openai.baseURL}/audio/voices`, {
+          headers: {
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_OPENAI_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        if (!response.ok) throw new Error('Failed to fetch voices');
+        const data = await response.json();
+        setAvailableVoices(data.voices || []);
+      } catch (error) {
+        console.error('Error fetching voices:', error);
+
+        // Set available voices to default openai voices
+        // Supported voices are alloy, ash, coral, echo, fable, onyx, nova, sage and shimmer
+        setAvailableVoices(['alloy', 'ash', 'coral', 'echo', 'fable', 'onyx', 'nova', 'sage', 'shimmer']);
+      }
+    };
+
+    fetchVoices();
+  }, [openai.baseURL]);
 
   // Text preprocessing function to clean and normalize text
   const preprocessText = (text: string): string => {
@@ -164,7 +195,7 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
         const startTime = Date.now();
         const response = await openai.audio.speech.create({
           model: 'tts-1',
-          voice: 'alloy',
+          voice: voice as "alloy",
           input: cleanedSentence,
           speed: speed,
         });
@@ -391,7 +422,7 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
       const startTime = Date.now();
       const response = await openai.audio.speech.create({
         model: 'tts-1',
-        voice: 'alloy',
+        voice: voice as "alloy",
         input: sentence,
         speed: speed,
       });
@@ -494,6 +525,22 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     }
   }, [isPlaying, currentIndex, stop]);
 
+  const setVoiceAndRestart = useCallback((newVoice: string) => {
+    setVoice(newVoice);
+    // Clear the audio cache since it contains audio with the old voice
+    audioCacheRef.current.clear();
+    
+    if (isPlaying) {
+      const currentIdx = currentIndex;
+      stop();
+      // Small delay to ensure audio is fully stopped
+      setTimeout(() => {
+        setCurrentIndex(currentIdx);
+        setIsPlaying(true);
+      }, 50);
+    }
+  }, [isPlaying, currentIndex, stop]);
+
   const value = {
     isPlaying,
     currentText,
@@ -512,6 +559,10 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     speed,
     setSpeed,
     setSpeedAndRestart,
+    voice,
+    setVoice,
+    setVoiceAndRestart,
+    availableVoices,
   };
 
   return (
