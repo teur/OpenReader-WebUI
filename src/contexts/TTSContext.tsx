@@ -38,6 +38,9 @@ interface TTSContextType {
   stopAndPlayFromIndex: (index: number) => void;
   sentences: string[];
   isProcessing: boolean;
+  speed: number;
+  setSpeed: (speed: number) => void;
+  setSpeedAndRestart: (speed: number) => void;
 }
 
 const TTSContext = createContext<TTSContextType | undefined>(undefined);
@@ -56,6 +59,7 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
   const skipTriggeredRef = useRef(false);
   const skipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isPausingRef = useRef(false);
+  const [speed, setSpeed] = useState(1);
 
   // Create OpenAI instance
   const [openai] = useState(
@@ -97,7 +101,7 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
       // Replace URLs with descriptive text including domain
       .replace(/\S*(?:https?:\/\/|www\.)([^\/\s]+)(?:\/\S*)?/gi, '- (link to $1) -')
       // Remove special characters except basic punctuation
-      .replace(/[^\w\s.,!?;:'"()-]/g, ' ')
+      //.replace(/[^\w\s.,!?;:'"()-]/g, ' ')
       // Fix hyphenated words at line breaks (word- word -> wordword)
       .replace(/(\w+)-\s+(\w+)/g, '$1$2')
       // Replace multiple spaces with single space
@@ -162,6 +166,7 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
           model: 'tts-1',
           voice: 'alloy',
           input: cleanedSentence,
+          speed: speed,
         });
 
         const duration = Date.now() - startTime;
@@ -388,6 +393,7 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
         model: 'tts-1',
         voice: 'alloy',
         input: sentence,
+        speed: speed,
       });
 
       const duration = Date.now() - startTime;
@@ -472,6 +478,22 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     skipTriggeredRef.current = false;
   }, [activeSource]);
 
+  const setSpeedAndRestart = useCallback((newSpeed: number) => {
+    setSpeed(newSpeed);
+    // Clear the audio cache since it contains audio at the old speed
+    audioCacheRef.current.clear();
+    
+    if (isPlaying) {
+      const currentIdx = currentIndex;
+      stop();
+      // Small delay to ensure audio is fully stopped
+      setTimeout(() => {
+        setCurrentIndex(currentIdx);
+        setIsPlaying(true);
+      }, 50);
+    }
+  }, [isPlaying, currentIndex, stop]);
+
   const value = {
     isPlaying,
     currentText,
@@ -487,6 +509,9 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     stopAndPlayFromIndex,
     sentences,
     isProcessing,
+    speed,
+    setSpeed,
+    setSpeedAndRestart,
   };
 
   return (
