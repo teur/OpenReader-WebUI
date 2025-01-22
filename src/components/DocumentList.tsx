@@ -134,7 +134,7 @@ export function DocumentList() {
                   </DialogTitle>
                   <div className="mt-2">
                     <p className="text-sm text-muted">
-                      Are you sure you want to delete "{documentToDelete?.name}"? This action cannot be undone.
+                      Are you sure you want to delete <span className='font-bold'>{documentToDelete?.name}</span>? This action cannot be undone.
                     </p>
                   </div>
 

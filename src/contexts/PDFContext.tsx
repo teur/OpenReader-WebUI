@@ -16,7 +16,7 @@ import stringSimilarity from 'string-similarity';
 import nlp from 'compromise';
 
 // Add the correct type import
-import type { TextContent, TextItem } from 'pdfjs-dist/types/src/display/api';
+import type { TextItem } from 'pdfjs-dist/types/src/display/api';
 import { useConfig } from '@/contexts/ConfigContext';
 
 // Set worker from public directory
@@ -232,7 +232,7 @@ export function PDFProvider({ children }: { children: ReactNode }) {
 
     for (let i = 0; i < elements.length; i++) {
       let combinedText = '';
-      let currentElements = [];
+      const currentElements = [];
       for (let j = i; j < Math.min(i + 10, elements.length); j++) {
         const node = elements[j];
         const newText = combinedText ? `${combinedText} ${node.text}` : node.text;

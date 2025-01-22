@@ -1,7 +1,7 @@
 import "./globals.css";
 import { Providers } from "./providers";
-import TTSPlayer from "@/components/TTSPlayer";
 import { Metadata } from "next";
+import Script from "next/script";
 
 export const metadata: Metadata = {
   title: "OpenReader WebUI",
@@ -17,13 +17,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <meta name="color-scheme" content="light dark" />
-        <script src="/theme.js" />
-        <style dangerouslySetInnerHTML={{ __html: `
-          :root { color-scheme: light dark; }
-          html.dark { color-scheme: dark; }
-          html.light { color-scheme: light; }
-          html { background: var(--background); }
-        `}} />
+        <Script src="/theme.js" strategy="beforeInteractive" />
       </head>
       <body className="antialiased">
         <Providers>

@@ -64,8 +64,8 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
   const [audioContext, setAudioContext] = useState<AudioContextType>(null);
   const currentRequestRef = useRef<AbortController | null>(null);
   const [activeSource, setActiveSource] = useState<AudioBufferSourceNode | null>(null);
-  const [audioQueue, setAudioQueue] = useState<AudioBuffer[]>([]);
-  const [currentAudioIndex, setCurrentAudioIndex] = useState(0);
+  const [audioQueue] = useState<AudioBuffer[]>([]);
+  const [currentAudioIndex] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const skipTriggeredRef = useRef(false);
   const skipTimeoutRef = useRef<NodeJS.Timeout | null>(null);

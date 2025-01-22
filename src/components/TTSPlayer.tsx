@@ -1,6 +1,5 @@
 'use client';
 
-import React, { useState } from 'react';
 import { useTTS } from '@/contexts/TTSContext';
 import { Button, Listbox, ListboxButton, ListboxOptions, ListboxOption } from '@headlessui/react';
 import {
@@ -33,7 +32,6 @@ const speedOptions = [
 ];
 
 export default function TTSPlayer() {
-  const [isVisible, setIsVisible] = useState(true);
   const {
     isPlaying,
     togglePlay,
@@ -51,8 +49,7 @@ export default function TTSPlayer() {
 
   return (
     <div
-      className={`fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 ${isVisible ? 'opacity-100' : 'opacity-0'
-        } transition-opacity duration-300`}
+      className={`fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 transition-opacity duration-300`}
     >
       <div className="bg-base dark:bg-base rounded-full shadow-lg px-4 py-1 flex items-center space-x-1 relative">
         <div className="relative">

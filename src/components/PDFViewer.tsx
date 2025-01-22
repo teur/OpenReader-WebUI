@@ -40,7 +40,7 @@ export function PDFViewer({ pdfData }: PDFViewerProps) {
     return () => {
       styleElement.remove();
     };
-  }, []);
+  }, [styleElement]);
 
   useEffect(() => {
     /*
