@@ -36,15 +36,13 @@ https://github.com/user-attachments/assets/7a3457ba-feda-4939-928a-cb587b1c0884
 
 1. Clone the repository:
 ```bash
-git clone [repository-url]
-cd openreader-webui
+git clone https://github.com/richardr1126/OpenReader-WebUI.git
+cd OpenReader-WebUI
 ```
 
 2. Install dependencies:
 ```bash
 npm install
-# or
-yarn install
 ```
 
 3. Set up environment variables:

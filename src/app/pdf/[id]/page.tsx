@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import { usePDF } from '@/contexts/PDFContext';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { PDFSkeleton } from '@/components/PDFSkeleton';
@@ -21,7 +21,6 @@ const PDFViewer = dynamic(
 export default function PDFViewerPage() {
   const { id } = useParams();
   const { getDocument } = usePDF();
-  const router = useRouter();
   const { setText, stop } = useTTS();
   const [document, setDocument] = useState<{ name: string; data: Blob } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -86,7 +85,7 @@ export default function PDFViewerPage() {
             </svg>
             Documents
           </Link>
-          <h1 className="mr-2 text-xl font-semibold text-foreground">
+          <h1 className="mr-2 text-md font-semibold text-foreground">
             {isLoading ? 'Loading...' : document?.name}
           </h1>
         </div>
