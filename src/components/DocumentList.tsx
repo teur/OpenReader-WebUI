@@ -1,7 +1,7 @@
 import { usePDF } from '@/contexts/PDFContext';
 import Link from 'next/link';
 import { Dialog } from '@headlessui/react';
-import { Transition } from '@headlessui/react';
+import { Transition, TransitionChild, DialogPanel, DialogTitle } from '@headlessui/react';
 import { Fragment, useState } from 'react';
 
 export function DocumentList() {
@@ -102,7 +102,7 @@ export function DocumentList() {
           className="relative z-50"
           onClose={() => setIsDeleteDialogOpen(false)}
         >
-          <Transition.Child
+          <TransitionChild
             as={Fragment}
             enter="ease-out duration-300"
             enterFrom="opacity-0"
@@ -112,11 +112,11 @@ export function DocumentList() {
             leaveTo="opacity-0"
           >
             <div className="fixed inset-0 bg-black bg-opacity-25" />
-          </Transition.Child>
+          </TransitionChild>
 
           <div className="fixed inset-0 overflow-y-auto">
             <div className="flex min-h-full items-center justify-center p-4 text-center">
-              <Transition.Child
+              <TransitionChild
                 as={Fragment}
                 enter="ease-out duration-300"
                 enterFrom="opacity-0 scale-95"
@@ -125,13 +125,13 @@ export function DocumentList() {
                 leaveFrom="opacity-100 scale-100"
                 leaveTo="opacity-0 scale-95"
               >
-                <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-background p-6 text-left align-middle shadow-xl transition-all">
-                  <Dialog.Title
+                <DialogPanel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-background p-6 text-left align-middle shadow-xl transition-all">
+                  <DialogTitle
                     as="h3"
                     className="text-lg font-medium leading-6 text-foreground"
                   >
                     Delete Document
-                  </Dialog.Title>
+                  </DialogTitle>
                   <div className="mt-2">
                     <p className="text-sm text-muted">
                       Are you sure you want to delete "{documentToDelete?.name}"? This action cannot be undone.
@@ -154,8 +154,8 @@ export function DocumentList() {
                       Delete
                     </button>
                   </div>
-                </Dialog.Panel>
-              </Transition.Child>
+                </DialogPanel>
+              </TransitionChild>
             </div>
           </div>
         </Dialog>

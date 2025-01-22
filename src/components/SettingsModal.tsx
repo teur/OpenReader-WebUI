@@ -1,7 +1,7 @@
 'use client';
 
 import { Fragment } from 'react';
-import { Dialog, Transition, Listbox } from '@headlessui/react';
+import { Dialog, DialogPanel, DialogTitle, Transition, TransitionChild, Listbox, ListboxButton, ListboxOptions, ListboxOption } from '@headlessui/react';
 import { useTheme } from '@/contexts/ThemeContext';
 
 interface SettingsModalProps {
@@ -22,7 +22,7 @@ export function SettingsModal({ isOpen, setIsOpen }: SettingsModalProps) {
   return (
     <Transition appear show={isOpen} as={Fragment}>
       <Dialog as="div" className="relative z-50" onClose={() => setIsOpen(false)}>
-        <Transition.Child
+        <TransitionChild
           as={Fragment}
           enter="ease-out duration-300"
           enterFrom="opacity-0"
@@ -32,11 +32,11 @@ export function SettingsModal({ isOpen, setIsOpen }: SettingsModalProps) {
           leaveTo="opacity-0"
         >
           <div className="fixed inset-0 bg-black/25 backdrop-blur-sm" />
-        </Transition.Child>
+        </TransitionChild>
 
         <div className="fixed inset-0 overflow-y-auto">
           <div className="flex min-h-full items-center justify-center p-4 text-center">
-            <Transition.Child
+            <TransitionChild
               as={Fragment}
               enter="ease-out duration-300"
               enterFrom="opacity-0 scale-95"
@@ -45,20 +45,20 @@ export function SettingsModal({ isOpen, setIsOpen }: SettingsModalProps) {
               leaveFrom="opacity-100 scale-100"
               leaveTo="opacity-0 scale-95"
             >
-              <Dialog.Panel className="w-full max-w-md transform rounded-2xl bg-base p-6 text-left align-middle shadow-xl transition-all">
-                <Dialog.Title
+              <DialogPanel className="w-full max-w-md transform rounded-2xl bg-base p-6 text-left align-middle shadow-xl transition-all">
+                <DialogTitle
                   as="h3"
                   className="text-lg font-semibold leading-6 text-foreground"
                 >
                   Settings
-                </Dialog.Title>
+                </DialogTitle>
                 <div className="mt-4">
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <label className="block text-sm font-medium text-foreground">Theme</label>
                       <Listbox value={selectedTheme} onChange={(newTheme) => setTheme(newTheme.id)}>
                         <div className="relative">
-                          <Listbox.Button className="relative w-full cursor-pointer rounded-lg bg-background py-2 pl-3 pr-10 text-left text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-accent">
+                          <ListboxButton className="relative w-full cursor-pointer rounded-lg bg-background py-2 pl-3 pr-10 text-left text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-accent">
                             <span className="block truncate">{selectedTheme.name}</span>
                             <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
                               <svg 
@@ -74,16 +74,16 @@ export function SettingsModal({ isOpen, setIsOpen }: SettingsModalProps) {
                                 />
                               </svg>
                             </span>
-                          </Listbox.Button>
+                          </ListboxButton>
                           <Transition
                             as={Fragment}
                             leave="transition ease-in duration-100"
                             leaveFrom="opacity-100"
                             leaveTo="opacity-0"
                           >
-                            <Listbox.Options className="absolute mt-1 max-h-60 w-full overflow-auto rounded-md bg-background py-1 shadow-lg ring-1 ring-black/5 focus:outline-none">
+                            <ListboxOptions className="absolute mt-1 max-h-60 w-full overflow-auto rounded-md bg-background py-1 shadow-lg ring-1 ring-black/5 focus:outline-none">
                               {themes.map((theme) => (
-                                <Listbox.Option
+                                <ListboxOption
                                   key={theme.id}
                                   className={({ active }) =>
                                     `relative cursor-pointer select-none py-2 pl-10 pr-4 ${
@@ -115,9 +115,9 @@ export function SettingsModal({ isOpen, setIsOpen }: SettingsModalProps) {
                                       ) : null}
                                     </>
                                   )}
-                                </Listbox.Option>
+                                </ListboxOption>
                               ))}
-                            </Listbox.Options>
+                            </ListboxOptions>
                           </Transition>
                         </div>
                       </Listbox>
@@ -137,8 +137,8 @@ export function SettingsModal({ isOpen, setIsOpen }: SettingsModalProps) {
                     Close
                   </button>
                 </div>
-              </Dialog.Panel>
-            </Transition.Child>
+              </DialogPanel>
+            </TransitionChild>
           </div>
         </div>
       </Dialog>

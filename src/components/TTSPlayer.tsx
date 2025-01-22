@@ -34,13 +34,13 @@ const speedOptions = [
 
 export default function TTSPlayer() {
   const [isVisible, setIsVisible] = useState(true);
-  const { 
-    isPlaying, 
-    togglePlay, 
-    skipForward, 
-    skipBackward, 
-    isProcessing, 
-    speed, 
+  const {
+    isPlaying,
+    togglePlay,
+    skipForward,
+    skipBackward,
+    isProcessing,
+    speed,
     setSpeedAndRestart,
     voice,
     setVoiceAndRestart,
@@ -50,12 +50,34 @@ export default function TTSPlayer() {
   //console.log(availableVoices);
 
   return (
-    <div 
-      className={`fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 ${
-        isVisible ? 'opacity-100' : 'opacity-0'
-      } transition-opacity duration-300`}
+    <div
+      className={`fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 ${isVisible ? 'opacity-100' : 'opacity-0'
+        } transition-opacity duration-300`}
     >
       <div className="bg-base dark:bg-base rounded-full shadow-lg px-4 py-1 flex items-center space-x-1 relative">
+        <div className="relative">
+          <Listbox value={speed} onChange={setSpeedAndRestart}>
+            <ListboxButton className="flex items-center space-x-1 bg-transparent text-foreground text-sm focus:outline-none cursor-pointer hover:bg-offbase rounded pl-2 pr-1 py-1">
+              <span>{speed}x</span>
+              <ChevronUpDownIcon className="h-3 w-3" />
+            </ListboxButton>
+            <ListboxOptions className="absolute bottom-full mb-1 w-24 overflow-auto rounded-lg bg-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+              {speedOptions.map((option) => (
+                <ListboxOption
+                  key={option.value}
+                  value={option.value}
+                  className={({ active, selected }) =>
+                    `relative cursor-pointer select-none py-2 px-3 ${active ? 'bg-offbase' : ''
+                    } ${selected ? 'font-medium' : ''}`
+                  }
+                >
+                  {option.label}
+                </ListboxOption>
+              ))}
+            </ListboxOptions>
+          </Listbox>
+        </div>
+
         <Button
           onClick={skipBackward}
           className="relative p-2 rounded-full text-foreground hover:bg-offbase data-[hover]:bg-offbase data-[active]:bg-offbase/80 transition-colors duration-200 focus:outline-none disabled:opacity-50"
@@ -64,7 +86,7 @@ export default function TTSPlayer() {
         >
           {isProcessing ? <LoadingSpinner /> : <SkipBackwardIcon />}
         </Button>
-        
+
         <Button
           onClick={togglePlay}
           className="relative p-2 rounded-full text-foreground hover:bg-offbase data-[hover]:bg-offbase data-[active]:bg-offbase/80 transition-colors duration-200 focus:outline-none"
@@ -82,29 +104,6 @@ export default function TTSPlayer() {
           {isProcessing ? <LoadingSpinner /> : <SkipForwardIcon />}
         </Button>
 
-        <div className="relative">
-          <Listbox value={speed} onChange={setSpeedAndRestart}>
-            <ListboxButton className="flex items-center space-x-1 bg-transparent text-foreground text-sm focus:outline-none cursor-pointer hover:bg-offbase rounded pl-2 pr-1 py-1">
-              <span>{speed}x</span>
-              <ChevronUpDownIcon className="h-3 w-3" />
-            </ListboxButton>
-            <ListboxOptions className="absolute bottom-full mb-1 w-24 overflow-auto rounded-lg bg-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
-              {speedOptions.map((option) => (
-                <ListboxOption
-                  key={option.value}
-                  value={option.value}
-                  className={({ active, selected }) =>
-                    `relative cursor-pointer select-none py-2 px-3 ${
-                      active ? 'bg-offbase' : ''
-                    } ${selected ? 'font-medium' : ''}`
-                  }
-                >
-                  {option.label}
-                </ListboxOption>
-              ))}
-            </ListboxOptions>
-          </Listbox>
-        </div>
 
         <div className="relative">
           <Listbox value={voice} onChange={setVoiceAndRestart}>
@@ -117,10 +116,8 @@ export default function TTSPlayer() {
                 <ListboxOption
                   key={voiceId}
                   value={voiceId}
-                  className={({ active, selected }) =>
-                    `relative cursor-pointer select-none py-2 px-3 ${
-                      active ? 'bg-offbase' : ''
-                    } ${selected ? 'font-medium' : ''}`
+                  className={({ active, selected  }) =>
+                    `relative cursor-pointer select-none py-2 px-3 ${active ? 'bg-offbase' : ''} ${selected ? 'font-medium' : ''}`
                   }
                 >
                   <span>{voiceId}</span>
