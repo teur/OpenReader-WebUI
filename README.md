@@ -1,38 +1,47 @@
 # OpenReader WebUI
 
-OpenReader WebUI is a modern, user-friendly web interface for reading and analyzing PDF documents. Built with Next.js and React, it provides an intuitive interface for document viewing, analysis, and interaction. The application features drop-in support for any OpenAI-compatible Text-to-Speech (TTS) API, making it highly flexible for various voice synthesis implementations.
+OpenReader WebUI is a web-based PDF reader with integrated Text-to-Speech capabilities. It provides a clean interface for reading PDF documents while offering synchronized text-to-speech playback using OpenAI's TTS API.
 
 ## Demo
 
-
 https://github.com/user-attachments/assets/7a3457ba-feda-4939-928a-cb587b1c0884
-
 
 ## Features
 
-- PDF document viewing and navigation
-- Interactive document interface
-- Modern UI with Tailwind CSS
-- Fast performance with Next.js and Turbopack
-- PDF text analysis capabilities
-- Drop-in support for OpenAI-compatible TTS APIs
-- Responsive design for various screen sizes
+- **PDF Document Management**
+  - Local document storage using IndexedDB
+  - PDF text extraction and rendering
+
+- **Text-to-Speech Integration**
+  - Real-time text-to-speech using OpenAI's TTS API, Kokoro TTS API, or anything else that follows the OpenAI API format
+  - Synchronized text highlighting
+  - Configurable playback speed
+  - Multiple voice options
+  - Click-to-read functionality
+
+- **User Interface**
+  - Light/Dark/System theme support
+  - Responsive design
+  - Configurable API settings
+  - Interactive PDF text selection
 
 ## Tech Stack
 
-- **Framework**: [Next.js 15](https://nextjs.org/)
-- **UI Library**: [React 19](https://react.dev/)
-- **Styling**: [Tailwind CSS](https://tailwindcss.com/)
-- **PDF Processing**: [React-PDF](https://react-pdf.org/) and [PDF.js](https://mozilla.github.io/pdf.js/)
-- **UI Components**: [Headless UI](https://headlessui.com/)
-- **Type Safety**: [TypeScript](https://www.typescriptlang.org/)
+- **Framework**: Next.js with React
+- **Storage**: IndexedDB for document storage
+- **PDF Processing**: 
+  - react-pdf for rendering
+  - pdf.js for text extraction
+  - compromise for text analysis
+- **UI Components**: 
+  - Headless UI for modals and dropdowns
+  - Tailwind CSS for styling
+- **TTS Integration**: OpenAI TTS API
 
-## Prerequisites
+## Installation
 
-- Node.js 18.x or higher
-- npm or yarn package manager
+> You will need `node` and `npm` installed on your machine. If you don't have it, I recommend installing it using [nvm](https://github.com/nvm-sh/nvm).
 
-## Getting Started
 
 1. Clone the repository:
 ```bash
@@ -49,13 +58,11 @@ npm install
 ```bash
 cp .env.template .env
 ```
-Edit the `.env` file with your configuration settings.
+> Edit the `.env` file with your configuration settings.
 
 4. Start the development server:
 ```bash
 npm run dev
-# or
-yarn dev
 ```
 
 The application will be available at [http://localhost:3000](http://localhost:3000).
@@ -70,24 +77,27 @@ The application will be available at [http://localhost:3000](http://localhost:30
 ## Project Structure
 
 ```
-openreader-webui/
-├── src/
-│   ├── app/          # Next.js app router pages
-│   ├── components/   # Reusable React components
-│   ├── contexts/     # React context providers
-│   └── services/     # Business logic and services
-├── public/           # Static assets
-└── scripts/         # Utility scripts
+src/
+├── app/                    # Next.js app router
+├── components/             # UI components
+├── contexts/               # Contexts for state management
+└── services/               # Utility functions
 ```
 
-## Contributing
+## Browser Support
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+The application requires modern browser features:
+- IndexedDB for document storage
+- PDF.js for document rendering
 
 ## License
 
-This project is licensed under the terms of the license included in the repository.
+MIT License
 
----
+## Acknowledgements
 
-Built with ❤️ using [Next.js](https://nextjs.org/)
+- [react-pdf](https://github.com/wojtekmaj/react-pdf) for the PDF rendering library.
+- [Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M) text-to-speech model
+- [Kokoro-FastAPI](https://github.com/remsky/Kokoro-FastAPI/tree/master) for the text-to-speech api wrapper.
+
+Thank you ❤️
