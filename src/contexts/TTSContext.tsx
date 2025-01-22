@@ -131,7 +131,7 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
   }, [audioContext]);
 
   // Text preprocessing function to clean and normalize text
-  const preprocessText = (text: string): string => {
+  const preprocessSentenceForAudio = (text: string): string => {
     return text
       // Replace URLs with descriptive text including domain
       .replace(/\S*(?:https?:\/\/|www\.)([^\/\s]+)(?:\/\S*)?/gi, '- (link to $1) -')
@@ -147,7 +147,7 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
 
   const splitIntoSentences = (text: string): string[] => {
     // Preprocess the text before splitting into sentences
-    const cleanedText = preprocessText(text);
+    const cleanedText = preprocessSentenceForAudio(text);
     const doc = nlp(cleanedText);
     return doc.sentences().out('array') as string[];
   };
@@ -173,7 +173,7 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
 
     try {
       // Only set processing if we need to fetch from API
-      const cleanedSentence = preprocessText(sentence);
+      const cleanedSentence = preprocessSentenceForAudio(sentence);
       if (!audioCacheRef.current.has(cleanedSentence)) {
         setIsProcessing(true);
       }

@@ -11,10 +11,12 @@ import { usePDF } from '@/contexts/PDFContext';
 
 interface PDFViewerProps {
   pdfData: Blob | undefined;
+  zoomLevel: number;
 }
 
-export function PDFViewer({ pdfData }: PDFViewerProps) {
+export function PDFViewer({ pdfData, zoomLevel }: PDFViewerProps) {
   const [numPages, setNumPages] = useState<number>();
+  const [containerWidth, setContainerWidth] = useState<number>(0);
   const { setText, currentSentence, stopAndPlayFromIndex, isProcessing } = useTTS();
   const [pdfText, setPdfText] = useState('');
   const [pdfDataUrl, setPdfDataUrl] = useState<string>();
@@ -143,6 +145,29 @@ export function PDFViewer({ pdfData }: PDFViewerProps) {
     };
   }, [pdfText, currentSentence, highlightPattern, clearHighlights]);
 
+  // Add scale calculation function
+  const calculateScale = (pageWidth: number = 595) => {  // 595 is default PDF width in points
+    const margin = 24; // 24px padding on each side
+    const targetWidth = containerWidth - margin;
+    const baseScale = targetWidth / pageWidth;
+    return baseScale * (zoomLevel / 100);
+  };
+
+  // Add resize observer effect
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    const observer = new ResizeObserver(entries => {
+      const width = entries[0]?.contentRect.width;
+      if (width) {
+        setContainerWidth(width);
+      }
+    });
+
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
+
   function onDocumentLoadSuccess({ numPages }: { numPages: number }): void {
     setNumPages(numPages);
   }
@@ -150,7 +175,7 @@ export function PDFViewer({ pdfData }: PDFViewerProps) {
   return (
     <div
       ref={containerRef}
-      className="flex flex-col items-center overflow-auto max-h-[calc(100vh-100px)]"
+      className="flex flex-col items-center overflow-auto max-h-[calc(100vh-100px)] w-full px-6"
       style={{ WebkitTapHighlightColor: 'transparent' }}
     >
       {loadingError ? (
@@ -161,7 +186,7 @@ export function PDFViewer({ pdfData }: PDFViewerProps) {
         noData={<PDFSkeleton />}
         file={pdfDataUrl}
         onLoadSuccess={onDocumentLoadSuccess}
-        className="flex flex-col items-center"
+        className="flex flex-col items-center m-0" 
       >
         {Array.from(
           new Array(numPages),
@@ -178,7 +203,7 @@ export function PDFViewer({ pdfData }: PDFViewerProps) {
                   renderAnnotationLayer={true}
                   renderTextLayer={true}
                   className="shadow-lg"
-                  scale={1.2}
+                  scale={calculateScale()}
                 />
               </div>
             </div>
