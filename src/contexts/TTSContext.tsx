@@ -12,6 +12,7 @@ import nlp from 'compromise';
 import OpenAI from 'openai';
 import { LRUCache } from 'lru-cache'; // Import LRUCache directly
 import { useConfig } from './ConfigContext';
+import { Howl } from 'howler';
 
 // Add type declarations
 declare global {
@@ -22,7 +23,7 @@ declare global {
 
 type AudioContextType = typeof window extends undefined
   ? never
-  : AudioContext | null;
+  : (AudioContext | null);
 
 interface TTSContextType {
   isPlaying: boolean;
@@ -52,10 +53,10 @@ const TTSContext = createContext<TTSContextType | undefined>(undefined);
 
 export function TTSProvider({ children }: { children: React.ReactNode }) {
   const { apiKey: openApiKey, baseUrl: openApiBaseUrl, isLoading: configIsLoading } = useConfig();
-  
+
   // Move openai initialization to a ref to avoid breaking hooks rules
   const openaiRef = useRef<OpenAI | null>(null);
-  
+
   // All existing state declarations and refs stay at the top
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentText, setCurrentText] = useState('');
@@ -63,7 +64,7 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [audioContext, setAudioContext] = useState<AudioContextType>(null);
   const currentRequestRef = useRef<AbortController | null>(null);
-  const [activeSource, setActiveSource] = useState<AudioBufferSourceNode | null>(null);
+  const [activeHowl, setActiveHowl] = useState<Howl | null>(null);
   const [audioQueue] = useState<AudioBuffer[]>([]);
   const [currentAudioIndex] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -73,9 +74,86 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
   const [speed, setSpeed] = useState(1);
   const [voice, setVoice] = useState('alloy');
   const [availableVoices, setAvailableVoices] = useState<string[]>([]);
-  
+
   // Audio cache using LRUCache with a maximum size of 50 entries
   const audioCacheRef = useRef(new LRUCache<string, AudioBuffer>({ max: 50 }));
+
+  // Move these function declarations up before they are used
+  const togglePlay = useCallback(() => {
+    setIsPlaying((prev) => {
+      if (!prev) {
+        isPausingRef.current = false;
+        return true;
+      } else {
+        if (activeHowl) {
+          isPausingRef.current = true;
+          activeHowl.stop();
+          setActiveHowl(null);
+        }
+        return false;
+      }
+    });
+  }, [activeHowl]);
+
+  const skipForward = useCallback(() => {
+    if (skipTimeoutRef.current) {
+      clearTimeout(skipTimeoutRef.current);
+    }
+
+    skipTriggeredRef.current = true;
+    setIsProcessing(true);
+
+    if (currentRequestRef.current) {
+      currentRequestRef.current.abort();
+      currentRequestRef.current = null;
+    }
+
+    if (activeHowl) {
+      activeHowl.stop();
+      setActiveHowl(null);
+    }
+
+    setCurrentIndex((prev) => {
+      const nextIndex = Math.min(prev + 1, sentences.length - 1);
+      console.log('Skipping forward to:', sentences[nextIndex]);
+      return nextIndex;
+    });
+
+    skipTimeoutRef.current = setTimeout(() => {
+      skipTriggeredRef.current = false;
+      setIsProcessing(false);
+    }, 100);
+  }, [sentences, activeHowl]);
+
+  const skipBackward = useCallback(() => {
+    if (skipTimeoutRef.current) {
+      clearTimeout(skipTimeoutRef.current);
+    }
+
+    skipTriggeredRef.current = true;
+    setIsProcessing(true);
+
+    if (currentRequestRef.current) {
+      currentRequestRef.current.abort();
+      currentRequestRef.current = null;
+    }
+
+    if (activeHowl) {
+      activeHowl.stop();
+      setActiveHowl(null);
+    }
+
+    setCurrentIndex((prev) => {
+      const nextIndex = Math.max(prev - 1, 0);
+      console.log('Skipping backward to:', sentences[nextIndex]);
+      return nextIndex;
+    });
+
+    skipTimeoutRef.current = setTimeout(() => {
+      skipTriggeredRef.current = false;
+      setIsProcessing(false);
+    }, 100);
+  }, [sentences, activeHowl]);
 
   // Initialize OpenAI instance when config loads
   useEffect(() => {
@@ -129,6 +207,28 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
       }
     }
   }, [audioContext]);
+
+  // Now the MediaSession effect can use these functions
+  useEffect(() => {
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: 'Text to Speech',
+        artist: 'OpenReader WebUI',
+        album: 'Current Reading',
+        artwork: [
+          {
+            src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+            type: 'image/png',
+          },
+        ],
+      });
+
+      navigator.mediaSession.setActionHandler('play', () => togglePlay());
+      navigator.mediaSession.setActionHandler('pause', () => togglePlay());
+      navigator.mediaSession.setActionHandler('nexttrack', () => skipForward());
+      navigator.mediaSession.setActionHandler('previoustrack', () => skipBackward());
+    }
+  }, [togglePlay, skipForward, skipBackward]);
 
   // Text preprocessing function to clean and normalize text
   const preprocessSentenceForAudio = (text: string): string => {
@@ -187,9 +287,9 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
       currentRequestRef.current = new AbortController();
 
       // Stop any currently playing audio
-      if (activeSource) {
-        activeSource.stop();
-        setActiveSource(null);
+      if (activeHowl) {
+        activeHowl.stop();
+        setActiveHowl(null);
       }
 
       let audioBuffer = audioCacheRef.current.get(cleanedSentence);
@@ -218,114 +318,121 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
       // If the request was aborted or component unmounted, do not proceed
       if (!currentRequestRef.current) return;
 
-      const source = audioContext.createBufferSource();
-      source.buffer = audioBuffer;
-      source.connect(audioContext.destination);
-      setActiveSource(source);
+      // Convert AudioBuffer to URL for Howler
+      const audioUrl = audioBufferToURL(audioBuffer!);
 
-      // Set up onended handler before starting
-      source.onended = () => {
-        setActiveSource(null);
-        // Only advance if we're playing and not pausing or skipping
-        if (isPlaying && !skipTriggeredRef.current && !isPausingRef.current) {
-          processNextSentence();
-        }
-        isPausingRef.current = false; // Reset pause flag
-      };
+      const howl = new Howl({
+        src: [audioUrl],
+        format: ['wav'],
+        html5: true,
+        onend: () => {
+          setActiveHowl(null);
+          // Cleanup the URL when audio ends
+          URL.revokeObjectURL(audioUrl);
+          if (isPlaying && !skipTriggeredRef.current && !isPausingRef.current) {
+            processNextSentence();
+          }
+          isPausingRef.current = false;
+        },
+        onplay: () => {
+          if ('mediaSession' in navigator) {
+            navigator.mediaSession.playbackState = 'playing';
+          }
+        },
+        onpause: () => {
+          if ('mediaSession' in navigator) {
+            navigator.mediaSession.playbackState = 'paused';
+          }
+        },
+      });
 
-      source.start(0);
+      setActiveHowl(howl);
+      howl.play();
+
     } catch (error: unknown) {
       if (error instanceof Error && error.name === 'AbortError') {
         console.log('Request was cancelled');
       } else {
         console.error('Error processing TTS:', error);
       }
-      setActiveSource(null);
+      setActiveHowl(null);
       setIsProcessing(false);
     } finally {
       currentRequestRef.current = null;
     }
   };
 
-  const togglePlay = useCallback(() => {
-    setIsPlaying((prev) => {
-      if (!prev) {
-        isPausingRef.current = false;
-        return true;
-      } else {
-        if (activeSource) {
-          isPausingRef.current = true;
-          activeSource.stop();
-          setActiveSource(null);
-        }
-        return false;
+  // Add utility function to convert AudioBuffer to URL
+  const audioBufferToURL = (audioBuffer: AudioBuffer): string => {
+    // Get WAV file bytes
+    const wavBytes = getWavBytes(audioBuffer.getChannelData(0), {
+      isFloat: true,       // floating point or 16-bit integer
+      numChannels: 1,      // number of channels
+      sampleRate: audioBuffer.sampleRate,    // audio sample rate
+    });
+
+    // Create blob and URL
+    const blob = new Blob([wavBytes], { type: 'audio/wav' });
+    return URL.createObjectURL(blob);
+  };
+
+  // Add helper function for WAV conversion
+  const getWavBytes = (samples: Float32Array, opts: {
+    isFloat?: boolean,
+    numChannels?: number,
+    sampleRate?: number,
+  }) => {
+    const {
+      isFloat = true,
+      numChannels = 1,
+      sampleRate = 44100,
+    } = opts;
+
+    const bytesPerSample = isFloat ? 4 : 2;
+    const numSamples = samples.length;
+
+    // WAV header size is 44 bytes
+    const buffer = new ArrayBuffer(44 + numSamples * bytesPerSample);
+    const dv = new DataView(buffer);
+
+    let pos = 0;
+
+    // Write WAV header
+    writeString(dv, pos, 'RIFF'); pos += 4;
+    dv.setUint32(pos, 36 + numSamples * bytesPerSample, true); pos += 4;
+    writeString(dv, pos, 'WAVE'); pos += 4;
+    writeString(dv, pos, 'fmt '); pos += 4;
+    dv.setUint32(pos, 16, true); pos += 4;
+    dv.setUint16(pos, isFloat ? 3 : 1, true); pos += 2;
+    dv.setUint16(pos, numChannels, true); pos += 2;
+    dv.setUint32(pos, sampleRate, true); pos += 4;
+    dv.setUint32(pos, sampleRate * numChannels * bytesPerSample, true); pos += 4;
+    dv.setUint16(pos, numChannels * bytesPerSample, true); pos += 2;
+    dv.setUint16(pos, bytesPerSample * 8, true); pos += 2;
+    writeString(dv, pos, 'data'); pos += 4;
+    dv.setUint32(pos, numSamples * bytesPerSample, true); pos += 4;
+
+    if (isFloat) {
+      for (let i = 0; i < numSamples; i++) {
+        dv.setFloat32(pos, samples[i], true);
+        pos += bytesPerSample;
       }
-    });
-  }, [activeSource]);
-
-  const skipForward = useCallback(() => {
-    if (skipTimeoutRef.current) {
-      clearTimeout(skipTimeoutRef.current);
+    } else {
+      for (let i = 0; i < numSamples; i++) {
+        const s = Math.max(-1, Math.min(1, samples[i]));
+        dv.setInt16(pos, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+        pos += bytesPerSample;
+      }
     }
 
-    skipTriggeredRef.current = true;
-    setIsProcessing(true);
-    // Cancel any ongoing request
-    if (currentRequestRef.current) {
-      currentRequestRef.current.abort();
-      currentRequestRef.current = null;
+    return buffer;
+  };
+
+  const writeString = (view: DataView, offset: number, string: string): void => {
+    for (let i = 0; i < string.length; i++) {
+      view.setUint8(offset + i, string.charCodeAt(i));
     }
-
-    // Stop current audio
-    if (activeSource) {
-      activeSource.stop();
-      setActiveSource(null);
-    }
-
-    setCurrentIndex((prev) => {
-      const nextIndex = Math.min(prev + 1, sentences.length - 1);
-      console.log('Skipping forward to:', sentences[nextIndex]);
-      return nextIndex;
-    });
-
-    // Reset skip flag after a short delay
-    skipTimeoutRef.current = setTimeout(() => {
-      skipTriggeredRef.current = false;
-      setIsProcessing(false);
-    }, 100);
-  }, [sentences, activeSource]);
-
-  const skipBackward = useCallback(() => {
-    if (skipTimeoutRef.current) {
-      clearTimeout(skipTimeoutRef.current);
-    }
-
-    skipTriggeredRef.current = true;
-    setIsProcessing(true);
-    // Cancel any ongoing request
-    if (currentRequestRef.current) {
-      currentRequestRef.current.abort();
-      currentRequestRef.current = null;
-    }
-
-    // Stop current audio
-    if (activeSource) {
-      activeSource.stop();
-      setActiveSource(null);
-    }
-
-    setCurrentIndex((prev) => {
-      const nextIndex = Math.max(prev - 1, 0);
-      console.log('Skipping backward to:', sentences[nextIndex]);
-      return nextIndex;
-    });
-
-    // Reset skip flag after a short delay
-    skipTimeoutRef.current = setTimeout(() => {
-      skipTriggeredRef.current = false;
-      setIsProcessing(false);
-    }, 100);
-  }, [sentences, activeSource]);
+  };
 
   const setText = useCallback((text: string) => {
     setCurrentText(text);
@@ -406,9 +513,9 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     return () => {
       isEffectActive = false;
       // Clean up any playing audio when the effect is cleaned up
-      if (activeSource) {
-        activeSource.stop();
-        setActiveSource(null);
+      if (activeHowl) {
+        activeHowl.stop();
+        setActiveHowl(null);
       }
       if (currentRequestRef.current) {
         currentRequestRef.current.abort();
@@ -456,16 +563,16 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     }
 
     // Stop current audio
-    if (activeSource) {
-      activeSource.stop();
-      setActiveSource(null);
+    if (activeHowl) {
+      activeHowl.stop();
+      setActiveHowl(null);
     }
 
     setIsPlaying(false);
     setCurrentIndex(0);
     setCurrentText('');
     setIsProcessing(false);
-  }, [activeSource]);
+  }, [activeHowl]);
 
   const stopAndPlayFromIndex = useCallback((index: number) => {
     // Cancel any ongoing request
@@ -475,9 +582,9 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     }
 
     // Stop current audio
-    if (activeSource) {
-      activeSource.stop();
-      setActiveSource(null);
+    if (activeHowl) {
+      activeHowl.stop();
+      setActiveHowl(null);
     }
 
     // Set skip flag to prevent immediate auto-advance
@@ -494,7 +601,7 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     skipTimeoutRef.current = setTimeout(() => {
       skipTriggeredRef.current = false;
     }, 100);
-  }, [activeSource]);
+  }, [activeHowl]);
 
   const setCurrentIndexWithoutPlay = useCallback((index: number) => {
     // Cancel any ongoing request
@@ -504,20 +611,20 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     }
 
     // Stop current audio
-    if (activeSource) {
-      activeSource.stop();
-      setActiveSource(null);
+    if (activeHowl) {
+      activeHowl.stop();
+      setActiveHowl(null);
     }
 
     setCurrentIndex(index);
     skipTriggeredRef.current = false;
-  }, [activeSource]);
+  }, [activeHowl]);
 
   const setSpeedAndRestart = useCallback((newSpeed: number) => {
     setSpeed(newSpeed);
     // Clear the audio cache since it contains audio at the old speed
     audioCacheRef.current.clear();
-    
+
     if (isPlaying) {
       const currentIdx = currentIndex;
       stop();
@@ -533,7 +640,7 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     setVoice(newVoice);
     // Clear the audio cache since it contains audio with the old voice
     audioCacheRef.current.clear();
-    
+
     if (isPlaying) {
       const currentIdx = currentIndex;
       stop();

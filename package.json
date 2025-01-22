@@ -5,14 +5,16 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
-    "start": "next start -p 3002",
+    "start": "next start -p 3003",
     "lint": "next lint"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.0",
+    "@types/howler": "^2.2.12",
     "@types/string-similarity": "^4.0.2",
     "@types/uuid": "^10.0.0",
     "compromise": "^14.14.4",
+    "howler": "^2.2.4",
     "lru-cache": "^11.0.2",
     "next": "15.1.5",
     "openai": "^4.79.1",
