@@ -74,10 +74,7 @@ export default function PDFViewerPage() {
           <div className="flex items-center gap-4">
             <Link
               href="/"
-              onClick={() => {
-                setText('');
-                stop();
-              }}
+              onClick={() => {clearCurrDoc(); stop();}}
               className="inline-flex items-center px-3 py-1 bg-base text-foreground rounded-lg hover:bg-offbase transition-colors"
             >
               <svg className="w-4 h-4 mr-2 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
