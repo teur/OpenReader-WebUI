@@ -151,7 +151,7 @@ export function PDFProvider({ children }: { children: ReactNode }) {
   const onDocumentLoadSuccess = useCallback(({ numPages }: { numPages: number }) => {
     console.log('Document loaded:', numPages);
     setCurrDocPages(numPages);
-  }, []);
+  }, [setCurrDocPages]);
 
   // Extract text from a PDF file
   const extractTextFromPDF = useCallback(async (pdfURL: string, currDocPage: number): Promise<string> => {

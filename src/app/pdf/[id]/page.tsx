@@ -20,7 +20,7 @@ const PDFViewer = dynamic(
 export default function PDFViewerPage() {
   const { id } = useParams();
   const { setCurrentDocument, currDocName, clearCurrDoc } = usePDF();
-  const { setText, stop } = useTTS();
+  const { stop } = useTTS();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [zoomLevel, setZoomLevel] = useState<number>(100);
