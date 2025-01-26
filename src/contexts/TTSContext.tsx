@@ -134,6 +134,10 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
         setCurrDocPage(currDocPage - 1);
 
         return 0;
+      } else if (nextIndex >= sentences.length && currDocPage >= currDocPages!) {
+        console.log('Reached end of document');
+        setIsPlaying(false);
+        return prev;
       }
       return prev;
     });
