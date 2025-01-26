@@ -4,7 +4,7 @@ import dynamic from 'next/dynamic';
 import { usePDF } from '@/contexts/PDFContext';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { use, useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { PDFSkeleton } from '@/components/PDFSkeleton';
 import { useTTS } from '@/contexts/TTSContext';
 
