@@ -56,8 +56,7 @@ export default function PDFViewerPage() {
         <Link
           href="/"
           onClick={() => {
-            setText('');
-            stop();
+            
           }}
           className="inline-flex items-center px-3 py-1 bg-base text-foreground rounded-lg hover:bg-offbase transition-colors"
         >

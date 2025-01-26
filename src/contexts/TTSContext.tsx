@@ -53,7 +53,7 @@ interface TTSContextType {
   setCurrentIndex: (index: number) => void;
   currDocPage: number;
   currDocPages: number | undefined;
-  setCurrDocPages: (num: number) => void;
+  setCurrDocPages: (num: number | undefined) => void;
   incrementPage: (num?: number) => void;
   skipToPage: (page: number) => void;
 }
@@ -126,8 +126,8 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
 
   const incrementPage = useCallback((num = 1) => {
     setNextPageLoading(true);
-    setCurrDocPage((prev) => prev + num);
-  }, []);
+    setCurrDocPage(currDocPage + num);
+  }, [currDocPage]);
 
   const advance = useCallback(async (backwards = false) => {
     setCurrentIndex((prev) => {
@@ -154,7 +154,7 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
       }
       return prev;
     });
-  }, [sentences, currDocPage, currDocPages]);
+  }, [sentences, currDocPage, currDocPages, incrementPage]);
   
 
   const skipForward = useCallback(() => {

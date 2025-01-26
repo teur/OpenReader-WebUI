@@ -57,6 +57,7 @@ interface PDFContextType {
   currDocPages: number | undefined;
   currDocPage: number;
   currDocText: string | undefined;
+  clearCurrDoc: () => void;
 }
 
 const PDFContext = createContext<PDFContextType | undefined>(undefined);
@@ -268,6 +269,17 @@ export function PDFProvider({ children }: { children: ReactNode }) {
     }
   }, [getDocument, loadCurrDocText]);
 
+  const clearCurrDoc = useCallback(() => {
+    setCurrDocName(undefined);
+    setCurrDocURL(undefined);
+    setCurrDocText(undefined);
+    setCurrDocPages(undefined);
+
+    // Clear TTS text
+    setTTSText('');
+
+  }, []);
+
   // Clear all highlights in the PDF viewer
   const clearHighlights = useCallback(() => {
     const textNodes = document.querySelectorAll('.react-pdf__Page__textContent span');
@@ -463,6 +475,7 @@ export function PDFProvider({ children }: { children: ReactNode }) {
       currDocPages,
       currDocPage,
       currDocText,
+      clearCurrDoc,
     }),
     [
       documents,
@@ -482,6 +495,7 @@ export function PDFProvider({ children }: { children: ReactNode }) {
       currDocPages,
       currDocPage,
       currDocText,
+      clearCurrDoc,
     ]
   );
 
