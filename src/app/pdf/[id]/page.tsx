@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { PDFSkeleton } from '@/components/PDFSkeleton';
 import { useTTS } from '@/contexts/TTSContext';
+import { Button } from '@headlessui/react';
 
 // Dynamic import for client-side rendering only
 const PDFViewer = dynamic(
@@ -83,24 +84,24 @@ export default function PDFViewerPage() {
               Documents
             </Link>
             <div className="bg-offbase px-2 py-0.5 rounded-full flex items-center gap-2">
-              <button
+              <Button
                 onClick={handleZoomOut}
                 className="text-xs hover:text-accent transition-colors"
                 aria-label="Zoom out"
               >
                 －
-              </button>
+              </Button>
               <span className="text-xs">{zoomLevel}%</span>
-              <button
+              <Button
                 onClick={handleZoomIn}
                 className="text-xs hover:text-accent transition-colors"
                 aria-label="Zoom in"
               >
                 ＋
-              </button>
+              </Button>
             </div>
           </div>
-          <h1 className="mr-2 text-md font-semibold text-foreground">
+          <h1 className="mr-2 text-md font-semibold text-foreground truncate">
             {isLoading ? 'Loading...' : currDocName}
           </h1>
         </div>

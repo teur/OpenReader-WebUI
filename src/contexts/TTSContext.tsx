@@ -242,15 +242,9 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if ('mediaSession' in navigator) {
       navigator.mediaSession.metadata = new MediaMetadata({
-        title: 'Text to Speech',
+        title: 'Text-to-Speech',
         artist: 'OpenReader WebUI',
-        album: 'Current Reading',
-        artwork: [
-          {
-            src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
-            type: 'image/png',
-          },
-        ],
+        album: 'Current Document',
       });
 
       navigator.mediaSession.setActionHandler('play', () => togglePlay());

@@ -6,6 +6,10 @@ import Script from "next/script";
 export const metadata: Metadata = {
   title: "OpenReader WebUI",
   description: "A modern web interface for reading and managing documents",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+  }
 };
 
 export default function RootLayout({
