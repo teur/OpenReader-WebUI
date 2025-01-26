@@ -18,9 +18,20 @@ import nlp from 'compromise';
 // Add the correct type import
 import type { TextItem } from 'pdfjs-dist/types/src/display/api';
 import { useConfig } from '@/contexts/ConfigContext';
+import { useTTS } from '@/contexts/TTSContext';
 
 // Set worker from public directory
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.mjs';
+
+// Convert PDF data to PDF data URL
+const convertPDFDataToURL = (pdfData: Blob): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(pdfData);
+  });
+};
 
 interface PDFContextType {
   documents: PDFDocument[];
@@ -29,7 +40,7 @@ interface PDFContextType {
   removeDocument: (id: string) => Promise<void>;
   isLoading: boolean;
   error: string | null;
-  extractTextFromPDF: (pdfData: Blob) => Promise<string>;
+  extractTextFromPDF: (pdfURL: string, currDocPage: number) => Promise<string>;
   highlightPattern: (text: string, pattern: string, containerRef: React.RefObject<HTMLDivElement>) => void;
   clearHighlights: () => void;
   handleTextClick: (
@@ -39,21 +50,41 @@ interface PDFContextType {
     stopAndPlayFromIndex: (index: number) => void,
     isProcessing: boolean
   ) => void;
+  onDocumentLoadSuccess: ({ numPages }: { numPages: number }) => void;
+  setCurrentDocument: (id: string) => Promise<void>;
+  currDocURL: string | undefined;
+  currDocName: string | undefined;
+  currDocPages: number | undefined;
+  currDocPage: number;
+  currDocText: string | undefined;
+  clearCurrDoc: () => void;
 }
 
 const PDFContext = createContext<PDFContextType | undefined>(undefined);
 
 export function PDFProvider({ children }: { children: ReactNode }) {
-  const { isDBReady } = useConfig();
   const [documents, setDocuments] = useState<PDFDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const { isDBReady } = useConfig();
+  const {
+    setText: setTTSText,
+    currDocPage,
+    currDocPages,
+    setCurrDocPages,
+  } = useTTS();
+
+  // Current document state
+  const [currDocURL, setCurrDocURL] = useState<string>();
+  const [currDocName, setCurrDocName] = useState<string>();
+  const [currDocText, setCurrDocText] = useState<string>();
 
   // Load documents from IndexedDB once DB is ready
   useEffect(() => {
     const loadDocuments = async () => {
       if (!isDBReady) return;
-      
+
       try {
         setError(null);
         const docs = await indexedDBService.getAllDocuments();
@@ -117,17 +148,15 @@ export function PDFProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Extract text from a PDF file
-  const extractTextFromPDF = useCallback(async (pdfData: Blob): Promise<string> => {
-    try {
-      const reader = new FileReader();
-      const dataUrl = await new Promise<string>((resolve, reject) => {
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = () => reject(reader.error);
-        reader.readAsDataURL(pdfData);
-      });
+  const onDocumentLoadSuccess = useCallback(({ numPages }: { numPages: number }) => {
+    console.log('Document loaded:', numPages);
+    setCurrDocPages(numPages);
+  }, [setCurrDocPages]);
 
-      const base64Data = dataUrl.split(',')[1];
+  // Extract text from a PDF file
+  const extractTextFromPDF = useCallback(async (pdfURL: string, currDocPage: number): Promise<string> => {
+    try {
+      const base64Data = pdfURL.split(',')[1];
       const binaryData = atob(base64Data);
       const bytes = new Uint8Array(binaryData.length);
       for (let i = 0; i < binaryData.length; i++) {
@@ -136,76 +165,120 @@ export function PDFProvider({ children }: { children: ReactNode }) {
 
       const loadingTask = pdfjs.getDocument({ data: bytes });
       const pdf = await loadingTask.promise;
-      let fullText = '';
 
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        
-        // Filter out non-text items and assert proper type
-        const textItems = textContent.items.filter((item): item is TextItem => 
-          'str' in item && 'transform' in item
-        );
-  
-        // Group text items into lines based on their vertical position
-        const tolerance = 2;
-        const lines: TextItem[][] = [];
-        let currentLine: TextItem[] = [];
-        let currentY: number | null = null;
-  
-        textItems.forEach((item) => {
-          const y = item.transform[5];
-          if (currentY === null) {
-            currentY = y;
-            currentLine.push(item);
-          } else if (Math.abs(y - currentY) < tolerance) {
-            currentLine.push(item);
-          } else {
-            lines.push(currentLine);
-            currentLine = [item];
-            currentY = y;
-          }
-        });
-        lines.push(currentLine);
-  
-        // Process each line to build text
-        let pageText = '';
-        for (const line of lines) {
-          // Sort items horizontally within the line
-          line.sort((a, b) => a.transform[4] - b.transform[4]);
-          
-          let lineText = '';
-          let prevItem: TextItem | null = null;
-  
-          for (const item of line) {
-            if (!prevItem) {
-              lineText = item.str;
-            } else {
-              const prevEndX = prevItem.transform[4] + (prevItem.width ?? 0);
-              const currentStartX = item.transform[4];
-              const space = currentStartX - prevEndX;
-  
-              // Add space if gap is significant, otherwise concatenate directly
-              if (space > ((item.width ?? 0) * 0.3)) {
-                lineText += ' ' + item.str;
-              } else {
-                lineText += item.str;
-              }
-            }
-            prevItem = item;
-          }
-          pageText += lineText + ' ';
+      // Get only the specified page
+      const page = await pdf.getPage(currDocPage);
+      const textContent = await page.getTextContent();
+
+      // Filter out non-text items and assert proper type
+      const textItems = textContent.items.filter((item): item is TextItem =>
+        'str' in item && 'transform' in item
+      );
+
+      // Group text items into lines based on their vertical position
+      const tolerance = 2;
+      const lines: TextItem[][] = [];
+      let currentLine: TextItem[] = [];
+      let currentY: number | null = null;
+
+      textItems.forEach((item) => {
+        const y = item.transform[5];
+        if (currentY === null) {
+          currentY = y;
+          currentLine.push(item);
+        } else if (Math.abs(y - currentY) < tolerance) {
+          currentLine.push(item);
+        } else {
+          lines.push(currentLine);
+          currentLine = [item];
+          currentY = y;
         }
-        
-        fullText += pageText + '\n';
+      });
+      lines.push(currentLine);
+
+      // Process each line to build text
+      let pageText = '';
+      for (const line of lines) {
+        // Sort items horizontally within the line
+        line.sort((a, b) => a.transform[4] - b.transform[4]);
+
+        let lineText = '';
+        let prevItem: TextItem | null = null;
+
+        for (const item of line) {
+          if (!prevItem) {
+            lineText = item.str;
+          } else {
+            const prevEndX = prevItem.transform[4] + (prevItem.width ?? 0);
+            const currentStartX = item.transform[4];
+            const space = currentStartX - prevEndX;
+
+            // Add space if gap is significant, otherwise concatenate directly
+            if (space > ((item.width ?? 0) * 0.3)) {
+              lineText += ' ' + item.str;
+            } else {
+              lineText += item.str;
+            }
+          }
+          prevItem = item;
+        }
+        pageText += lineText + ' ';
       }
 
-      return fullText.replace(/\s+/g, ' ').trim();
+      return pageText.replace(/\s+/g, ' ').trim();
     } catch (error) {
       console.error('Error extracting text from PDF:', error);
       throw new Error('Failed to extract text from PDF');
     }
   }, []);
+
+  // Load curr doc text
+  const loadCurrDocText = useCallback(async () => {
+    try {
+      if (!currDocURL) return;
+      const text = await extractTextFromPDF(currDocURL, currDocPage);
+      setCurrDocText(text);
+      setTTSText(text);
+    } catch (error) {
+      console.error('Error loading PDF text:', error);
+      setError('Failed to extract PDF text');
+    }
+  }, [currDocURL, currDocPage, extractTextFromPDF, setTTSText]);
+
+  // Update the current document text when the page changes
+  useEffect(() => {
+    if (currDocURL) {
+      loadCurrDocText();
+    }
+  }, [currDocPage, currDocURL, loadCurrDocText]);
+
+  // Set curr document
+  const setCurrentDocument = useCallback(async (id: string): Promise<void> => {
+    setError(null);
+    try {
+      const doc = await getDocument(id);
+      if (doc) {
+        const url = await convertPDFDataToURL(doc.data);
+        setCurrDocName(doc.name);
+        setCurrDocURL(url);
+        //await loadCurrDocText();
+      }
+    } catch (error) {
+      console.error('Failed to get document URL:', error);
+      setError('Failed to retrieve the document. Please try again.');
+    }
+  }, [getDocument]);
+
+  const clearCurrDoc = useCallback(() => {
+    setCurrDocName(undefined);
+    setCurrDocURL(undefined);
+    setCurrDocText(undefined);
+
+    // Clear TTS text
+    setCurrDocPages(undefined); // Goes to TTS context
+    setTTSText('');
+
+  }, [setCurrDocPages, setTTSText]);
 
   // Clear all highlights in the PDF viewer
   const clearHighlights = useCallback(() => {
@@ -291,7 +364,7 @@ export function PDFProvider({ children }: { children: ReactNode }) {
 
     // Search for the best match within the visible area first
     let bestMatch = findBestTextMatch(visibleNodes, cleanPattern, cleanPattern.length * 2);
-    
+
     // If no good match found in visible area, search the entire document
     if (bestMatch.rating < 0.3) {
       bestMatch = findBestTextMatch(allText, cleanPattern, cleanPattern.length * 2);
@@ -324,12 +397,12 @@ export function PDFProvider({ children }: { children: ReactNode }) {
   // Handle text click events in the PDF viewer
   const handleTextClick = useCallback((
     event: MouseEvent,
-    pdfText: string,
+    pageText: string, // Renamed from pdfText to pageText for clarity
     containerRef: React.RefObject<HTMLDivElement>,
     stopAndPlayFromIndex: (index: number) => void,
     isProcessing: boolean
   ) => {
-    if (isProcessing) return; // Don't process clicks while TTS is processing
+    if (isProcessing) return;
 
     const target = event.target as HTMLElement;
     if (!target.matches('.react-pdf__Page__textContent span')) return;
@@ -361,7 +434,8 @@ export function PDFProvider({ children }: { children: ReactNode }) {
 
     if (bestMatch.rating >= similarityThreshold) {
       const matchText = bestMatch.text;
-      const sentences = nlp(pdfText).sentences().out('array') as string[];
+      // Use pageText instead of full PDF text for sentence splitting
+      const sentences = nlp(pageText).sentences().out('array') as string[];
       let bestSentenceMatch = { sentence: '', rating: 0 };
 
       for (const sentence of sentences) {
@@ -375,7 +449,7 @@ export function PDFProvider({ children }: { children: ReactNode }) {
         const sentenceIndex = sentences.findIndex((sentence) => sentence === bestSentenceMatch.sentence);
         if (sentenceIndex !== -1) {
           stopAndPlayFromIndex(sentenceIndex);
-          highlightPattern(pdfText, bestSentenceMatch.sentence, containerRef);
+          highlightPattern(pageText, bestSentenceMatch.sentence, containerRef);
         }
       }
     }
@@ -394,6 +468,14 @@ export function PDFProvider({ children }: { children: ReactNode }) {
       highlightPattern,
       clearHighlights,
       handleTextClick,
+      onDocumentLoadSuccess,
+      setCurrentDocument,
+      currDocURL,
+      currDocName,
+      currDocPages,
+      currDocPage,
+      currDocText,
+      clearCurrDoc,
     }),
     [
       documents,
@@ -406,6 +488,14 @@ export function PDFProvider({ children }: { children: ReactNode }) {
       highlightPattern,
       clearHighlights,
       handleTextClick,
+      onDocumentLoadSuccess,
+      setCurrentDocument,
+      currDocURL,
+      currDocName,
+      currDocPages,
+      currDocPage,
+      currDocText,
+      clearCurrDoc,
     ]
   );
 

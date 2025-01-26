@@ -4,9 +4,8 @@ import dynamic from 'next/dynamic';
 import { usePDF } from '@/contexts/PDFContext';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { PDFSkeleton } from '@/components/PDFSkeleton';
-import TTSPlayer from '@/components/TTSPlayer';
 import { useTTS } from '@/contexts/TTSContext';
 
 // Dynamic import for client-side rendering only
@@ -20,32 +19,32 @@ const PDFViewer = dynamic(
 
 export default function PDFViewerPage() {
   const { id } = useParams();
-  const { getDocument } = usePDF();
-  const { setText, stop } = useTTS();
-  const [document, setDocument] = useState<{ name: string; data: Blob } | null>(null);
+  const { setCurrentDocument, currDocName, clearCurrDoc } = usePDF();
+  const { stop } = useTTS();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [zoomLevel, setZoomLevel] = useState<number>(100);
 
-  useEffect(() => {
-    async function loadDocument() {
-      try {
-        const doc = await getDocument(id as string);
-        if (!doc) {
-          setError('Document not found');
-          return;
-        }
-        setDocument(doc);
-      } catch (err) {
-        console.error('Error loading document:', err);
-        setError('Failed to load document');
-      } finally {
-        setIsLoading(false);
+  const loadDocument = useCallback(async () => {
+    if (!isLoading) return; // Prevent calls when not loading new doc
+    console.log('Loading new document (from page.tsx)');
+    try {
+      if (!id) {
+        setError('Document not found');
+        return;
       }
+      setCurrentDocument(id as string);
+    } catch (err) {
+      console.error('Error loading document:', err);
+      setError('Failed to load document');
+    } finally {
+      setIsLoading(false);
     }
+  }, [isLoading, id, setCurrentDocument]);
 
+  useEffect(() => {
     loadDocument();
-  }, [id, getDocument]);
+  }, [loadDocument]);
 
   const handleZoomIn = () => setZoomLevel(prev => Math.min(prev + 10, 200));
   const handleZoomOut = () => setZoomLevel(prev => Math.max(prev - 10, 50));
@@ -56,10 +55,7 @@ export default function PDFViewerPage() {
         <p className="text-red-500 mb-4">{error}</p>
         <Link
           href="/"
-          onClick={() => {
-            setText('');
-            stop();
-          }}
+          onClick={() => {clearCurrDoc(); stop();}}
           className="inline-flex items-center px-3 py-1 bg-base text-foreground rounded-lg hover:bg-offbase transition-colors"
         >
           <svg className="w-4 h-4 mr-2 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -73,16 +69,12 @@ export default function PDFViewerPage() {
 
   return (
     <>
-      <TTSPlayer />
       <div className="p-2 pb-2 border-b border-offbase">
         <div className="flex flex-wrap items-center justify-between">
           <div className="flex items-center gap-4">
             <Link
               href="/"
-              onClick={() => {
-                setText('');
-                stop();
-              }}
+              onClick={() => {clearCurrDoc(); stop();}}
               className="inline-flex items-center px-3 py-1 bg-base text-foreground rounded-lg hover:bg-offbase transition-colors"
             >
               <svg className="w-4 h-4 mr-2 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -109,7 +101,7 @@ export default function PDFViewerPage() {
             </div>
           </div>
           <h1 className="mr-2 text-md font-semibold text-foreground">
-            {isLoading ? 'Loading...' : document?.name}
+            {isLoading ? 'Loading...' : currDocName}
           </h1>
         </div>
       </div>
@@ -118,7 +110,7 @@ export default function PDFViewerPage() {
           <PDFSkeleton />
         </div>
       ) : (
-        <PDFViewer pdfData={document?.data} zoomLevel={zoomLevel} />
+        <PDFViewer zoomLevel={zoomLevel} />
       )}
     </>
   );
