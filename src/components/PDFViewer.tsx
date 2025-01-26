@@ -1,6 +1,6 @@
 'use client';
 
-import { RefObject } from 'react';
+import { RefObject, useCallback } from 'react';
 import { Document, Page } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
@@ -8,21 +8,34 @@ import { useState, useEffect, useRef } from 'react';
 import { PDFSkeleton } from './PDFSkeleton';
 import { useTTS } from '@/contexts/TTSContext';
 import { usePDF } from '@/contexts/PDFContext';
+import TTSPlayer from '@/components/player/TTSPlayer';
 
 interface PDFViewerProps {
-  pdfData: Blob | undefined;
   zoomLevel: number;
 }
 
-export function PDFViewer({ pdfData, zoomLevel }: PDFViewerProps) {
-  const [numPages, setNumPages] = useState<number>();
+export function PDFViewer({ zoomLevel }: PDFViewerProps) {
   const [containerWidth, setContainerWidth] = useState<number>(0);
-  const { setText, currentSentence, stopAndPlayFromIndex, isProcessing } = useTTS();
-  const [pdfText, setPdfText] = useState('');
-  const [pdfDataUrl, setPdfDataUrl] = useState<string>();
-  const [loadingError, setLoadingError] = useState<string>();
   const containerRef = useRef<HTMLDivElement>(null);
-  const { extractTextFromPDF, highlightPattern, clearHighlights, handleTextClick } = usePDF();
+
+  // TTS context
+  const {
+    currentSentence,
+    stopAndPlayFromIndex,
+    isProcessing
+  } = useTTS();
+
+  // PDF context
+  const {
+    highlightPattern,
+    clearHighlights,
+    handleTextClick,
+    onDocumentLoadSuccess,
+    currDocURL,
+    currDocPages,
+    currDocText,
+    currDocPage,
+  } = usePDF();
 
   // Add static styles once during component initialization
   const styleElement = document.createElement('style');
@@ -46,58 +59,6 @@ export function PDFViewer({ pdfData, zoomLevel }: PDFViewerProps) {
 
   useEffect(() => {
     /*
-     * Converts PDF blob to a data URL for display.
-     * Cleans up by clearing the data URL when component unmounts.
-     * 
-     * Dependencies:
-     * - pdfData: Re-run when the PDF blob changes to convert it to a new data URL
-     */
-    if (!pdfData) return;
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      setPdfDataUrl(reader.result as string);
-    };
-    reader.onerror = () => {
-      console.error('Error reading file:', reader.error);
-      setLoadingError('Failed to load PDF');
-    };
-    reader.readAsDataURL(pdfData);
-
-    return () => {
-      setPdfDataUrl(undefined);
-    };
-  }, [pdfData]);
-
-  useEffect(() => {
-    /*
-     * Extracts text content from the PDF once it's loaded.
-     * Sets the extracted text for both display and text-to-speech.
-     * 
-     * Dependencies:
-     * - pdfDataUrl: Re-run when the data URL is ready
-     * - extractTextFromPDF: Function from context that could change
-     * - setText: Function from context that could change
-     * - pdfData: Source PDF blob that's being processed
-     */
-    if (!pdfDataUrl || !pdfData) return;
-
-    const loadPdfText = async () => {
-      try {
-        const text = await extractTextFromPDF(pdfData);
-        setPdfText(text);
-        setText(text);
-      } catch (error) {
-        console.error('Error loading PDF text:', error);
-        setLoadingError('Failed to extract PDF text');
-      }
-    };
-
-    loadPdfText();
-  }, [pdfDataUrl, extractTextFromPDF, setText, pdfData]);
-
-  useEffect(() => {
-    /*
      * Sets up click event listeners for text selection in the PDF.
      * Cleans up by removing the event listener when component unmounts.
      * 
@@ -108,10 +69,11 @@ export function PDFViewer({ pdfData, zoomLevel }: PDFViewerProps) {
      */
     const container = containerRef.current;
     if (!container) return;
+    if (!currDocText) return;
 
     const handleClick = (event: MouseEvent) => handleTextClick(
       event,
-      pdfText,
+      currDocText,
       containerRef as RefObject<HTMLDivElement>,
       stopAndPlayFromIndex,
       isProcessing
@@ -120,7 +82,7 @@ export function PDFViewer({ pdfData, zoomLevel }: PDFViewerProps) {
     return () => {
       container.removeEventListener('click', handleClick);
     };
-  }, [pdfText, handleTextClick, stopAndPlayFromIndex, isProcessing]);
+  }, [currDocText, handleTextClick, stopAndPlayFromIndex, isProcessing]);
 
   useEffect(() => {
     /*
@@ -133,25 +95,27 @@ export function PDFViewer({ pdfData, zoomLevel }: PDFViewerProps) {
      * - highlightPattern: Function from context that could change
      * - clearHighlights: Function from context that could change
      */
+    if (!currDocText) return;
+
     const highlightTimeout = setTimeout(() => {
       if (containerRef.current) {
-        highlightPattern(pdfText, currentSentence || '', containerRef as RefObject<HTMLDivElement>);
+        highlightPattern(currDocText, currentSentence || '', containerRef as RefObject<HTMLDivElement>);
       }
-    }, 100);
+    }, 200);
 
     return () => {
       clearTimeout(highlightTimeout);
       clearHighlights();
     };
-  }, [pdfText, currentSentence, highlightPattern, clearHighlights]);
+  }, [currDocText, currentSentence, highlightPattern, clearHighlights]);
 
   // Add scale calculation function
-  const calculateScale = (pageWidth: number = 595) => {  // 595 is default PDF width in points
+  const calculateScale = useCallback((pageWidth = 595): number => {
     const margin = 24; // 24px padding on each side
     const targetWidth = containerWidth - margin;
     const baseScale = targetWidth / pageWidth;
     return baseScale * (zoomLevel / 100);
-  };
+  }, [containerWidth, zoomLevel]);
 
   // Add resize observer effect
   useEffect(() => {
@@ -168,48 +132,35 @@ export function PDFViewer({ pdfData, zoomLevel }: PDFViewerProps) {
     return () => observer.disconnect();
   }, []);
 
-  function onDocumentLoadSuccess({ numPages }: { numPages: number }): void {
-    setNumPages(numPages);
-  }
-
   return (
-    <div
-      ref={containerRef}
-      className="flex flex-col items-center overflow-auto max-h-[calc(100vh-100px)] w-full px-6"
-      style={{ WebkitTapHighlightColor: 'transparent' }}
-    >
-      {loadingError ? (
-        <div className="text-red-500 mb-4">{loadingError}</div>
-      ) : null}
+    <div ref={containerRef} className="flex flex-col items-center overflow-auto max-h-[calc(100vh-100px)] w-full px-6">
       <Document
         loading={<PDFSkeleton />}
         noData={<PDFSkeleton />}
-        file={pdfDataUrl}
-        onLoadSuccess={onDocumentLoadSuccess}
+        file={currDocURL}
+        onLoadSuccess={(pdf) => {
+          onDocumentLoadSuccess(pdf);
+          //handlePageChange(1); // Load first page text
+        }}
         className="flex flex-col items-center m-0" 
       >
-        {Array.from(
-          new Array(numPages),
-          (el, index) => (
-            <div key={`page_${index + 1}`}>
-              <div className="bg-offbase my-4 px-2 py-0.5 rounded-full w-fit">
-                <p className="text-xs">
-                  {index + 1} / {numPages}
-                </p>
-              </div>
-              <div className="flex justify-center">
-                <Page
-                  pageNumber={index + 1}
-                  renderAnnotationLayer={true}
-                  renderTextLayer={true}
-                  className="shadow-lg"
-                  scale={calculateScale()}
-                />
-              </div>
-            </div>
-          ),
-        )}
+        <div>
+          <div className="flex justify-center">
+            <Page
+              pageNumber={currDocPage}
+              renderAnnotationLayer={true}
+              renderTextLayer={true}
+              className="shadow-lg"
+              scale={calculateScale()}
+            />
+          </div>
+        </div>
       </Document>
+      <TTSPlayer 
+        currentPage={currDocPage}
+        numPages={currDocPages}
+        onPageChange={() => {}}
+      />
     </div>
   );
 }
