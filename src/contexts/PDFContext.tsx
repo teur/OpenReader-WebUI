@@ -39,7 +39,6 @@ interface PDFContextType {
   getDocument: (id: string) => Promise<PDFDocument | undefined>;
   removeDocument: (id: string) => Promise<void>;
   isLoading: boolean;
-  error: string | null;
   extractTextFromPDF: (pdfURL: string, currDocPage: number) => Promise<string>;
   highlightPattern: (text: string, pattern: string, containerRef: React.RefObject<HTMLDivElement>) => void;
   clearHighlights: () => void;
@@ -65,7 +64,6 @@ const PDFContext = createContext<PDFContextType | undefined>(undefined);
 export function PDFProvider({ children }: { children: ReactNode }) {
   const [documents, setDocuments] = useState<PDFDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   const { isDBReady } = useConfig();
   const {
@@ -86,12 +84,10 @@ export function PDFProvider({ children }: { children: ReactNode }) {
       if (!isDBReady) return;
 
       try {
-        setError(null);
         const docs = await indexedDBService.getAllDocuments();
         setDocuments(docs);
       } catch (error) {
         console.error('Failed to load documents:', error);
-        setError('Failed to load documents. Please try again.');
       } finally {
         setIsLoading(false);
       }
@@ -102,7 +98,6 @@ export function PDFProvider({ children }: { children: ReactNode }) {
 
   // Add a new document to IndexedDB
   const addDocument = useCallback(async (file: File): Promise<string> => {
-    setError(null);
     const id = uuidv4();
     const newDoc: PDFDocument = {
       id,
@@ -118,32 +113,27 @@ export function PDFProvider({ children }: { children: ReactNode }) {
       return id;
     } catch (error) {
       console.error('Failed to add document:', error);
-      setError('Failed to save the document. Please try again.');
       throw error;
     }
   }, []);
 
   // Get a document by ID from IndexedDB
   const getDocument = useCallback(async (id: string): Promise<PDFDocument | undefined> => {
-    setError(null);
     try {
       return await indexedDBService.getDocument(id);
     } catch (error) {
       console.error('Failed to get document:', error);
-      setError('Failed to retrieve the document. Please try again.');
       return undefined;
     }
   }, []);
 
   // Remove a document by ID from IndexedDB
   const removeDocument = useCallback(async (id: string): Promise<void> => {
-    setError(null);
     try {
       await indexedDBService.removeDocument(id);
       setDocuments((prev) => prev.filter((doc) => doc.id !== id));
     } catch (error) {
       console.error('Failed to remove document:', error);
-      setError('Failed to remove the document. Please try again.');
       throw error;
     }
   }, []);
@@ -241,7 +231,6 @@ export function PDFProvider({ children }: { children: ReactNode }) {
       setTTSText(text);
     } catch (error) {
       console.error('Error loading PDF text:', error);
-      setError('Failed to extract PDF text');
     }
   }, [currDocURL, currDocPage, extractTextFromPDF, setTTSText]);
 
@@ -254,7 +243,6 @@ export function PDFProvider({ children }: { children: ReactNode }) {
 
   // Set curr document
   const setCurrentDocument = useCallback(async (id: string): Promise<void> => {
-    setError(null);
     try {
       const doc = await getDocument(id);
       if (doc) {
@@ -265,7 +253,6 @@ export function PDFProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       console.error('Failed to get document URL:', error);
-      setError('Failed to retrieve the document. Please try again.');
     }
   }, [getDocument]);
 
@@ -463,7 +450,6 @@ export function PDFProvider({ children }: { children: ReactNode }) {
       getDocument,
       removeDocument,
       isLoading,
-      error,
       extractTextFromPDF,
       highlightPattern,
       clearHighlights,
@@ -483,7 +469,6 @@ export function PDFProvider({ children }: { children: ReactNode }) {
       getDocument,
       removeDocument,
       isLoading,
-      error,
       extractTextFromPDF,
       highlightPattern,
       clearHighlights,

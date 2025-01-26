@@ -1,10 +1,9 @@
 'use client';
 
-import { RefObject, useCallback } from 'react';
+import { RefObject, useCallback, useState, useEffect, useRef } from 'react';
 import { Document, Page } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
-import { useState, useEffect, useRef } from 'react';
 import { PDFSkeleton } from './PDFSkeleton';
 import { useTTS } from '@/contexts/TTSContext';
 import { usePDF } from '@/contexts/PDFContext';
@@ -109,13 +108,25 @@ export function PDFViewer({ zoomLevel }: PDFViewerProps) {
     };
   }, [currDocText, currentSentence, highlightPattern, clearHighlights]);
 
-  // Add scale calculation function
-  const calculateScale = useCallback((pageWidth = 595): number => {
+  // Add page dimensions state
+  const [pageWidth, setPageWidth] = useState<number>(595); // default A4 width
+  const [pageHeight, setPageHeight] = useState<number>(842); // default A4 height
+
+  // Modify scale calculation function to handle orientation
+  const calculateScale = useCallback((width = pageWidth, height = pageHeight): number => {
     const margin = 24; // 24px padding on each side
+    const containerHeight = window.innerHeight - 100; // approximate visible height
     const targetWidth = containerWidth - margin;
-    const baseScale = targetWidth / pageWidth;
+    const targetHeight = containerHeight - margin;
+
+    // Calculate scales based on both dimensions
+    const scaleByWidth = targetWidth / width;
+    const scaleByHeight = targetHeight / height;
+
+    // Use the smaller scale to ensure the page fits both dimensions
+    const baseScale = Math.min(scaleByWidth, scaleByHeight);
     return baseScale * (zoomLevel / 100);
-  }, [containerWidth, zoomLevel]);
+  }, [containerWidth, zoomLevel, pageWidth, pageHeight]);
 
   // Add resize observer effect
   useEffect(() => {
@@ -152,6 +163,10 @@ export function PDFViewer({ zoomLevel }: PDFViewerProps) {
               renderTextLayer={true}
               className="shadow-lg"
               scale={calculateScale()}
+              onLoadSuccess={(page) => {
+                setPageWidth(page.originalWidth);
+                setPageHeight(page.originalHeight);
+              }}
             />
           </div>
         </div>
