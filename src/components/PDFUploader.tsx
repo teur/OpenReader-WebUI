@@ -9,7 +9,7 @@ interface PDFUploaderProps {
 }
 
 export function PDFUploader({ className = '' }: PDFUploaderProps) {
-  const { addDocument, error: contextError } = usePDF();
+  const { addDocument } = usePDF();
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,13 +21,13 @@ export function PDFUploader({ className = '' }: PDFUploaderProps) {
       try {
         await addDocument(file);
       } catch (err) {
-        setError(contextError || 'Failed to upload PDF. Please try again.');
+        setError('Failed to upload PDF. Please try again.');
         console.error('Upload error:', err);
       } finally {
         setIsUploading(false);
       }
     }
-  }, [addDocument, contextError]);
+  }, [addDocument]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,

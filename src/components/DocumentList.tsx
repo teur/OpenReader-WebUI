@@ -5,7 +5,7 @@ import { Transition, TransitionChild, DialogPanel, DialogTitle } from '@headless
 import { Fragment, useState } from 'react';
 
 export function DocumentList() {
-  const { documents, removeDocument, isLoading, error } = usePDF();
+  const { documents, removeDocument, isLoading } = usePDF();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [documentToDelete, setDocumentToDelete] = useState<{ id: string; name: string } | null>(null);
 
@@ -25,14 +25,6 @@ export function DocumentList() {
     return (
       <div className="w-full text-center text-muted">
         Loading documents...
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="w-full text-center text-red-500">
-        {error}
       </div>
     );
   }
