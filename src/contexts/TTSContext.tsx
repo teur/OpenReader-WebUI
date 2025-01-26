@@ -53,7 +53,9 @@ interface TTSContextType {
   setCurrentIndex: (index: number) => void;
   currDocPage: number;
   currDocPages: number | undefined;
-  setCurrDocPages: (pages: number) => void;
+  setCurrDocPages: (num: number) => void;
+  incrementPage: (num?: number) => void;
+  skipToPage: (page: number) => void;
 }
 
 const TTSContext = createContext<TTSContextType | undefined>(undefined);
@@ -114,6 +116,19 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     });
   }, [abortAudio]);
 
+  const skipToPage = useCallback((page: number) => {
+    abortAudio();
+    setIsPlaying(false);
+    setNextPageLoading(true);
+    setCurrentIndex(0);
+    setCurrDocPage(page);
+  }, [abortAudio]);
+
+  const incrementPage = useCallback((num = 1) => {
+    setNextPageLoading(true);
+    setCurrDocPage((prev) => prev + num);
+  }, []);
+
   const advance = useCallback(async (backwards = false) => {
     setCurrentIndex((prev) => {
       const nextIndex = prev + (backwards ? -1 : 1);
@@ -123,15 +138,13 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
       } else if (nextIndex >= sentences.length && currDocPage < currDocPages!) {
         console.log('Advancing to next page:', currDocPage + 1);
 
-        setNextPageLoading(true);
-        setCurrDocPage(currDocPage + 1);
+        incrementPage();
 
         return 0;
       } else if (nextIndex < 0 && currDocPage > 1) {
         console.log('Advancing to previous page:', currDocPage - 1);
 
-        setNextPageLoading(true);
-        setCurrDocPage(currDocPage - 1);
+        incrementPage(-1);
 
         return 0;
       } else if (nextIndex >= sentences.length && currDocPage >= currDocPages!) {
@@ -475,6 +488,8 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     currDocPage,
     currDocPages,
     setCurrDocPages,
+    incrementPage,
+    skipToPage,
   };
 
   if (configIsLoading) {

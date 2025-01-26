@@ -13,10 +13,9 @@ import { VoicesControl } from '@/components/player/VoicesControl';
 import { SpeedControl } from '@/components/player/SpeedControl';
 import { Navigator } from '@/components/player/Navigator';
 
-export default function TTSPlayer({ currentPage, numPages, onPageChange }: {
+export default function TTSPlayer({ currentPage, numPages }: {
   currentPage: number;
   numPages: number | undefined;
-  onPageChange: (page: number) => void;
 }) {
   const {
     isPlaying,
@@ -29,6 +28,7 @@ export default function TTSPlayer({ currentPage, numPages, onPageChange }: {
     voice,
     setVoiceAndRestart,
     availableVoices,
+    skipToPage,
   } = useTTS();
 
   return (
@@ -38,7 +38,7 @@ export default function TTSPlayer({ currentPage, numPages, onPageChange }: {
         <SpeedControl speed={speed} setSpeedAndRestart={setSpeedAndRestart} />
 
         {/* Page Navigation */}
-        <Navigator currentPage={currentPage} numPages={numPages} onPageChange={onPageChange} />
+        <Navigator currentPage={currentPage} numPages={numPages} skipToPage={skipToPage} />
 
         {/* Playback Controls */}
         <Button

@@ -159,7 +159,6 @@ export function PDFViewer({ zoomLevel }: PDFViewerProps) {
       <TTSPlayer 
         currentPage={currDocPage}
         numPages={currDocPages}
-        onPageChange={() => {}}
       />
     </div>
   );
