@@ -416,11 +416,8 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
   const stopAndPlayFromIndex = useCallback((index: number) => {
     abortAudio();
     
-    // Set the states in the next tick to ensure clean state
-    setTimeout(() => {
-      setCurrentIndex(index);
-      setIsPlaying(true);
-    }, 50);
+    setCurrentIndex(index);
+    setIsPlaying(true);
   }, [abortAudio]);
 
   const setCurrentIndexWithoutPlay = useCallback((index: number) => {
@@ -437,11 +434,8 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     if (isPlaying) {
       const currentIdx = currentIndex;
       stop();
-      // Small delay to ensure audio is fully stopped
-      setTimeout(() => {
-        setCurrentIndex(currentIdx);
-        setIsPlaying(true);
-      }, 50);
+      setCurrentIndex(currentIdx);
+      setIsPlaying(true);
     }
   }, [isPlaying, currentIndex, stop]);
 
@@ -453,11 +447,8 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     if (isPlaying) {
       const currentIdx = currentIndex;
       stop();
-      // Small delay to ensure audio is fully stopped
-      setTimeout(() => {
-        setCurrentIndex(currentIdx);
-        setIsPlaying(true);
-      }, 50);
+      setCurrentIndex(currentIdx);
+      setIsPlaying(true);
     }
   }, [isPlaying, currentIndex, stop]);
 
