@@ -3,19 +3,39 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { getItem, indexedDBService, setItem } from '@/services/indexedDB';
 
+export type ViewType = 'single' | 'dual' | 'scroll';
 interface ConfigContextType {
   apiKey: string;
   baseUrl: string;
-  updateConfig: (newConfig: Partial<{ apiKey: string; baseUrl: string }>) => Promise<void>;
+  viewType: ViewType;
+  voiceSpeed: number;
+  voice: string;
+  updateConfig: (newConfig: Partial<{ apiKey: string; baseUrl: string; viewType: ViewType }>) => Promise<void>;
+  updateConfigKey: <K extends keyof ConfigValues>(key: K, value: ConfigValues[K]) => Promise<void>;
   isLoading: boolean;
   isDBReady: boolean;
 }
 
+// Add this type to help with type safety
+type ConfigValues = {
+  apiKey: string;
+  baseUrl: string;
+  viewType: ViewType;
+  voiceSpeed: number;
+  voice: string;
+};
+
 const ConfigContext = createContext<ConfigContextType | undefined>(undefined);
 
 export function ConfigProvider({ children }: { children: React.ReactNode }) {
+  // Config state
   const [apiKey, setApiKey] = useState<string>('');
   const [baseUrl, setBaseUrl] = useState<string>('');
+  const [viewType, setViewType] = useState<ViewType>('single');
+  const [voiceSpeed, setVoiceSpeed] = useState<number>(1);
+  const [voice, setVoice] = useState<string>('af_sarah');
+
+
   const [isLoading, setIsLoading] = useState(true);
   const [isDBReady, setIsDBReady] = useState(false);
 
@@ -29,13 +49,15 @@ export function ConfigProvider({ children }: { children: React.ReactNode }) {
         // Now load config
         const cachedApiKey = await getItem('apiKey');
         const cachedBaseUrl = await getItem('baseUrl');
+        const cachedViewType = await getItem('viewType');
+        const cachedVoiceSpeed = await getItem('voiceSpeed');
+        const cachedVoice = await getItem('voice');
 
-        if (cachedApiKey) {
-          console.log('Cached API key found:', cachedApiKey);
-        }
-        if (cachedBaseUrl) {
-          console.log('Cached base URL found:', cachedBaseUrl);
-        }
+        if (cachedApiKey) console.log('Cached API key found:', cachedApiKey);
+        if (cachedBaseUrl) console.log('Cached base URL found:', cachedBaseUrl);
+        if (cachedViewType) console.log('Cached view type found:', cachedViewType);
+        if (cachedVoiceSpeed) console.log('Cached voice speed found:', cachedVoiceSpeed);
+        if (cachedVoice) console.log('Cached voice found:', cachedVoice);
 
         // If not in cache, use env variables
         const defaultApiKey = process.env.NEXT_PUBLIC_OPENAI_API_KEY || '';
@@ -44,6 +66,9 @@ export function ConfigProvider({ children }: { children: React.ReactNode }) {
         // Set the values
         setApiKey(cachedApiKey || defaultApiKey);
         setBaseUrl(cachedBaseUrl || defaultBaseUrl);
+        setViewType((cachedViewType || 'single') as ViewType);
+        setVoiceSpeed(parseFloat(cachedVoiceSpeed || '1'));
+        setVoice(cachedVoice || 'af_sarah');
 
         // If not in cache, save to cache
         if (!cachedApiKey) {
@@ -51,6 +76,9 @@ export function ConfigProvider({ children }: { children: React.ReactNode }) {
         }
         if (!cachedBaseUrl) {
           await setItem('baseUrl', defaultBaseUrl);
+        }
+        if (!cachedViewType) {
+          await setItem('viewType', 'single');
         }
         
       } catch (error) {
@@ -79,8 +107,44 @@ export function ConfigProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const updateConfigKey = async <K extends keyof ConfigValues>(key: K, value: ConfigValues[K]) => {
+    try {
+      await setItem(key, value.toString());
+      switch (key) {
+        case 'apiKey':
+          setApiKey(value as string);
+          break;
+        case 'baseUrl':
+          setBaseUrl(value as string);
+          break;
+        case 'viewType':
+          setViewType(value as ViewType);
+          break;
+        case 'voiceSpeed':
+          setVoiceSpeed(value as number);
+          break;
+        case 'voice':
+          setVoice(value as string);
+          break;
+      }
+    } catch (error) {
+      console.error(`Error updating config key ${key}:`, error);
+      throw error;
+    }
+  };
+
   return (
-    <ConfigContext.Provider value={{ apiKey, baseUrl, updateConfig, isLoading, isDBReady }}>
+    <ConfigContext.Provider value={{ 
+      apiKey, 
+      baseUrl, 
+      viewType, 
+      voiceSpeed,
+      voice,
+      updateConfig, 
+      updateConfigKey,
+      isLoading, 
+      isDBReady 
+    }}>
       {children}
     </ConfigContext.Provider>
   );

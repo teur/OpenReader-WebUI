@@ -8,6 +8,7 @@ import { PDFSkeleton } from './PDFSkeleton';
 import { useTTS } from '@/contexts/TTSContext';
 import { usePDF } from '@/contexts/PDFContext';
 import TTSPlayer from '@/components/player/TTSPlayer';
+import { useConfig } from '@/contexts/ConfigContext';
 
 interface PDFViewerProps {
   zoomLevel: number;
@@ -16,6 +17,9 @@ interface PDFViewerProps {
 export function PDFViewer({ zoomLevel }: PDFViewerProps) {
   const [containerWidth, setContainerWidth] = useState<number>(0);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Config context
+  const { viewType } = useConfig();
 
   // TTS context
   const {
@@ -112,21 +116,36 @@ export function PDFViewer({ zoomLevel }: PDFViewerProps) {
   const [pageWidth, setPageWidth] = useState<number>(595); // default A4 width
   const [pageHeight, setPageHeight] = useState<number>(842); // default A4 height
 
-  // Modify scale calculation function to handle orientation
+  // Calculate which pages to show based on viewType
+  const leftPage = viewType === 'dual' 
+    ? (currDocPage % 2 === 0 ? currDocPage - 1 : currDocPage)
+    : currDocPage;
+  const rightPage = viewType === 'dual'
+    ? (currDocPage % 2 === 0 ? currDocPage : currDocPage + 1)
+    : null;
+
+  // Modify scale calculation to account for view type
   const calculateScale = useCallback((width = pageWidth, height = pageHeight): number => {
-    const margin = 24; // 24px padding on each side
-    const containerHeight = window.innerHeight - 100; // approximate visible height
-    const targetWidth = containerWidth - margin;
+    const margin = viewType === 'dual' ? 48 : 24; // adjust margin based on view type
+    const containerHeight = window.innerHeight - 100;
+    const targetWidth = viewType === 'dual'
+      ? (containerWidth - margin) / 2 // divide by 2 for dual pages
+      : containerWidth - margin;
     const targetHeight = containerHeight - margin;
 
-    // Calculate scales based on both dimensions
+    if (viewType === 'scroll') {
+      // For scroll mode, use a more comfortable width-based scale
+      // Use 75% of the width-based scale to make it less zoomed in
+      const scaleByWidth = (targetWidth / width) * 0.75;
+      return scaleByWidth * (zoomLevel / 100);
+    }
+
     const scaleByWidth = targetWidth / width;
     const scaleByHeight = targetHeight / height;
 
-    // Use the smaller scale to ensure the page fits both dimensions
     const baseScale = Math.min(scaleByWidth, scaleByHeight);
     return baseScale * (zoomLevel / 100);
-  }, [containerWidth, zoomLevel, pageWidth, pageHeight]);
+  }, [containerWidth, zoomLevel, pageWidth, pageHeight, viewType]);
 
   // Add resize observer effect
   useEffect(() => {
@@ -151,24 +170,61 @@ export function PDFViewer({ zoomLevel }: PDFViewerProps) {
         file={currDocURL}
         onLoadSuccess={(pdf) => {
           onDocumentLoadSuccess(pdf);
-          //handlePageChange(1); // Load first page text
         }}
         className="flex flex-col items-center m-0" 
       >
         <div>
-          <div className="flex justify-center">
-            <Page
-              pageNumber={currDocPage}
-              renderAnnotationLayer={true}
-              renderTextLayer={true}
-              className="shadow-lg"
-              scale={calculateScale()}
-              onLoadSuccess={(page) => {
-                setPageWidth(page.originalWidth);
-                setPageHeight(page.originalHeight);
-              }}
-            />
-          </div>
+          {viewType === 'scroll' ? (
+            // Scroll mode: render all pages
+            <div className="flex flex-col gap-4">
+              {currDocPages && [...Array(currDocPages)].map((_, i) => (
+                <Page
+                  key={`page_${i + 1}`}
+                  pageNumber={i + 1}
+                  renderAnnotationLayer={true}
+                  renderTextLayer={i + 1 === currDocPage}
+                  className="shadow-lg"
+                  scale={calculateScale()}
+                  onLoadSuccess={(page) => {
+                    setPageWidth(page.originalWidth);
+                    setPageHeight(page.originalHeight);
+                  }}
+                />
+              ))}
+            </div>
+          ) : (
+            // Single/Dual page mode
+            <div className="flex justify-center gap-4">
+              {currDocPages && leftPage > 0 && (
+                <Page
+                  key={`page_${leftPage}`}
+                  pageNumber={leftPage}
+                  renderAnnotationLayer={true}
+                  renderTextLayer={leftPage === currDocPage}
+                  className="shadow-lg"
+                  scale={calculateScale()}
+                  onLoadSuccess={(page) => {
+                    setPageWidth(page.originalWidth);
+                    setPageHeight(page.originalHeight);
+                  }}
+                />
+              )}
+              {currDocPages && rightPage && rightPage <= currDocPages && viewType === 'dual' && (
+                <Page
+                  key={`page_${rightPage}`}
+                  pageNumber={rightPage}
+                  renderAnnotationLayer={true}
+                  renderTextLayer={rightPage === currDocPage}
+                  className="shadow-lg"
+                  scale={calculateScale()}
+                  onLoadSuccess={(page) => {
+                    setPageWidth(page.originalWidth);
+                    setPageHeight(page.originalHeight);
+                  }}
+                />
+              )}
+            </div>
+          )}
         </div>
       </Document>
       <TTSPlayer 

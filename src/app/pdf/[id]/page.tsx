@@ -8,6 +8,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { PDFSkeleton } from '@/components/PDFSkeleton';
 import { useTTS } from '@/contexts/TTSContext';
 import { Button } from '@headlessui/react';
+import { PDFViewSettings } from '@/components/PDFViewSettings';
+import { SettingsIcon } from '@/components/icons/Icons';
 
 // Dynamic import for client-side rendering only
 const PDFViewer = dynamic(
@@ -25,6 +27,7 @@ export default function PDFViewerPage() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [zoomLevel, setZoomLevel] = useState<number>(100);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const loadDocument = useCallback(async () => {
     if (!isLoading) return; // Prevent calls when not loading new doc
@@ -72,7 +75,7 @@ export default function PDFViewerPage() {
     <>
       <div className="p-2 pb-2 border-b border-offbase">
         <div className="flex flex-wrap items-center justify-between">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             <Link
               href="/"
               onClick={() => {clearCurrDoc(); stop();}}
@@ -100,6 +103,14 @@ export default function PDFViewerPage() {
                 ＋
               </Button>
             </div>
+            <Button
+              onClick={() => setIsSettingsOpen(true)}
+              className="rounded-full p-2 text-foreground hover:bg-offbase focus:bg-offbase 
+                       focus:outline-none focus:ring-2 focus:ring-accent transition-colors"
+              aria-label="View Settings"
+            >
+              <SettingsIcon className="w-5 h-5 hover:animate-spin-slow" />
+            </Button>
           </div>
           <h1 className="mr-2 text-md font-semibold text-foreground truncate">
             {isLoading ? 'Loading...' : currDocName}
@@ -113,6 +124,7 @@ export default function PDFViewerPage() {
       ) : (
         <PDFViewer zoomLevel={zoomLevel} />
       )}
+      <PDFViewSettings isOpen={isSettingsOpen} setIsOpen={setIsSettingsOpen} />
     </>
   );
 }
