@@ -93,6 +93,12 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
   // Audio cache using LRUCache with a maximum size of 50 entries
   const audioCacheRef = useRef(new LRUCache<string, AudioBuffer>({ max: 50 }));
 
+  // Update local state when config changes
+  useEffect(() => {
+    setSpeed(voiceSpeed);
+    setVoice(configVoice);
+  }, [voiceSpeed, configVoice]);
+
   const setText = useCallback((text: string) => {
     setCurrentText(text);
     console.log('Setting page text:', text);
@@ -352,12 +358,7 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
       setIsProcessing(false);
       //setIsPlaying(false); // Stop playback on error
       
-      if (error instanceof Error && 
-         (error.message.includes('Unable to decode audio data') || 
-          error.message.includes('EncodingError'))) {
-        console.log('Skipping problematic sentence:', sentence);
-        advance(); // Skip problematic sentence
-      }
+      advance(); // Skip problematic sentence
     }
   }, [isPlaying, processSentence, advance]);
 
@@ -434,12 +435,11 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     audioCacheRef.current.clear();
 
     if (isPlaying) {
-      const currentIdx = currentIndex;
-      stop();
-      setCurrentIndex(currentIdx);
+      setIsPlaying(false);
+      abortAudio();
       setIsPlaying(true);
     }
-  }, [isPlaying, currentIndex, stop, updateConfigKey]);
+  }, [isPlaying, abortAudio, updateConfigKey]);
 
   const setVoiceAndRestart = useCallback((newVoice: string) => {
     setVoice(newVoice);
@@ -448,12 +448,11 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     audioCacheRef.current.clear();
 
     if (isPlaying) {
-      const currentIdx = currentIndex;
-      stop();
-      setCurrentIndex(currentIdx);
+      setIsPlaying(false);
+      abortAudio();
       setIsPlaying(true);
     }
-  }, [isPlaying, currentIndex, stop, updateConfigKey]);
+  }, [isPlaying, abortAudio, updateConfigKey]);
 
   const value = {
     isPlaying,
