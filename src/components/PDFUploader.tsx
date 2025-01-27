@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { usePDF } from '@/contexts/PDFContext';
+import { UploadIcon } from '@/components/icons/Icons';
 
 interface PDFUploaderProps {
   className?: string;
@@ -42,7 +43,7 @@ export function PDFUploader({ className = '' }: PDFUploaderProps) {
     <div
       {...getRootProps()}
       className={`
-        w-full p-8 border-2 border-dashed rounded-lg
+        w-full py-5 px-3 border-2 border-dashed rounded-lg
         ${isDragActive ? 'border-accent bg-base' : 'border-muted'}
         transition-colors duration-200 ease-in-out
         ${isUploading ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:border-accent hover:bg-base'}
@@ -51,20 +52,7 @@ export function PDFUploader({ className = '' }: PDFUploaderProps) {
     >
       <input {...getInputProps()} />
       <div className="flex flex-col items-center justify-center text-center">
-        <svg
-          className="w-12 h-12 mb-4 text-muted"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-          />
-        </svg>
+        <UploadIcon className="w-10 h-10 mb-2 text-muted" />
 
         {isUploading ? (
           <p className="text-lg font-semibold text-foreground">
@@ -76,7 +64,7 @@ export function PDFUploader({ className = '' }: PDFUploaderProps) {
               {isDragActive ? 'Drop your PDF here' : 'Drop your PDF here, or click to select'}
             </p>
             <p className="text-sm text-muted">
-              Only PDF files are accepted
+              Only PDF files are currently accepted
             </p>
             {error && <p className="mt-2 text-sm text-red-500">{error}</p>}
           </>

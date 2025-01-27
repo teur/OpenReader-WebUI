@@ -2,6 +2,7 @@ import "./globals.css";
 import { Providers } from "./providers";
 import { Metadata } from "next";
 import Script from "next/script";
+import { Footer } from "@/components/Footer";
 
 export const metadata: Metadata = {
   title: "OpenReader WebUI",
@@ -30,6 +31,7 @@ export default function RootLayout({
               <div className="bg-base rounded-lg shadow-lg">
                 {children}
               </div>
+              <Footer />
             </div>
           </div>
         </Providers>

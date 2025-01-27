@@ -23,9 +23,7 @@ export default function TTSPlayer({ currentPage, numPages }: {
     skipForward,
     skipBackward,
     isProcessing,
-    speed,
     setSpeedAndRestart,
-    voice,
     setVoiceAndRestart,
     availableVoices,
     skipToPage,
@@ -35,7 +33,7 @@ export default function TTSPlayer({ currentPage, numPages }: {
     <div className={`fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 transition-opacity duration-300`}>
       <div className="bg-base dark:bg-base rounded-full shadow-lg px-4 py-1 flex items-center space-x-1 relative">
         {/* Speed control */}
-        <SpeedControl speed={speed} setSpeedAndRestart={setSpeedAndRestart} />
+        <SpeedControl setSpeedAndRestart={setSpeedAndRestart} />
 
         {/* Page Navigation */}
         <Navigator currentPage={currentPage} numPages={numPages} skipToPage={skipToPage} />
@@ -68,7 +66,7 @@ export default function TTSPlayer({ currentPage, numPages }: {
         </Button>
 
         {/* Voice control */}
-        <VoicesControl voice={voice} availableVoices={availableVoices} setVoiceAndRestart={setVoiceAndRestart} />
+        <VoicesControl availableVoices={availableVoices} setVoiceAndRestart={setVoiceAndRestart} />
       </div>
     </div>
   );

@@ -19,8 +19,7 @@ const speedOptions = [
   { value: 3, label: '3x' },
 ];
 
-export const SpeedControl = ({ speed, setSpeedAndRestart }: {
-  speed: number;
+export const SpeedControl = ({ setSpeedAndRestart }: {
   setSpeedAndRestart: (speed: number) => void;
 }) => {
   const { voiceSpeed } = useConfig();

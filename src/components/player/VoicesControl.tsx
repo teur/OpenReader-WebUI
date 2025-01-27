@@ -7,8 +7,7 @@ import {
 import { ChevronUpDownIcon } from '@/components/icons/Icons';
 import { useConfig } from '@/contexts/ConfigContext';
 
-export const VoicesControl = ({ voice, availableVoices, setVoiceAndRestart }: {
-  voice: string;
+export const VoicesControl = ({ availableVoices, setVoiceAndRestart }: {
   availableVoices: string[];
   setVoiceAndRestart: (voice: string) => void;
 }) => {

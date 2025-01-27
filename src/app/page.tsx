@@ -12,7 +12,7 @@ export default function Home() {
   return (
     <div className='p-4'>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-center flex-grow">OpenReader WebUI</h1>
+        <h1 className="text-xl font-bold text-center flex-grow">OpenReader WebUI</h1>
         <button
           onClick={() => setIsSettingsOpen(true)}
           className="rounded-full p-2.5 text-foreground hover:bg-base focus:bg-base 
