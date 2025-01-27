@@ -61,7 +61,14 @@ interface TTSContextType {
 const TTSContext = createContext<TTSContextType | undefined>(undefined);
 
 export function TTSProvider({ children }: { children: React.ReactNode }) {
-  const { apiKey: openApiKey, baseUrl: openApiBaseUrl, isLoading: configIsLoading } = useConfig();
+  const { 
+    apiKey: openApiKey, 
+    baseUrl: openApiBaseUrl, 
+    isLoading: configIsLoading,
+    voiceSpeed,
+    voice: configVoice,
+    updateConfigKey
+  } = useConfig();
 
   // Move openai initialization to a ref to avoid breaking hooks rules
   const openaiRef = useRef<OpenAI | null>(null);
@@ -75,8 +82,8 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
   const [activeHowl, setActiveHowl] = useState<Howl | null>(null);
   const [audioQueue] = useState<AudioBuffer[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [speed, setSpeed] = useState(1);
-  const [voice, setVoice] = useState('alloy');
+  const [speed, setSpeed] = useState(voiceSpeed);
+  const [voice, setVoice] = useState(configVoice);
   const [availableVoices, setAvailableVoices] = useState<string[]>([]);
 
   const [currDocPage, setCurrDocPage] = useState<number>(1);
@@ -422,6 +429,7 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
 
   const setSpeedAndRestart = useCallback((newSpeed: number) => {
     setSpeed(newSpeed);
+    updateConfigKey('voiceSpeed', newSpeed);
     // Clear the audio cache since it contains audio at the old speed
     audioCacheRef.current.clear();
 
@@ -431,10 +439,11 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
       setCurrentIndex(currentIdx);
       setIsPlaying(true);
     }
-  }, [isPlaying, currentIndex, stop]);
+  }, [isPlaying, currentIndex, stop, updateConfigKey]);
 
   const setVoiceAndRestart = useCallback((newVoice: string) => {
     setVoice(newVoice);
+    updateConfigKey('voice', newVoice);
     // Clear the audio cache since it contains audio with the old voice
     audioCacheRef.current.clear();
 
@@ -444,7 +453,7 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
       setCurrentIndex(currentIdx);
       setIsPlaying(true);
     }
-  }, [isPlaying, currentIndex, stop]);
+  }, [isPlaying, currentIndex, stop, updateConfigKey]);
 
   const value = {
     isPlaying,

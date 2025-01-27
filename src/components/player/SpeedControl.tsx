@@ -5,6 +5,7 @@ import {
   ListboxOptions,
 } from '@headlessui/react';
 import { ChevronUpDownIcon } from '@/components/icons/Icons';
+import { useConfig } from '@/contexts/ConfigContext';
 
 const speedOptions = [
   { value: 0.5, label: '0.5x' },
@@ -22,11 +23,16 @@ export const SpeedControl = ({ speed, setSpeedAndRestart }: {
   speed: number;
   setSpeedAndRestart: (speed: number) => void;
 }) => {
+  const { voiceSpeed } = useConfig();
+
+  // Use voiceSpeed as the source of truth
+  const currentSpeed = voiceSpeed;
+
   return (
     <div className="relative">
-      <Listbox value={speed} onChange={setSpeedAndRestart}>
+      <Listbox value={currentSpeed} onChange={setSpeedAndRestart}>
         <ListboxButton className="flex items-center space-x-1 bg-transparent text-foreground text-sm focus:outline-none cursor-pointer hover:bg-offbase rounded pl-2 pr-1 py-1">
-          <span>{speed}x</span>
+          <span>{currentSpeed}x</span>
           <ChevronUpDownIcon className="h-3 w-3" />
         </ListboxButton>
         <ListboxOptions className="absolute bottom-full mb-1 w-24 overflow-auto rounded-lg bg-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
