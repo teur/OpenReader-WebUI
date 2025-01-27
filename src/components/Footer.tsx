@@ -9,7 +9,7 @@ export function Footer() {
             <PopoverButton className="hover:text-foreground transition-colors">
               Privacy info
             </PopoverButton>
-            <PopoverPanel anchor="bottom start" className="bg-base p-4 rounded-lg shadow-lg w-64">
+            <PopoverPanel anchor="top" className="bg-base p-4 rounded-lg shadow-lg w-64">
               <p>No data collection. Documents are uploaded to your local browser cache.</p>
               <p className='mt-3'>Each sentence of the document you are viewing is sent to my FastAPI server for audio generation, no requests or data is collected.</p>
             </PopoverPanel>
