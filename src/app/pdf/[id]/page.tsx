@@ -50,7 +50,7 @@ export default function PDFViewerPage() {
     loadDocument();
   }, [loadDocument]);
 
-  const handleZoomIn = () => setZoomLevel(prev => Math.min(prev + 10, 200));
+  const handleZoomIn = () => setZoomLevel(prev => Math.min(prev + 10, 300));
   const handleZoomOut = () => setZoomLevel(prev => Math.max(prev - 10, 50));
 
   if (error) {
