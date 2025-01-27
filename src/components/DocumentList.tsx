@@ -1,6 +1,6 @@
 import { usePDF } from '@/contexts/PDFContext';
 import Link from 'next/link';
-import { Dialog } from '@headlessui/react';
+import { Button, Dialog } from '@headlessui/react';
 import { Transition, TransitionChild, DialogPanel, DialogTitle } from '@headlessui/react';
 import { Fragment, useState } from 'react';
 
@@ -38,7 +38,7 @@ export function DocumentList() {
   }
 
   return (
-    <div className="w-full max-w-3xl mx-auto">
+    <div className="w-full mx-auto">
       <h2 className="text-xl font-semibold mb-4 text-foreground">Your Documents</h2>
       <div className="bg-background rounded-lg shadow p-2 space-y-2">
         {documents.map((doc) => (
@@ -64,14 +64,14 @@ export function DocumentList() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                   </svg>
                 </div>
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 transform transition-transform duration-200 ease-in-out hover:scale-[1.02]">
                   <p className="text-foreground font-medium truncate">{doc.name}</p>
                   <p className="text-sm text-muted truncate">
                     {(doc.size / 1024 / 1024).toFixed(2)} MB
                   </p>
                 </div>
               </Link>
-              <button
+              <Button
                 onClick={() => {
                   setDocumentToDelete({ id: doc.id, name: doc.name });
                   setIsDeleteDialogOpen(true);
@@ -82,7 +82,7 @@ export function DocumentList() {
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
-              </button>
+              </Button>
             </div>
           </Transition>
         ))}
@@ -131,20 +131,20 @@ export function DocumentList() {
                   </div>
 
                   <div className="mt-4 flex justify-end space-x-3">
-                    <button
+                    <Button
                       type="button"
                       className="inline-flex justify-center rounded-md border border-transparent bg-base px-4 py-2 text-sm font-medium text-foreground hover:bg-base/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
                       onClick={() => setIsDeleteDialogOpen(false)}
                     >
                       Cancel
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="button"
                       className="inline-flex justify-center rounded-md border border-transparent bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2"
                       onClick={handleDelete}
                     >
                       Delete
-                    </button>
+                    </Button>
                   </div>
                 </DialogPanel>
               </TransitionChild>

@@ -1,7 +1,7 @@
 'use client';
 
 import { Fragment } from 'react';
-import { Dialog, DialogPanel, DialogTitle, Transition, TransitionChild, Listbox, ListboxButton, ListboxOptions, ListboxOption } from '@headlessui/react';
+import { Dialog, DialogPanel, DialogTitle, Transition, TransitionChild, Listbox, ListboxButton, ListboxOptions, ListboxOption, Button } from '@headlessui/react';
 import { useConfig, ViewType } from '@/contexts/ConfigContext';
 import { ChevronUpDownIcon, CheckIcon } from '@/components/icons/Icons';
 
@@ -62,7 +62,7 @@ export function PDFViewSettings({ isOpen, setIsOpen }: PDFViewSettingsProps) {
                         onChange={(newView) => updateConfigKey('viewType', newView.id as ViewType)}
                       >
                         <div className="relative">
-                          <ListboxButton className="relative w-full cursor-pointer rounded-lg bg-background py-2 pl-3 pr-10 text-left text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-accent">
+                          <ListboxButton className="relative w-full cursor-pointer rounded-lg bg-background py-2 pl-3 pr-10 text-left text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-accent transform transition-transform duration-200 ease-in-out hover:scale-[1.01] hover:text-accent">
                             <span className="block truncate">{selectedView.name}</span>
                             <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
                               <ChevronUpDownIcon className="h-5 w-5 text-muted" />
@@ -113,16 +113,16 @@ export function PDFViewSettings({ isOpen, setIsOpen }: PDFViewSettingsProps) {
                 </div>
 
                 <div className="mt-3 flex justify-end">
-                  <button
+                  <Button
                     type="button"
                     className="inline-flex justify-center rounded-lg bg-background px-4 py-2 text-sm 
                              font-medium text-foreground hover:bg-background/90 focus:outline-none 
                              focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2
-                             transition-colors"
+                             transform transition-transform duration-200 ease-in-out hover:scale-[1.04] hover:text-accent"
                     onClick={() => setIsOpen(false)}
                   >
                     Close
-                  </button>
+                  </Button>
                 </div>
               </DialogPanel>
             </TransitionChild>

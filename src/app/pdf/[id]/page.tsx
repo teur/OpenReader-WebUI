@@ -79,9 +79,9 @@ export default function PDFViewerPage() {
             <Link
               href="/"
               onClick={() => {clearCurrDoc(); stop();}}
-              className="inline-flex items-center px-3 py-1 bg-base text-foreground rounded-lg hover:bg-offbase transition-colors"
+              className="inline-flex items-center px-3 py-1 bg-base text-foreground rounded-lg hover:bg-offbase transform transition-transform duration-200 ease-in-out hover:scale-[1.02]"
             >
-              <svg className="w-4 h-4 mr-2 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 mr-2" fill="currentColor" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
               Documents
@@ -89,7 +89,7 @@ export default function PDFViewerPage() {
             <div className="bg-offbase px-2 py-0.5 rounded-full flex items-center gap-2">
               <Button
                 onClick={handleZoomOut}
-                className="text-xs hover:text-accent transition-colors"
+                className="text-xs transform transition-transform duration-200 ease-in-out hover:scale-[1.45] hover:font-semibold hover:text-accent"
                 aria-label="Zoom out"
               >
                 －
@@ -97,7 +97,7 @@ export default function PDFViewerPage() {
               <span className="text-xs">{zoomLevel}%</span>
               <Button
                 onClick={handleZoomIn}
-                className="text-xs hover:text-accent transition-colors"
+                className="text-xs transform transition-transform duration-200 ease-in-out hover:scale-[1.45] hover:font-semibold hover:text-accent"
                 aria-label="Zoom in"
               >
                 ＋
@@ -105,8 +105,7 @@ export default function PDFViewerPage() {
             </div>
             <Button
               onClick={() => setIsSettingsOpen(true)}
-              className="rounded-full p-2 text-foreground hover:bg-offbase focus:bg-offbase 
-                       focus:outline-none focus:ring-2 focus:ring-accent transition-colors"
+              className="rounded-full p-1 text-foreground hover:bg-offbase transform transition-transform duration-200 ease-in-out hover:scale-[1.1] hover:text-accent"
               aria-label="View Settings"
             >
               <SettingsIcon className="w-5 h-5 hover:animate-spin-slow" />

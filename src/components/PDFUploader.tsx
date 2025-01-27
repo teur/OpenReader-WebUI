@@ -45,7 +45,7 @@ export function PDFUploader({ className = '' }: PDFUploaderProps) {
       className={`
         w-full py-5 px-3 border-2 border-dashed rounded-lg
         ${isDragActive ? 'border-accent bg-base' : 'border-muted'}
-        transition-colors duration-200 ease-in-out
+        transform trasition-transform duration-200 ease-in-out hover:scale-[1.008]
         ${isUploading ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:border-accent hover:bg-base'}
         ${className}
       `}
