@@ -61,7 +61,7 @@ export function PDFViewSettings({ isOpen, setIsOpen }: PDFViewSettingsProps) {
                         value={selectedView} 
                         onChange={(newView) => updateConfigKey('viewType', newView.id as ViewType)}
                       >
-                        <div className="relative">
+                        <div className="relative z-10">
                           <ListboxButton className="relative w-full cursor-pointer rounded-lg bg-background py-2 pl-3 pr-10 text-left text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-accent transform transition-transform duration-200 ease-in-out hover:scale-[1.01] hover:text-accent">
                             <span className="block truncate">{selectedView.name}</span>
                             <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
@@ -118,7 +118,7 @@ export function PDFViewSettings({ isOpen, setIsOpen }: PDFViewSettingsProps) {
                     className="inline-flex justify-center rounded-lg bg-background px-4 py-2 text-sm 
                              font-medium text-foreground hover:bg-background/90 focus:outline-none 
                              focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2
-                             transform transition-transform duration-200 ease-in-out hover:scale-[1.04] hover:text-accent"
+                             transform transition-transform duration-200 ease-in-out hover:scale-[1.04] hover:text-accent z-1"
                     onClick={() => setIsOpen(false)}
                   >
                     Close

@@ -6,11 +6,42 @@ import { Footer } from "@/components/Footer";
 
 export const metadata: Metadata = {
   title: "OpenReader WebUI",
-  description: "A modern web interface for reading and managing documents",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "black-translucent",
-  }
+  description: 'A "bring your own TTS api" web interface for reading documents with high quality text-to-speech voices.',
+  keywords: "PDF reader, text to speech, tts open ai, kokoro tts, Kokoro-82M, OpenReader, TTS PDF reader, high quality text to speech",
+  authors: [{ name: "Richard Roberson" }],
+  manifest: "/manifest.json",
+  metadataBase: new URL("https://openreader.richardr.dev"), // Replace with your domain
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "https://openreader.richardr.dev",
+    siteName: "OpenReader WebUI",
+    title: "OpenReader WebUI",
+    description: 'A "bring your own TTS api" web interface for reading documents with high quality text-to-speech voices.',
+    images: [
+      {
+        url: "/web-app-manifest-512x512.png",
+        width: 512,
+        height: 512,
+        alt: "OpenReader WebUI Logo",
+      },
+    ],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  verification: {
+    // Add your verification codes if you have them
+    google: "MJXyTudn1kgQF8EtGD-tsnAWev7Iawso9hEvqeGHB3U",
+  },
 };
 
 export default function RootLayout({
@@ -27,7 +58,7 @@ export default function RootLayout({
       <body className="antialiased">
         <Providers>
           <div className="min-h-screen bg-background p-4">
-            <div className="max-w-6xl mx-auto align-center">
+            <div className="relative max-w-6xl mx-auto align-center">
               <div className="bg-base rounded-lg shadow-lg">
                 {children}
               </div>
