@@ -4,17 +4,17 @@ export function Footer() {
   return (
     <footer className="m-8 text-sm text-muted">
       <div className="flex flex-col items-center space-y-2">
-        <div className="flex space-x-3">
-          <Popover className="relative">
+        <div className="flex flex-wrap md:flex-nowrap items-center justify-center text-center md:space-x-3">
+          <Popover className="flex relative">
             <PopoverButton className="hover:text-foreground transition-colors">
               Privacy info
             </PopoverButton>
-            <PopoverPanel className="absolute bottom-8 bg-base p-4 rounded-lg shadow-lg w-64">
+            <PopoverPanel anchor="bottom start" className="bg-base p-4 rounded-lg shadow-lg w-64">
               <p>No data collection. Documents are uploaded to your local browser cache.</p>
               <p className='mt-3'>Each sentence of the document you are viewing is sent to my FastAPI server for audio generation, no requests or data is collected.</p>
             </PopoverPanel>
           </Popover>
-          <span>•</span>
+          <span className='w-full md:w-fit'>•</span>
           <span>
             Powered by{' '}
             <a
