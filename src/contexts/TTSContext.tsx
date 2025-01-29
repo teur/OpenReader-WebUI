@@ -1,3 +1,17 @@
+/**
+ * Text-to-Speech (TTS) Context Provider
+ * 
+ * This module provides a React context for managing text-to-speech functionality.
+ * It handles audio playback, sentence processing, and integration with OpenAI's TTS API.
+ * 
+ * Key features:
+ * - Audio playback control (play/pause/skip)
+ * - Sentence-by-sentence processing
+ * - Audio caching for better performance
+ * - Voice and speed control
+ * - Document navigation
+ */
+
 'use client';
 
 import React, {
@@ -23,10 +37,16 @@ declare global {
   }
 }
 
+/**
+ * Type definition for AudioContext to handle browser compatibility
+ */
 type AudioContextType = typeof window extends undefined
   ? never
   : (AudioContext);
 
+/**
+ * Interface defining all available methods and properties in the TTS context
+ */
 interface TTSContextType {
   isPlaying: boolean;
   currentText: string;
@@ -58,9 +78,17 @@ interface TTSContextType {
   skipToPage: (page: number) => void;
 }
 
+// Create the context
 const TTSContext = createContext<TTSContextType | undefined>(undefined);
 
+/**
+ * TTSProvider Component
+ * 
+ * Main provider component that manages the TTS state and functionality.
+ * Handles initialization of OpenAI client, audio context, and media session.
+ */
 export function TTSProvider({ children }: { children: React.ReactNode }) {
+  // Configuration context consumption
   const { 
     apiKey: openApiKey, 
     baseUrl: openApiBaseUrl, 
@@ -70,9 +98,17 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     updateConfigKey
   } = useConfig();
 
-  // Move openai initialization to a ref to avoid breaking hooks rules
+  // OpenAI client reference
   const openaiRef = useRef<OpenAI | null>(null);
 
+  /**
+   * State Management
+   * - Playback control
+   * - Text and sentence management
+   * - Audio processing
+   * - Voice and speed settings
+   * - Document navigation
+   */
   // All existing state declarations and refs stay at the top
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentText, setCurrentText] = useState('');
@@ -90,15 +126,16 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
   const [currDocPages, setCurrDocPages] = useState<number>();
   const [nextPageLoading, setNextPageLoading] = useState(false);
 
-  // Audio cache using LRUCache with a maximum size of 50 entries
+  /**
+   * Audio Cache
+   * LRU cache to store processed audio buffers and improve performance
+   */
   const audioCacheRef = useRef(new LRUCache<string, AudioBuffer>({ max: 50 }));
 
-  // Update local state when config changes
-  useEffect(() => {
-    setSpeed(voiceSpeed);
-    setVoice(configVoice);
-  }, [voiceSpeed, configVoice]);
-
+  /**
+   * Text Processing Functions
+   * Handle text input and sentence splitting
+   */
   const setText = useCallback((text: string) => {
     setCurrentText(text);
     console.log('Setting page text:', text);
@@ -118,6 +155,10 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     }
   }, [activeHowl]);
 
+  /**
+   * Playback Control Functions
+   * Manage audio playback, navigation, and state
+   */
   const togglePlay = useCallback(() => {
     setIsPlaying((prev) => {
       if (!prev) {
@@ -190,6 +231,10 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     setIsProcessing(false);
   }, [abortAudio, advance]);
 
+  /**
+   * Audio Processing Functions
+   * Handle audio generation, caching, and playback
+   */
   // Initialize OpenAI instance when config loads
   useEffect(() => {
     const fetchVoices = async () => {
@@ -222,6 +267,7 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     }
   }, [configIsLoading, openApiKey, openApiBaseUrl]);
 
+  // Initialize AudioContext
   useEffect(() => {
     /*
      * Initializes the AudioContext for text-to-speech playback.
@@ -251,7 +297,7 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     }
   }, [audioContext]);
 
-  // Now the MediaSession effect can use these functions
+  // Set up MediaSession API
   useEffect(() => {
     if ('mediaSession' in navigator) {
       navigator.mediaSession.metadata = new MediaMetadata({
@@ -376,7 +422,10 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     await playSentenceWithHowl(sentences[currentIndex]);
   }, [sentences, currentIndex, playSentenceWithHowl]);
 
-  // main driver useEffect
+  /**
+   * Main Playback Driver
+   * Controls the flow of audio playback and sentence processing
+   */
   useEffect(() => {
     if (!isPlaying) return; // Don't proceed if stopped
     if (isProcessing) return; // Don't proceed if processing audio
@@ -454,6 +503,10 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     }
   }, [isPlaying, abortAudio, updateConfigKey]);
 
+  /**
+   * Context Value
+   * Aggregate all functions and state to be provided to consumers
+   */
   const value = {
     isPlaying,
     currentText,
@@ -485,6 +538,7 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     skipToPage,
   };
 
+  // Render provider with value
   if (configIsLoading) {
     return null;
   }
@@ -496,6 +550,10 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+/**
+ * Custom hook to consume the TTS context
+ * Ensures the context is used within a provider
+ */
 export function useTTS() {
   const context = useContext(TTSContext);
   if (context === undefined) {

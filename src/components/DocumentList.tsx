@@ -53,20 +53,20 @@ export function DocumentList() {
             leaveTo="transform scale-95 opacity-0"
           >
             <div 
-              className="flex items-center justify-between hover:bg-base p-2 rounded-lg transition-colors"
+              className="flex items-center justify-between hover:bg-base p-1 rounded-lg transition-colors"
             >
               <Link 
                 href={`/pdf/${encodeURIComponent(doc.id)}`}
                 className="flex items-center space-x-4 flex-1 min-w-0"
               >
                 <div className="flex-shrink-0">
-                  <svg className="w-8 h-8 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-6 h-6 sm:w-8 sm:h-8 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                   </svg>
                 </div>
                 <div className="flex-1 min-w-0 transform transition-transform duration-200 ease-in-out hover:scale-[1.02]">
-                  <p className="text-foreground font-medium truncate">{doc.name}</p>
-                  <p className="text-sm text-muted truncate">
+                  <p className="text-sm sm:text-md text-foreground font-medium truncate">{doc.name}</p>
+                  <p className="text-xs sm:text-sm text-muted truncate">
                     {(doc.size / 1024 / 1024).toFixed(2)} MB
                   </p>
                 </div>

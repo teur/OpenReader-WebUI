@@ -52,18 +52,18 @@ export function PDFUploader({ className = '' }: PDFUploaderProps) {
     >
       <input {...getInputProps()} />
       <div className="flex flex-col items-center justify-center text-center">
-        <UploadIcon className="w-10 h-10 mb-2 text-muted" />
+        <UploadIcon className="w-7 h-7 sm:w-10 sm:h-10 mb-2 text-muted" />
 
         {isUploading ? (
-          <p className="text-lg font-semibold text-foreground">
+          <p className="text-sm sm:text-lg font-semibold text-foreground">
             Uploading PDF...
           </p>
         ) : (
           <>
-            <p className="mb-2 text-lg font-semibold text-foreground">
+            <p className="mb-2 text-sm sm:text-lg font-semibold text-foreground">
               {isDragActive ? 'Drop your PDF here' : 'Drop your PDF here, or click to select'}
             </p>
-            <p className="text-sm text-muted">
+            <p className="text-xs sm:text-sm text-muted">
               Only PDF files are currently accepted
             </p>
             {error && <p className="mt-2 text-sm text-red-500">{error}</p>}

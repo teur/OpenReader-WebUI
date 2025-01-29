@@ -111,7 +111,7 @@ export default function PDFViewerPage() {
               <SettingsIcon className="w-5 h-5 hover:animate-spin-slow" />
             </Button>
           </div>
-          <h1 className="mr-2 text-md font-semibold text-foreground truncate">
+          <h1 className="ml-2 mr-2 text-md font-semibold text-foreground truncate">
             {isLoading ? 'Loading...' : currDocName}
           </h1>
         </div>

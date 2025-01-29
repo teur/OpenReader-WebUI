@@ -4,7 +4,7 @@ export function Footer() {
   return (
     <footer className="m-8 text-sm text-muted">
       <div className="flex flex-col items-center space-y-2">
-        <div className="flex flex-wrap md:flex-nowrap items-center justify-center text-center md:space-x-3">
+        <div className="flex flex-wrap sm:flex-nowrap items-center justify-center text-center sm:space-x-3">
           <Popover className="flex relative">
             <PopoverButton className="hover:text-foreground transition-colors">
               Privacy info
@@ -14,7 +14,7 @@ export function Footer() {
               <p className='mt-3'>Each sentence of the document you are viewing is sent to my FastAPI server for audio generation, no requests or data is collected.</p>
             </PopoverPanel>
           </Popover>
-          <span className='w-full md:w-fit'>•</span>
+          <span className='w-full sm:w-fit'>•</span>
           <span>
             Powered by{' '}
             <a
