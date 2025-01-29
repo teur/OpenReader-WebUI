@@ -21,7 +21,7 @@ export default function Home() {
         <SettingsIcon className="w-4 h-4 sm:w-5 sm:h-5 hover:animate-spin-slow" />
       </Button>
       <h1 className="text-xl font-bold text-center flex-grow">OpenReader WebUI</h1>
-      <p className="text-sm mt-1 text-center text-muted mb-5">A bring your own text-to-speech api web interface for reading documents with high quality voices.</p>
+      <p className="text-sm mt-1 text-center text-muted mb-5">A bring your own text-to-speech api web interface for reading documents with high quality voices</p>
       <div className="flex flex-col items-center gap-5">
         <PDFUploader className='max-w-xl' />
         <DocumentList />
