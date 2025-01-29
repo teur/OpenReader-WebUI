@@ -21,6 +21,7 @@ import React, {
   useCallback,
   useEffect,
   useRef,
+  useMemo,
 } from 'react';
 import OpenAI from 'openai';
 import { LRUCache } from 'lru-cache'; // Import LRUCache directly
@@ -48,33 +49,28 @@ type AudioContextType = typeof window extends undefined
  * Interface defining all available methods and properties in the TTS context
  */
 interface TTSContextType {
+  // Playback state
   isPlaying: boolean;
-  currentText: string;
+  isProcessing: boolean;
+  currentSentence: string;
+
+  // Navigation
+  currDocPage: number;
+  currDocPages: number | undefined;
+
+  // Voice settings
+  availableVoices: string[];
+
+  // Control functions
   togglePlay: () => void;
   skipForward: () => void;
   skipBackward: () => void;
-  setText: (text: string) => void;
-  currentSentence: string;
-  audioQueue: AudioBuffer[];
   stop: () => void;
   stopAndPlayFromIndex: (index: number) => void;
-  sentences: string[];
-  isProcessing: boolean;
-  setIsProcessing: (value: boolean) => void;
-  setIsPlaying: (value: boolean) => void;
-  speed: number;
-  setSpeed: (speed: number) => void;
-  setSpeedAndRestart: (speed: number) => void;
-  voice: string;
-  setVoice: (voice: string) => void;
-  setVoiceAndRestart: (voice: string) => void;
-  availableVoices: string[];
-  currentIndex: number;
-  setCurrentIndex: (index: number) => void;
-  currDocPage: number;
-  currDocPages: number | undefined;
+  setText: (text: string) => void;
   setCurrDocPages: (num: number | undefined) => void;
-  incrementPage: (num?: number) => void;
+  setSpeedAndRestart: (speed: number) => void;
+  setVoiceAndRestart: (voice: string) => void;
   skipToPage: (page: number) => void;
 }
 
@@ -127,14 +123,15 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
   const [nextPageLoading, setNextPageLoading] = useState(false);
 
   /**
-   * Audio Cache
-   * LRU cache to store processed audio buffers and improve performance
+   * Cache for storing audio buffers using LRU (Least Recently Used) strategy
    */
   const audioCacheRef = useRef(new LRUCache<string, AudioBuffer>({ max: 50 }));
 
   /**
-   * Text Processing Functions
-   * Handle text input and sentence splitting
+   * Sets the current text and splits it into sentences
+   * 
+   * @param {string} text - The text to be processed
+   * @returns {void}
    */
   const setText = useCallback((text: string) => {
     setCurrentText(text);
@@ -148,6 +145,11 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     setNextPageLoading(false);
   }, []);
 
+  /**
+   * Stops the current audio playback and clears the active Howl instance
+   * 
+   * @returns {void}
+   */
   const abortAudio = useCallback(() => {
     if (activeHowl) {
       activeHowl.stop();
@@ -156,8 +158,9 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
   }, [activeHowl]);
 
   /**
-   * Playback Control Functions
-   * Manage audio playback, navigation, and state
+   * Toggles the playback state between playing and paused
+   * 
+   * @returns {void}
    */
   const togglePlay = useCallback(() => {
     setIsPlaying((prev) => {
@@ -170,6 +173,12 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     });
   }, [abortAudio]);
 
+  /**
+   * Navigates to a specific page in the document
+   * 
+   * @param {number} page - The target page number
+   * @returns {void}
+   */
   const skipToPage = useCallback((page: number) => {
     abortAudio();
     setIsPlaying(false);
@@ -178,11 +187,23 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     setCurrDocPage(page);
   }, [abortAudio]);
 
+  /**
+   * Changes the current page by a specified amount
+   * 
+   * @param {number} [num=1] - The number of pages to increment by
+   * @returns {void}
+   */
   const incrementPage = useCallback((num = 1) => {
     setNextPageLoading(true);
     setCurrDocPage(currDocPage + num);
   }, [currDocPage]);
 
+  /**
+   * Moves to the next or previous sentence
+   * 
+   * @param {boolean} [backwards=false] - Whether to move backwards
+   * @returns {Promise<void>}
+   */
   const advance = useCallback(async (backwards = false) => {
     setCurrentIndex((prev) => {
       const nextIndex = prev + (backwards ? -1 : 1);
@@ -211,6 +232,11 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
   }, [sentences, currDocPage, currDocPages, incrementPage]);
   
 
+  /**
+   * Moves forward one sentence in the text
+   * 
+   * @returns {void}
+   */
   const skipForward = useCallback(() => {
     setIsProcessing(true);
 
@@ -221,6 +247,11 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     setIsProcessing(false);
   }, [abortAudio, advance]);
 
+  /**
+   * Moves backward one sentence in the text
+   * 
+   * @returns {void}
+   */
   const skipBackward = useCallback(() => {
     setIsProcessing(true);
 
@@ -232,10 +263,20 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
   }, [abortAudio, advance]);
 
   /**
-   * Audio Processing Functions
-   * Handle audio generation, caching, and playback
+   * Updates the voice and speed settings from the configuration
+   * 
+   * @returns {void}
    */
-  // Initialize OpenAI instance when config loads
+  const updateVoiceAndSpeed = useCallback(() => {
+    setVoice(configVoice);
+    setSpeed(voiceSpeed);
+  }, [configVoice, voiceSpeed]);
+
+  /**
+   * Initializes OpenAI configuration and fetches available voices
+   * 
+   * This effect runs when the config is loaded or API settings change
+   */
   useEffect(() => {
     const fetchVoices = async () => {
       try {
@@ -264,19 +305,14 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
         dangerouslyAllowBrowser: true,
       });
       fetchVoices();
+      updateVoiceAndSpeed();
     }
-  }, [configIsLoading, openApiKey, openApiBaseUrl]);
+  }, [configIsLoading, openApiKey, openApiBaseUrl, updateVoiceAndSpeed]);
 
-  // Initialize AudioContext
+  /**
+   * Initializes the AudioContext when component mounts
+   */
   useEffect(() => {
-    /*
-     * Initializes the AudioContext for text-to-speech playback.
-     * Creates a new AudioContext instance if one doesn't exist.
-     * Only runs on the client side to avoid SSR issues.
-     * 
-     * Dependencies:
-     * - audioContext: Re-runs if the audioContext is null or changes
-     */
     if (typeof window !== 'undefined' && !audioContext) {
       const AudioContextClass = window.AudioContext || window.webkitAudioContext;
       if (AudioContextClass) {
@@ -297,7 +333,9 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     }
   }, [audioContext]);
 
-  // Set up MediaSession API
+  /**
+   * Sets up MediaSession API for media controls
+   */
   useEffect(() => {
     if ('mediaSession' in navigator) {
       navigator.mediaSession.metadata = new MediaMetadata({
@@ -313,7 +351,11 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     }
   }, [togglePlay, skipForward, skipBackward]);
 
-  //new function to return audio buffer with caching
+  /**
+   * Generates and plays audio for the current sentence
+   * 
+   * @returns {Promise<void>}
+   */
   const getAudio = useCallback(async (sentence: string): Promise<AudioBuffer | undefined> => {
     // Check if the audio is already cached
     const cachedAudio = audioCacheRef.current.get(sentence);
@@ -343,6 +385,11 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     }
   }, [audioContext, voice, speed]);
 
+  /**
+   * Processes and plays the current sentence
+   * 
+   * @returns {Promise<void>}
+   */
   const processSentence = useCallback(async (sentence: string, preload = false): Promise<string> => {
     if (isProcessing && !preload) throw new Error('Audio is already being processed');
     if (!audioContext || !openaiRef.current) throw new Error('Audio context not initialized');
@@ -356,6 +403,11 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     return audioBufferToURL(audioBuffer!);
   }, [isProcessing, audioContext, getAudio]);
 
+  /**
+   * Plays the current sentence with Howl
+   * 
+   * @returns {Promise<void>}
+   */
   const playSentenceWithHowl = useCallback(async (sentence: string) => {
     try {
       const audioUrl = await processSentence(sentence);
@@ -408,6 +460,11 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     }
   }, [isPlaying, processSentence, advance]);
 
+  /**
+   * Preloads the next sentence's audio
+   * 
+   * @returns {void}
+   */
   const preloadNextAudio = useCallback(() => {
     try {
       if (sentences[currentIndex + 1] && !audioCacheRef.current.has(sentences[currentIndex + 1])) {
@@ -418,6 +475,11 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     }
   }, [currentIndex, sentences, audioCacheRef, processSentence]);
 
+  /**
+   * Plays the current sentence's audio
+   * 
+   * @returns {Promise<void>}
+   */
   const playAudio = useCallback(async () => {
     await playSentenceWithHowl(sentences[currentIndex]);
   }, [sentences, currentIndex, playSentenceWithHowl]);
@@ -454,6 +516,11 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     abortAudio
   ]);
 
+  /**
+   * Stops the current audio playback
+   * 
+   * @returns {void}
+   */
   const stop = useCallback(() => {
     // Cancel any ongoing request
     abortAudio();
@@ -464,6 +531,12 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     setIsProcessing(false);
   }, [abortAudio]);
 
+  /**
+   * Stops the current audio playback and starts playing from a specified index
+   * 
+   * @param {number} index - The index to start playing from
+   * @returns {void}
+   */
   const stopAndPlayFromIndex = useCallback((index: number) => {
     abortAudio();
     
@@ -471,12 +544,24 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     setIsPlaying(true);
   }, [abortAudio]);
 
+  /**
+   * Sets the current index without playing
+   * 
+   * @param {number} index - The index to set
+   * @returns {void}
+   */
   const setCurrentIndexWithoutPlay = useCallback((index: number) => {
     abortAudio();
 
     setCurrentIndex(index);
   }, [abortAudio]);
 
+  /**
+   * Sets the speed and restarts the playback
+   * 
+   * @param {number} newSpeed - The new speed to set
+   * @returns {void}
+   */
   const setSpeedAndRestart = useCallback((newSpeed: number) => {
     setSpeed(newSpeed);
     updateConfigKey('voiceSpeed', newSpeed);
@@ -490,6 +575,12 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     }
   }, [isPlaying, abortAudio, updateConfigKey]);
 
+  /**
+   * Sets the voice and restarts the playback
+   * 
+   * @param {string} newVoice - The new voice to set
+   * @returns {void}
+   */
   const setVoiceAndRestart = useCallback((newVoice: string) => {
     setVoice(newVoice);
     updateConfigKey('voice', newVoice);
@@ -504,45 +595,51 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
   }, [isPlaying, abortAudio, updateConfigKey]);
 
   /**
-   * Context Value
-   * Aggregate all functions and state to be provided to consumers
+   * Provides the TTS context value to child components
    */
-  const value = {
+  const value = useMemo(() => ({
     isPlaying,
-    currentText,
+    isProcessing,
+    currentSentence: sentences[currentIndex] || '',
+    currDocPage,
+    currDocPages,
+    availableVoices,
     togglePlay,
     skipForward,
     skipBackward,
-    setText,
-    currentSentence: sentences[currentIndex] || '',
-    audioQueue,
     stop,
-    setCurrentIndex: setCurrentIndexWithoutPlay,
     stopAndPlayFromIndex,
-    sentences,
-    isProcessing,
-    setIsProcessing,
-    setIsPlaying,
-    speed,
-    setSpeed,
+    setText,
+    setCurrDocPages,
     setSpeedAndRestart,
-    voice,
-    setVoice,
     setVoiceAndRestart,
-    availableVoices,
+    skipToPage,
+  }), [
+    isPlaying,
+    isProcessing,
+    sentences,
     currentIndex,
     currDocPage,
     currDocPages,
+    availableVoices,
+    togglePlay,
+    skipForward,
+    skipBackward,
+    stop,
+    stopAndPlayFromIndex,
+    setText,
     setCurrDocPages,
-    incrementPage,
+    setSpeedAndRestart,
+    setVoiceAndRestart,
     skipToPage,
-  };
+  ]);
 
-  // Render provider with value
-  if (configIsLoading) {
-    return null;
-  }
-
+  /**
+   * Renders the TTS context provider with its children
+   * 
+   * @param {ReactNode} children - Child components to be wrapped
+   * @returns {JSX.Element}
+   */
   return (
     <TTSContext.Provider value={value}>
       {children}

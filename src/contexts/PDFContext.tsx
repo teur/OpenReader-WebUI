@@ -1,3 +1,16 @@
+/**
+ * PDF Context Provider
+ * 
+ * This module provides a React context for managing PDF document functionality.
+ * It handles document loading, text extraction, highlighting, and integration with TTS.
+ * 
+ * Key features:
+ * - PDF document management (add/remove/load)
+ * - Text extraction and processing
+ * - Text highlighting and navigation
+ * - Document state management
+ */
+
 'use client';
 
 import {
@@ -23,7 +36,12 @@ import { useTTS } from '@/contexts/TTSContext';
 // Set worker from public directory
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.mjs';
 
-// Convert PDF data to PDF data URL
+/**
+ * Converts PDF binary data to a data URL for display
+ * 
+ * @param {Blob} pdfData - The PDF binary data
+ * @returns {Promise<string>} A data URL representing the PDF
+ */
 const convertPDFDataToURL = (pdfData: Blob): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -33,13 +51,27 @@ const convertPDFDataToURL = (pdfData: Blob): Promise<string> => {
   });
 };
 
+/**
+ * Interface defining all available methods and properties in the PDF context
+ */
 interface PDFContextType {
+  // Documents management
   documents: PDFDocument[];
   addDocument: (file: File) => Promise<string>;
-  getDocument: (id: string) => Promise<PDFDocument | undefined>;
   removeDocument: (id: string) => Promise<void>;
   isLoading: boolean;
-  extractTextFromPDF: (pdfURL: string, currDocPage: number) => Promise<string>;
+
+  // Current document state
+  currDocURL: string | undefined;
+  currDocName: string | undefined;
+  currDocPages: number | undefined;
+  currDocPage: number;
+  currDocText: string | undefined;
+  setCurrentDocument: (id: string) => Promise<void>;
+  clearCurrDoc: () => void;
+
+  // PDF functionality
+  onDocumentLoadSuccess: ({ numPages }: { numPages: number }) => void;
   highlightPattern: (text: string, pattern: string, containerRef: React.RefObject<HTMLDivElement>) => void;
   clearHighlights: () => void;
   handleTextClick: (
@@ -49,19 +81,24 @@ interface PDFContextType {
     stopAndPlayFromIndex: (index: number) => void,
     isProcessing: boolean
   ) => void;
-  onDocumentLoadSuccess: ({ numPages }: { numPages: number }) => void;
-  setCurrentDocument: (id: string) => Promise<void>;
-  currDocURL: string | undefined;
-  currDocName: string | undefined;
-  currDocPages: number | undefined;
-  currDocPage: number;
-  currDocText: string | undefined;
-  clearCurrDoc: () => void;
 }
 
+// Create the context
 const PDFContext = createContext<PDFContextType | undefined>(undefined);
 
+/**
+ * PDFProvider Component
+ * 
+ * Main provider component that manages PDF state and functionality.
+ * Handles document loading, text processing, and integration with TTS.
+ */
 export function PDFProvider({ children }: { children: ReactNode }) {
+  /**
+   * State Management
+   * - Document management
+   * - Current document state
+   * - Loading states
+   */
   const [documents, setDocuments] = useState<PDFDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -78,7 +115,9 @@ export function PDFProvider({ children }: { children: ReactNode }) {
   const [currDocName, setCurrDocName] = useState<string>();
   const [currDocText, setCurrDocText] = useState<string>();
 
-  // Load documents from IndexedDB once DB is ready
+  /**
+   * Load documents from IndexedDB when the database is ready
+   */
   useEffect(() => {
     const loadDocuments = async () => {
       if (!isDBReady) return;
@@ -96,7 +135,12 @@ export function PDFProvider({ children }: { children: ReactNode }) {
     loadDocuments();
   }, [isDBReady]);
 
-  // Add a new document to IndexedDB
+  /**
+   * Adds a new document to IndexedDB
+   * 
+   * @param {File} file - The PDF file to add
+   * @returns {Promise<string>} The ID of the added document
+   */
   const addDocument = useCallback(async (file: File): Promise<string> => {
     const id = uuidv4();
     const newDoc: PDFDocument = {
@@ -117,17 +161,11 @@ export function PDFProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Get a document by ID from IndexedDB
-  const getDocument = useCallback(async (id: string): Promise<PDFDocument | undefined> => {
-    try {
-      return await indexedDBService.getDocument(id);
-    } catch (error) {
-      console.error('Failed to get document:', error);
-      return undefined;
-    }
-  }, []);
-
-  // Remove a document by ID from IndexedDB
+  /**
+   * Removes a document from IndexedDB
+   * 
+   * @param {string} id - The ID of the document to remove
+   */
   const removeDocument = useCallback(async (id: string): Promise<void> => {
     try {
       await indexedDBService.removeDocument(id);
@@ -138,12 +176,23 @@ export function PDFProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  /**
+   * Handles successful document load
+   * 
+   * @param {Object} param0 - Object containing numPages
+   */
   const onDocumentLoadSuccess = useCallback(({ numPages }: { numPages: number }) => {
     console.log('Document loaded:', numPages);
     setCurrDocPages(numPages);
   }, [setCurrDocPages]);
 
-  // Extract text from a PDF file
+  /**
+   * Extracts text content from a specific page of the PDF
+   * 
+   * @param {string} pdfURL - The URL of the PDF
+   * @param {number} currDocPage - The page number to extract
+   * @returns {Promise<string>} The extracted text
+   */
   const extractTextFromPDF = useCallback(async (pdfURL: string, currDocPage: number): Promise<string> => {
     try {
       const base64Data = pdfURL.split(',')[1];
@@ -222,7 +271,9 @@ export function PDFProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Load curr doc text
+  /**
+   * Loads and processes text from the current document page
+   */
   const loadCurrDocText = useCallback(async () => {
     try {
       if (!currDocURL) return;
@@ -234,17 +285,23 @@ export function PDFProvider({ children }: { children: ReactNode }) {
     }
   }, [currDocURL, currDocPage, extractTextFromPDF, setTTSText]);
 
-  // Update the current document text when the page changes
+  /**
+   * Updates the current document text when the page changes
+   */
   useEffect(() => {
     if (currDocURL) {
       loadCurrDocText();
     }
   }, [currDocPage, currDocURL, loadCurrDocText]);
 
-  // Set curr document
+  /**
+   * Sets the current document based on its ID
+   * 
+   * @param {string} id - The ID of the document to set
+   */
   const setCurrentDocument = useCallback(async (id: string): Promise<void> => {
     try {
-      const doc = await getDocument(id);
+      const doc = await indexedDBService.getDocument(id);
       if (doc) {
         const url = await convertPDFDataToURL(doc.data);
         setCurrDocName(doc.name);
@@ -254,8 +311,11 @@ export function PDFProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Failed to get document URL:', error);
     }
-  }, [getDocument]);
+  }, [indexedDBService]);
 
+  /**
+   * Clears the current document state
+   */
   const clearCurrDoc = useCallback(() => {
     setCurrDocName(undefined);
     setCurrDocURL(undefined);
@@ -267,7 +327,9 @@ export function PDFProvider({ children }: { children: ReactNode }) {
 
   }, [setCurrDocPages, setTTSText]);
 
-  // Clear all highlights in the PDF viewer
+  /**
+   * Removes all text highlights from the PDF viewer
+   */
   const clearHighlights = useCallback(() => {
     const textNodes = document.querySelectorAll('.react-pdf__Page__textContent span');
     textNodes.forEach((node) => {
@@ -277,7 +339,13 @@ export function PDFProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  // Find the best text match using string similarity
+  /**
+   * Finds the best matching text segment using string similarity
+   * 
+   * @param {Array} elements - Array of elements and their text content
+   * @param {string} targetText - The text to match against
+   * @param {number} maxCombinedLength - Maximum length of combined text to consider
+   */
   const findBestTextMatch = useCallback((
     elements: Array<{ element: HTMLElement; text: string }>,
     targetText: string,
@@ -320,7 +388,14 @@ export function PDFProvider({ children }: { children: ReactNode }) {
     return bestMatch;
   }, []);
 
-  // Highlight matching text in the PDF viewer with sliding context window
+  /**
+   * Highlights matching text in the PDF viewer
+   * Uses a sliding context window for improved accuracy
+   * 
+   * @param {string} text - The document text
+   * @param {string} pattern - The pattern to highlight
+   * @param {RefObject} containerRef - Reference to the container element
+   */
   const highlightPattern = useCallback((text: string, pattern: string, containerRef: React.RefObject<HTMLDivElement>) => {
     clearHighlights();
 
@@ -381,10 +456,19 @@ export function PDFProvider({ children }: { children: ReactNode }) {
     }
   }, [clearHighlights, findBestTextMatch]);
 
-  // Handle text click events in the PDF viewer
+  /**
+   * Handles text click events in the PDF viewer
+   * Integrates with TTS for synchronized playback
+   * 
+   * @param {MouseEvent} event - The click event
+   * @param {string} pdfText - The text content of the page
+   * @param {RefObject} containerRef - Reference to the container element
+   * @param {Function} stopAndPlayFromIndex - Function to control TTS playback
+   * @param {boolean} isProcessing - Whether TTS is currently processing
+   */
   const handleTextClick = useCallback((
     event: MouseEvent,
-    pageText: string, // Renamed from pdfText to pageText for clarity
+    pdfText: string, // Renamed from pdfText to pageText for clarity
     containerRef: React.RefObject<HTMLDivElement>,
     stopAndPlayFromIndex: (index: number) => void,
     isProcessing: boolean
@@ -422,7 +506,7 @@ export function PDFProvider({ children }: { children: ReactNode }) {
     if (bestMatch.rating >= similarityThreshold) {
       const matchText = bestMatch.text;
       // Use pageText instead of full PDF text for sentence splitting
-      const sentences = nlp(pageText).sentences().out('array') as string[];
+      const sentences = nlp(pdfText).sentences().out('array') as string[];
       let bestSentenceMatch = { sentence: '', rating: 0 };
 
       for (const sentence of sentences) {
@@ -436,24 +520,19 @@ export function PDFProvider({ children }: { children: ReactNode }) {
         const sentenceIndex = sentences.findIndex((sentence) => sentence === bestSentenceMatch.sentence);
         if (sentenceIndex !== -1) {
           stopAndPlayFromIndex(sentenceIndex);
-          highlightPattern(pageText, bestSentenceMatch.sentence, containerRef);
+          highlightPattern(pdfText, bestSentenceMatch.sentence, containerRef);
         }
       }
     }
   }, [highlightPattern, findBestTextMatch]);
 
-  // Memoize the context value to prevent unnecessary re-renders
+  // Context value memoization
   const contextValue = useMemo(
     () => ({
       documents,
       addDocument,
-      getDocument,
       removeDocument,
       isLoading,
-      extractTextFromPDF,
-      highlightPattern,
-      clearHighlights,
-      handleTextClick,
       onDocumentLoadSuccess,
       setCurrentDocument,
       currDocURL,
@@ -462,17 +541,15 @@ export function PDFProvider({ children }: { children: ReactNode }) {
       currDocPage,
       currDocText,
       clearCurrDoc,
+      highlightPattern,
+      clearHighlights,
+      handleTextClick,
     }),
     [
       documents,
       addDocument,
-      getDocument,
       removeDocument,
       isLoading,
-      extractTextFromPDF,
-      highlightPattern,
-      clearHighlights,
-      handleTextClick,
       onDocumentLoadSuccess,
       setCurrentDocument,
       currDocURL,
@@ -481,6 +558,9 @@ export function PDFProvider({ children }: { children: ReactNode }) {
       currDocPage,
       currDocText,
       clearCurrDoc,
+      highlightPattern,
+      clearHighlights,
+      handleTextClick,
     ]
   );
 
@@ -491,6 +571,13 @@ export function PDFProvider({ children }: { children: ReactNode }) {
   );
 }
 
+/**
+ * Custom hook to consume the PDF context
+ * Ensures the context is used within a provider
+ * 
+ * @throws {Error} If used outside of PDFProvider
+ * @returns {PDFContextType} The PDF context value
+ */
 export function usePDF() {
   const context = useContext(PDFContext);
   if (context === undefined) {
