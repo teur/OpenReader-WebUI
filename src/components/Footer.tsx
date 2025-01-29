@@ -5,7 +5,7 @@ export function Footer() {
     <footer className="m-8 text-sm text-muted">
       <div className="flex flex-col items-center space-y-2">
         <div className="flex flex-wrap sm:flex-nowrap items-center justify-center text-center sm:space-x-3">
-          <Popover className="flex relative">
+          <Popover className="flex">
             <PopoverButton className="hover:text-foreground transition-colors">
               Privacy info
             </PopoverButton>

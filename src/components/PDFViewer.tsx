@@ -171,7 +171,7 @@ export function PDFViewer({ zoomLevel }: PDFViewerProps) {
         onLoadSuccess={(pdf) => {
           onDocumentLoadSuccess(pdf);
         }}
-        className="flex flex-col items-center m-0" 
+        className="flex flex-col items-center m-0 z-0" 
       >
         <div>
           {viewType === 'scroll' ? (
