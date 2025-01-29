@@ -311,7 +311,7 @@ export function PDFProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Failed to get document URL:', error);
     }
-  }, [indexedDBService]);
+  }, []);
 
   /**
    * Clears the current document state

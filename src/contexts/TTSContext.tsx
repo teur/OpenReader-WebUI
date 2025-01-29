@@ -24,12 +24,15 @@ import React, {
   useMemo,
 } from 'react';
 import OpenAI from 'openai';
-import { LRUCache } from 'lru-cache'; // Import LRUCache directly
 import { Howl } from 'howler';
 
 import { useConfig } from '@/contexts/ConfigContext';
 import { splitIntoSentences, preprocessSentenceForAudio } from '@/services/nlp';
 import { audioBufferToURL } from '@/services/audio';
+import { useAudioCache } from '@/hooks/useAudioCache';
+import { useVoiceManagement } from '@/hooks/useVoiceManagement';
+import { useMediaSession } from '@/hooks/useMediaSession';
+import { useAudioContext } from '@/hooks/useAudioContext';
 
 // Media globals
 declare global {
@@ -37,13 +40,6 @@ declare global {
     webkitAudioContext: typeof AudioContext;
   }
 }
-
-/**
- * Type definition for AudioContext to handle browser compatibility
- */
-type AudioContextType = typeof window extends undefined
-  ? never
-  : (AudioContext);
 
 /**
  * Interface defining all available methods and properties in the TTS context
@@ -97,35 +93,24 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
   // OpenAI client reference
   const openaiRef = useRef<OpenAI | null>(null);
 
+  // Use custom hooks
+  const audioContext = useAudioContext();
+  const audioCache = useAudioCache(50);
+  const { availableVoices, fetchVoices } = useVoiceManagement(openApiKey, openApiBaseUrl);
+
   /**
    * State Management
-   * - Playback control
-   * - Text and sentence management
-   * - Audio processing
-   * - Voice and speed settings
-   * - Document navigation
    */
-  // All existing state declarations and refs stay at the top
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentText, setCurrentText] = useState('');
   const [sentences, setSentences] = useState<string[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [audioContext, setAudioContext] = useState<AudioContextType>();
   const [activeHowl, setActiveHowl] = useState<Howl | null>(null);
-  const [audioQueue] = useState<AudioBuffer[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [speed, setSpeed] = useState(voiceSpeed);
   const [voice, setVoice] = useState(configVoice);
-  const [availableVoices, setAvailableVoices] = useState<string[]>([]);
-
   const [currDocPage, setCurrDocPage] = useState<number>(1);
   const [currDocPages, setCurrDocPages] = useState<number>();
   const [nextPageLoading, setNextPageLoading] = useState(false);
-
-  /**
-   * Cache for storing audio buffers using LRU (Least Recently Used) strategy
-   */
-  const audioCacheRef = useRef(new LRUCache<string, AudioBuffer>({ max: 50 }));
 
   /**
    * Sets the current text and splits it into sentences
@@ -134,13 +119,9 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
    * @returns {void}
    */
   const setText = useCallback((text: string) => {
-    setCurrentText(text);
     console.log('Setting page text:', text);
     const newSentences = splitIntoSentences(text);
     setSentences(newSentences);
-
-    // Clear audio cache
-    //audioCacheRef.current.clear();
 
     setNextPageLoading(false);
   }, []);
@@ -230,7 +211,6 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
       return prev;
     });
   }, [sentences, currDocPage, currDocPages, incrementPage]);
-  
 
   /**
    * Moves forward one sentence in the text
@@ -274,30 +254,8 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
 
   /**
    * Initializes OpenAI configuration and fetches available voices
-   * 
-   * This effect runs when the config is loaded or API settings change
    */
   useEffect(() => {
-    const fetchVoices = async () => {
-      try {
-        const response = await fetch(`${openApiBaseUrl}/audio/voices`, {
-          headers: {
-            'Authorization': `Bearer ${openApiKey}`,
-            'Content-Type': 'application/json',
-          },
-        });
-        if (!response.ok) throw new Error('Failed to fetch voices');
-        const data = await response.json();
-        setAvailableVoices(data.voices || []);
-      } catch (error) {
-        console.error('Error fetching voices:', error);
-
-        // Set available voices to default openai voices
-        // Supported voices are alloy, ash, coral, echo, fable, onyx, nova, sage and shimmer
-        setAvailableVoices(['alloy', 'ash', 'coral', 'echo', 'fable', 'onyx', 'nova', 'sage', 'shimmer']);
-      }
-    };
-
     if (!configIsLoading && openApiKey && openApiBaseUrl) {
       openaiRef.current = new OpenAI({
         apiKey: openApiKey,
@@ -307,49 +265,7 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
       fetchVoices();
       updateVoiceAndSpeed();
     }
-  }, [configIsLoading, openApiKey, openApiBaseUrl, updateVoiceAndSpeed]);
-
-  /**
-   * Initializes the AudioContext when component mounts
-   */
-  useEffect(() => {
-    if (typeof window !== 'undefined' && !audioContext) {
-      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-      if (AudioContextClass) {
-        try {
-          setAudioContext(new AudioContextClass());
-        } catch (error) {
-          console.error('Failed to initialize AudioContext:', error);
-        }
-      }
-    }
-
-    return () => {
-      if (audioContext) {
-        audioContext.close().catch((error) => {
-          console.error('Error closing AudioContext:', error);
-        });
-      }
-    }
-  }, [audioContext]);
-
-  /**
-   * Sets up MediaSession API for media controls
-   */
-  useEffect(() => {
-    if ('mediaSession' in navigator) {
-      navigator.mediaSession.metadata = new MediaMetadata({
-        title: 'Text-to-Speech',
-        artist: 'OpenReader WebUI',
-        album: 'Current Document',
-      });
-
-      navigator.mediaSession.setActionHandler('play', () => togglePlay());
-      navigator.mediaSession.setActionHandler('pause', () => togglePlay());
-      navigator.mediaSession.setActionHandler('nexttrack', () => skipForward());
-      navigator.mediaSession.setActionHandler('previoustrack', () => skipBackward());
-    }
-  }, [togglePlay, skipForward, skipBackward]);
+  }, [configIsLoading, openApiKey, openApiBaseUrl, updateVoiceAndSpeed, fetchVoices]);
 
   /**
    * Generates and plays audio for the current sentence
@@ -358,7 +274,7 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
    */
   const getAudio = useCallback(async (sentence: string): Promise<AudioBuffer | undefined> => {
     // Check if the audio is already cached
-    const cachedAudio = audioCacheRef.current.get(sentence);
+    const cachedAudio = audioCache.get(sentence);
     if (cachedAudio) {
       console.log('Using cached audio for sentence:', sentence.substring(0, 20));
       return cachedAudio;
@@ -379,11 +295,11 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
       const audioBuffer = await audioContext!.decodeAudioData(arrayBuffer);
 
       // Cache the audio buffer
-      audioCacheRef.current.set(sentence, audioBuffer);
+      audioCache.set(sentence, audioBuffer);
 
       return audioBuffer;
     }
-  }, [audioContext, voice, speed]);
+  }, [audioContext, voice, speed, audioCache]);
 
   /**
    * Processes and plays the current sentence
@@ -467,13 +383,13 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
    */
   const preloadNextAudio = useCallback(() => {
     try {
-      if (sentences[currentIndex + 1] && !audioCacheRef.current.has(sentences[currentIndex + 1])) {
+      if (sentences[currentIndex + 1] && !audioCache.has(sentences[currentIndex + 1])) {
         processSentence(sentences[currentIndex + 1], true); // True indicates preloading
       }
     } catch (error) {
       console.error('Error preloading next sentence:', error);
     }
-  }, [currentIndex, sentences, audioCacheRef, processSentence]);
+  }, [currentIndex, sentences, audioCache, processSentence]);
 
   /**
    * Plays the current sentence's audio
@@ -527,7 +443,6 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
 
     setIsPlaying(false);
     setCurrentIndex(0);
-    setCurrentText('');
     setIsProcessing(false);
   }, [abortAudio]);
 
@@ -545,18 +460,6 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
   }, [abortAudio]);
 
   /**
-   * Sets the current index without playing
-   * 
-   * @param {number} index - The index to set
-   * @returns {void}
-   */
-  const setCurrentIndexWithoutPlay = useCallback((index: number) => {
-    abortAudio();
-
-    setCurrentIndex(index);
-  }, [abortAudio]);
-
-  /**
    * Sets the speed and restarts the playback
    * 
    * @param {number} newSpeed - The new speed to set
@@ -566,14 +469,14 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     setSpeed(newSpeed);
     updateConfigKey('voiceSpeed', newSpeed);
     // Clear the audio cache since it contains audio at the old speed
-    audioCacheRef.current.clear();
+    audioCache.clear();
 
     if (isPlaying) {
       setIsPlaying(false);
       abortAudio();
       setIsPlaying(true);
     }
-  }, [isPlaying, abortAudio, updateConfigKey]);
+  }, [isPlaying, abortAudio, updateConfigKey, audioCache]);
 
   /**
    * Sets the voice and restarts the playback
@@ -585,14 +488,14 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     setVoice(newVoice);
     updateConfigKey('voice', newVoice);
     // Clear the audio cache since it contains audio with the old voice
-    audioCacheRef.current.clear();
+    audioCache.clear();
 
     if (isPlaying) {
       setIsPlaying(false);
       abortAudio();
       setIsPlaying(true);
     }
-  }, [isPlaying, abortAudio, updateConfigKey]);
+  }, [isPlaying, abortAudio, updateConfigKey, audioCache]);
 
   /**
    * Provides the TTS context value to child components
@@ -633,6 +536,13 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     setVoiceAndRestart,
     skipToPage,
   ]);
+
+  // Use media session hook
+  useMediaSession({
+    togglePlay,
+    skipForward,
+    skipBackward,
+  });
 
   /**
    * Renders the TTS context provider with its children
