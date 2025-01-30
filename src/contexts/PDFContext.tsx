@@ -38,7 +38,6 @@ import { usePDFURLConversion } from '@/hooks/pdf/usePDFURLConversion';
 interface PDFContextType {
   // Documents management
   documents: PDFDocument[];
-  addDocument: (file: File) => Promise<string>;
   removeDocument: (id: string) => Promise<void>;
   isLoading: boolean;
 
@@ -74,7 +73,6 @@ const PDFContext = createContext<PDFContextType | undefined>(undefined);
  * Handles document loading, text processing, and integration with TTS.
  */
 export function PDFProvider({ children }: { children: ReactNode }) {
-  const { isDBReady } = useConfig();
   const {
     setText: setTTSText,
     currDocPage,
@@ -83,7 +81,7 @@ export function PDFProvider({ children }: { children: ReactNode }) {
   } = useTTS();
 
   // Initialize hooks
-  const { documents, isLoading, addDocument, removeDocument } = usePDFDocuments(isDBReady);
+  const { documents, isLoading, removeDocument } = usePDFDocuments();
   const { extractTextFromPDF } = usePDFTextProcessing();
   const { highlightPattern, clearHighlights } = usePDFHighlighting();
   const { handleTextClick } = usePDFTextClick();
@@ -160,7 +158,6 @@ export function PDFProvider({ children }: { children: ReactNode }) {
   const contextValue = useMemo(
     () => ({
       documents,
-      addDocument,
       removeDocument,
       isLoading,
       onDocumentLoadSuccess,
@@ -177,7 +174,6 @@ export function PDFProvider({ children }: { children: ReactNode }) {
     }),
     [
       documents,
-      addDocument,
       removeDocument,
       isLoading,
       onDocumentLoadSuccess,

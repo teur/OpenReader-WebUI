@@ -1,8 +1,10 @@
 import { useState, useCallback, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { indexedDBService, type PDFDocument } from '@/services/indexedDB';
+import { useConfig } from '@/contexts/ConfigContext';
 
-export function usePDFDocuments(isDBReady: boolean) {
+export function usePDFDocuments() {
+  const { isDBReady } = useConfig();
   const [documents, setDocuments] = useState<PDFDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
