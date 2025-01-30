@@ -26,11 +26,11 @@ import {
 import { indexedDBService, type PDFDocument } from '@/services/indexedDB';
 import { useConfig } from '@/contexts/ConfigContext';
 import { useTTS } from '@/contexts/TTSContext';
-import { usePDFDocuments } from '@/hooks/usePDFDocuments';
-import { usePDFHighlighting } from '@/hooks/usePDFHighlighting';
-import { usePDFTextClick } from '@/hooks/usePDFTextClick';
-import { usePDFTextProcessing } from '@/hooks/usePDFTextProcessing';
-import { usePDFURLConversion } from '@/hooks/usePDFURLConversion';
+import { usePDFDocuments } from '@/hooks/pdf/usePDFDocuments';
+import { usePDFHighlighting } from '@/hooks/pdf/usePDFHighlighting';
+import { usePDFTextClick } from '@/hooks/pdf/usePDFTextClick';
+import { usePDFTextProcessing } from '@/hooks/pdf/usePDFTextProcessing';
+import { usePDFURLConversion } from '@/hooks/pdf/usePDFURLConversion';
 
 /**
  * Interface defining all available methods and properties in the PDF context

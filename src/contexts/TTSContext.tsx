@@ -29,10 +29,10 @@ import { Howl } from 'howler';
 import { useConfig } from '@/contexts/ConfigContext';
 import { splitIntoSentences, preprocessSentenceForAudio } from '@/services/nlp';
 import { audioBufferToURL } from '@/services/audio';
-import { useAudioCache } from '@/hooks/useAudioCache';
-import { useVoiceManagement } from '@/hooks/useVoiceManagement';
-import { useMediaSession } from '@/hooks/useMediaSession';
-import { useAudioContext } from '@/hooks/useAudioContext';
+import { useAudioCache } from '@/hooks/audio/useAudioCache';
+import { useVoiceManagement } from '@/hooks/audio/useVoiceManagement';
+import { useMediaSession } from '@/hooks/audio/useMediaSession';
+import { useAudioContext } from '@/hooks/audio/useAudioContext';
 
 // Media globals
 declare global {
