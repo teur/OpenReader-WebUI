@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState } from 'react';
-import { getItem, indexedDBService, setItem } from '@/services/indexedDB';
+import { getItem, indexedDBService, setItem } from '@/utils/indexedDB';
 
 export type ViewType = 'single' | 'dual' | 'scroll';
 interface ConfigContextType {

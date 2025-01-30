@@ -27,8 +27,8 @@ import OpenAI from 'openai';
 import { Howl } from 'howler';
 
 import { useConfig } from '@/contexts/ConfigContext';
-import { splitIntoSentences, preprocessSentenceForAudio } from '@/services/nlp';
-import { audioBufferToURL } from '@/services/audio';
+import { splitIntoSentences, preprocessSentenceForAudio } from '@/utils/nlp';
+import { audioBufferToURL } from '@/utils/audio';
 import { useAudioCache } from '@/hooks/audio/useAudioCache';
 import { useVoiceManagement } from '@/hooks/audio/useVoiceManagement';
 import { useMediaSession } from '@/hooks/audio/useMediaSession';

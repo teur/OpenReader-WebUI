@@ -23,23 +23,26 @@ import {
   useMemo,
 } from 'react';
 
-import { indexedDBService, type PDFDocument } from '@/services/indexedDB';
-import { useConfig } from '@/contexts/ConfigContext';
+import { indexedDBService, type PDFDocument } from '@/utils/indexedDB';
 import { useTTS } from '@/contexts/TTSContext';
+import {
+  extractTextFromPDF,
+  convertPDFDataToURL,
+  highlightPattern,
+  clearHighlights,
+  handleTextClick,
+} from '@/utils/pdf';
 import { usePDFDocuments } from '@/hooks/pdf/usePDFDocuments';
-import { usePDFHighlighting } from '@/hooks/pdf/usePDFHighlighting';
-import { usePDFTextClick } from '@/hooks/pdf/usePDFTextClick';
-import { usePDFTextProcessing } from '@/hooks/pdf/usePDFTextProcessing';
-import { usePDFURLConversion } from '@/hooks/pdf/usePDFURLConversion';
 
 /**
  * Interface defining all available methods and properties in the PDF context
  */
 interface PDFContextType {
-  // Documents management
+  // PDF document store management
+  addDocument: (file: File) => Promise<string>;
   documents: PDFDocument[];
   removeDocument: (id: string) => Promise<void>;
-  isLoading: boolean;
+  isDocsLoading: boolean;
 
   // Current document state
   currDocURL: string | undefined;
@@ -80,12 +83,8 @@ export function PDFProvider({ children }: { children: ReactNode }) {
     setCurrDocPages,
   } = useTTS();
 
-  // Initialize hooks
-  const { documents, isLoading, removeDocument } = usePDFDocuments();
-  const { extractTextFromPDF } = usePDFTextProcessing();
-  const { highlightPattern, clearHighlights } = usePDFHighlighting();
-  const { handleTextClick } = usePDFTextClick();
-  const { convertPDFDataToURL } = usePDFURLConversion();
+  // PDF Documents hook
+  const { addDocument, documents, removeDocument, isLoading: isDocsLoading } = usePDFDocuments();
 
   // Current document state
   const [currDocURL, setCurrDocURL] = useState<string>();
@@ -114,7 +113,7 @@ export function PDFProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Error loading PDF text:', error);
     }
-  }, [currDocURL, currDocPage, extractTextFromPDF, setTTSText]);
+  }, [currDocURL, currDocPage, setTTSText]);
 
   /**
    * Updates the current document text when the page changes
@@ -141,7 +140,7 @@ export function PDFProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Failed to get document URL:', error);
     }
-  }, [convertPDFDataToURL]);
+  }, []);
 
   /**
    * Clears the current document state
@@ -157,9 +156,10 @@ export function PDFProvider({ children }: { children: ReactNode }) {
   // Context value memoization
   const contextValue = useMemo(
     () => ({
+      addDocument,
       documents,
       removeDocument,
-      isLoading,
+      isDocsLoading,
       onDocumentLoadSuccess,
       setCurrentDocument,
       currDocURL,
@@ -173,9 +173,10 @@ export function PDFProvider({ children }: { children: ReactNode }) {
       handleTextClick,
     }),
     [
+      addDocument,
       documents,
       removeDocument,
-      isLoading,
+      isDocsLoading,
       onDocumentLoadSuccess,
       setCurrentDocument,
       currDocURL,
@@ -184,9 +185,6 @@ export function PDFProvider({ children }: { children: ReactNode }) {
       currDocPage,
       currDocText,
       clearCurrDoc,
-      highlightPattern,
-      clearHighlights,
-      handleTextClick,
     ]
   );
 

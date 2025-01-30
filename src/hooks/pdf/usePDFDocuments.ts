@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { indexedDBService, type PDFDocument } from '@/services/indexedDB';
+import { indexedDBService, type PDFDocument } from '@/utils/indexedDB';
 import { useConfig } from '@/contexts/ConfigContext';
 
 export function usePDFDocuments() {
@@ -11,10 +11,8 @@ export function usePDFDocuments() {
   /**
    * Load documents from IndexedDB when the database is ready
    */
-  useEffect(() => {
-    const loadDocuments = async () => {
-      if (!isDBReady) return;
-
+  const loadDocuments = useCallback(async () => {
+    if (isDBReady) {
       try {
         const docs = await indexedDBService.getAllDocuments();
         setDocuments(docs);
@@ -23,10 +21,12 @@ export function usePDFDocuments() {
       } finally {
         setIsLoading(false);
       }
-    };
-
-    loadDocuments();
+    }
   }, [isDBReady]);
+
+  useEffect(() => {
+    loadDocuments();
+  }, [loadDocuments]);
 
   /**
    * Adds a new document to IndexedDB

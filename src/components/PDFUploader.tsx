@@ -2,15 +2,15 @@
 
 import { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
+import { usePDF } from '@/contexts/PDFContext';
 import { UploadIcon } from '@/components/icons/Icons';
-import { usePDFDocuments } from '@/hooks/pdf/usePDFDocuments';
 
 interface PDFUploaderProps {
   className?: string;
 }
 
 export function PDFUploader({ className = '' }: PDFUploaderProps) {
-  const { addDocument } = usePDFDocuments();
+  const { addDocument } = usePDF();
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
