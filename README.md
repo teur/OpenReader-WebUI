@@ -1,103 +1,103 @@
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](#license)
+[![Contributions Welcome](https://img.shields.io/badge/Contributions-Welcome-orange.svg)](../../pulls)
+
 # OpenReader WebUI
 
-OpenReader WebUI is a web-based PDF reader with integrated Text-to-Speech capabilities. It provides a clean interface for reading PDF documents while offering synchronized text-to-speech playback using OpenAI's TTS API.
+OpenReader WebUI is a sleek, web-based PDF reader with built-in Text-to-Speech capabilities, offering a seamless reading experience with synchronized audio narration.
 
-## Demo
-
-https://github.com/user-attachments/assets/7a3457ba-feda-4939-928a-cb587b1c0884
-
-## Features
-
-- **PDF Document Management**
-  - Local document storage using IndexedDB
-  - PDF text extraction and rendering
-
-- **Text-to-Speech Integration**
-  - Real-time text-to-speech using OpenAI's TTS API, Kokoro TTS API, or anything else that follows the OpenAI API format
-  - Synchronized text highlighting
-  - Configurable playback speed
+- 🎯 **TTS API Integration**: Compatible with OpenAI API TTS and Kokoro FastAPI TTS, enabling high-quality voice narration
+- 💾 **Local-First Architecture**: Secure document handling with IndexedDB browser storage - no server uploads required
+- 🔍 **Smart Text Processing**: Real-time sentence detection and synchronized text highlighting during playback
+- ⚡ **Modern Tech Stack**: Built with Next.js, React, and Tailwind CSS
+- 🎨 **Customizable Experience**: 
+  - Adjustable playback speed
   - Multiple voice options
-  - Click-to-read functionality
+  - Dark/light/system theme support
+  - Persistent user settings
+- 📱 **Cross-Platform**: Responsive design works seamlessly across desktop and mobile devices
 
-- **User Interface**
-  - Light/Dark/System theme support
-  - Responsive design
-  - Configurable API settings
-  - Interactive PDF text selection
+## **Demo**
 
-## Tech Stack
-
-- **Framework**: Next.js with React
-- **Storage**: IndexedDB for document storage
-- **PDF Processing**: 
-  - react-pdf for rendering
-  - pdf.js for text extraction
-  - compromise for text analysis
-- **UI Components**: 
-  - Headless UI for modals and dropdowns
-  - Tailwind CSS for styling
-- **TTS Integration**: OpenAI TTS API
+https://github.com/user-attachments/assets/323251e6-3b3b-43cc-b139-cdab01ca7d75
 
 ## Installation
 
-> You will need `node` and `npm` installed on your machine. If you don't have it, I recommend installing it using [nvm](https://github.com/nvm-sh/nvm).
+### Prerequisites
+- Node.js & npm (recommended: use [nvm](https://github.com/nvm-sh/nvm))
 
+### Steps
 
 1. Clone the repository:
-```bash
-git clone https://github.com/richardr1126/OpenReader-WebUI.git
-cd OpenReader-WebUI
-```
+   ```bash
+   git clone https://github.com/richardr1126/OpenReader-WebUI.git
+   cd OpenReader-WebUI
+   ```
 
 2. Install dependencies:
-```bash
-npm install
-```
+   ```bash
+   npm install
+   ```
 
-3. Set up environment variables:
-```bash
-cp .env.template .env
-```
-> Edit the `.env` file with your configuration settings.
+3. Configure the environment:
+   ```bash
+   cp .env.template .env
+   # Edit .env with your configuration settings
+   ```
 
 4. Start the development server:
-```bash
-npm run dev
-```
+   ```bash
+   npm run dev
+   ```
+   Visit [http://localhost:3000](http://localhost:3000) to run the app.
 
-The application will be available at [http://localhost:3000](http://localhost:3000).
+## **Features**
+  - Real-time sentence by sentence text-to-speech via OpenAI API TTS, [Kokoro FastAPI TTS](https://github.com/remsky/Kokoro-FastAPI), or others compatible with the `/v1/audio/speech` endpoint
+  - IndexedDB-powered local storage
+  - Synchronized text highlighting during playback (using string similarity for best match on the page)
+  - Configurable playback speed and voice options, which checks `/v1/audio/voices` for available voices
+  - Click-to-skip on the same page for navigation
+  - Responsive design with light, dark, and system themes
+  - All configuration settings saved in IndexedDB
 
-## Available Scripts
+## Stack
 
-- `npm run dev` - Start development server with Turbopack
-- `npm run build` - Create production build
-- `npm run start` - Start production server
-- `npm run lint` - Run ESLint for code quality
+- **Framework:** Next.js (React)
+- **Storage:** IndexedDB (in broswer db store)
+- **PDF Processing:** 
+  - [react-pdf](https://github.com/wojtekmaj/react-pdf)
+  - [pdf.js](https://mozilla.github.io/pdf.js/)
+  - Compromise for text analysis
+- **UI Components:** 
+  - Headless UI
+  - Tailwind CSS
+- **TTS Integration:** anything you want
 
 ## Project Structure
 
 ```
 src/
-├── app/                    # Next.js app router
-├── components/             # UI components
-├── contexts/               # Contexts for state management
-└── services/               # Utility functions
+├── app/           // Next.js app router
+├── components/    // Reusable UI components
+├── contexts/      // State management contexts
+└── services/      // Utility functions & integrations
 ```
 
-## Browser Support
+## Contributing
 
-The application requires modern browser features:
-- IndexedDB for document storage
-- PDF.js for document rendering
+Contributions are welcome! Fork the repository and submit a pull request with your changes. For significant alterations, please open an issue first.
 
 ## License
 
-MIT License
+This project is licensed under the MIT License.
 
 ## Acknowledgements
 
-- [react-pdf](https://github.com/wojtekmaj/react-pdf) for the PDF rendering library.
-- [Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M) text-to-speech model
-- [Kokoro-FastAPI](https://github.com/remsky/Kokoro-FastAPI/tree/master) for the text-to-speech api wrapper.
+- [react-pdf](https://github.com/wojtekmaj/react-pdf)
+- [Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M) for text-to-speech
+- [Kokoro-FastAPI](https://github.com/remsky/Kokoro-FastAPI) for the API wrapper
 
-Thank you ❤️
+## Support
+
+If you encounter issues or have suggestions, please open an issue on GitHub.
+
+<!-- ...existing sections for further documentation or credits if needed... -->
