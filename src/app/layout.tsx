@@ -44,11 +44,14 @@ export const metadata: Metadata = {
   },
 };
 
+const isDev = process.env.NEXT_PUBLIC_NODE_ENV !== 'production';
+
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -62,7 +65,7 @@ export default function RootLayout({
               <div className="bg-base rounded-lg shadow-lg">
                 {children}
               </div>
-              <Footer />
+              {!isDev && <Footer />}
             </div>
           </div>
         </Providers>
