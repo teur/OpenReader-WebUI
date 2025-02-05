@@ -64,8 +64,8 @@ export function ConfigProvider({ children }: { children: React.ReactNode }) {
         if (cachedSkipBlank) console.log('Cached skip blank found:', cachedSkipBlank);
 
         // If not in cache, use env variables
-        const defaultApiKey = process.env.NEXT_PUBLIC_OPENAI_API_KEY || '';
-        const defaultBaseUrl = process.env.NEXT_PUBLIC_OPENAI_API_BASE || '';
+        const defaultApiKey = process.env.NEXT_PUBLIC_OPENAI_API_KEY || '1234567890';
+        const defaultBaseUrl = process.env.NEXT_PUBLIC_OPENAI_API_BASE || 'https://api.openai.com/v1';
 
         // Set the values
         setApiKey(cachedApiKey || defaultApiKey);
