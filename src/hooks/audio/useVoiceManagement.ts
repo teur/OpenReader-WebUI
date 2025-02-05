@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useCallback } from 'react';
 
 const DEFAULT_VOICES = ['alloy', 'ash', 'coral', 'echo', 'fable', 'onyx', 'nova', 'sage', 'shimmer'];

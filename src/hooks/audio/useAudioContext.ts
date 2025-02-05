@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useEffect } from 'react';
 
 // Type definition for AudioContext to handle browser compatibility
