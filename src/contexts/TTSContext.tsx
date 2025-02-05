@@ -25,6 +25,7 @@ import React, {
 } from 'react';
 import OpenAI from 'openai';
 import { Howl } from 'howler';
+import toast from 'react-hot-toast';
 
 import { useConfig } from '@/contexts/ConfigContext';
 import { splitIntoSentences, preprocessSentenceForAudio } from '@/utils/nlp';
@@ -136,8 +137,21 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
 
     // If skipBlank is enabled and there's no text and we are playing audio, automatically move to next page
     if (isPlaying && skipBlank && newSentences.length === 0 && currDocPage < currDocPages!) {
-      console.log('Skipping blank page:', currDocPage);
       incrementPage();
+
+      toast.success(`Skipping blank page ${currDocPage}`, {
+        id: `page-${currDocPage}`,
+        iconTheme: {
+          primary: 'var(--accent)',
+          secondary: 'var(--background)',
+        },
+        style: {
+          background: 'var(--background)',
+          color: 'var(--accent)',
+        },
+        duration: 1000,
+        position: 'top-center',
+      });
       return;
     }
     

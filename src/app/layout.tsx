@@ -3,6 +3,7 @@ import { Providers } from "./providers";
 import { Metadata } from "next";
 import Script from "next/script";
 import { Footer } from "@/components/Footer";
+import { Toaster } from 'react-hot-toast';
 
 export const metadata: Metadata = {
   title: "OpenReader WebUI",
@@ -69,6 +70,7 @@ export default function RootLayout({
               {!isDev && <Footer />}
             </div>
           </div>
+          <Toaster />
         </Providers>
       </body>
     </html>
