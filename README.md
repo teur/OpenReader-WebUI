@@ -20,7 +20,26 @@ OpenReader WebUI is a sleek, web-based PDF reader with built-in Text-to-Speech c
 
 https://github.com/user-attachments/assets/323251e6-3b3b-43cc-b139-cdab01ca7d75
 
-## Installation
+## 🐳 Docker Quick Start
+
+```bash
+docker run --name openreader-webui -p 3003:3003 richardr1126/openreader-webui:latest
+```
+Visit [http://localhost:3003](http://localhost:3003) to run the app.
+
+### Using Docker Compose
+Create or add to a `docker-compose.yml`:
+```yaml
+services:
+  openreader-webui:
+    container_name: openreader-webui
+    image: richardr1126/openreader-webui:latest
+    ports:
+      - "3003:3003"
+    restart: unless-stopped
+```
+
+## Dev Installation
 
 ### Prerequisites
 - Node.js & npm (recommended: use [nvm](https://github.com/nvm-sh/nvm))
@@ -48,7 +67,21 @@ https://github.com/user-attachments/assets/323251e6-3b3b-43cc-b139-cdab01ca7d75
    ```bash
    npm run dev
    ```
-   Visit [http://localhost:3000](http://localhost:3000) to run the app.
+
+   or build and run the production server:
+   ```bash
+   npm run build
+   npm start
+   ```
+
+   Visit [http://localhost:3003](http://localhost:3003) to run the app.
+
+   > Dev server runs on port 3000 by default, while the production server runs on port 3003.
+
+#### Docker Supported Architectures
+- linux/amd64 (x86_64)
+- linux/arm64 (Apple Silicon)
+- linux/arm/v7 (Raspberry Pi)
 
 ## **Features**
   - Real-time sentence by sentence text-to-speech via OpenAI API TTS, [Kokoro FastAPI TTS](https://github.com/remsky/Kokoro-FastAPI), or others compatible with the `/v1/audio/speech` endpoint
