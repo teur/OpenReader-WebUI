@@ -110,6 +110,7 @@ export function PDFProvider({ children }: { children: ReactNode }) {
       const text = await extractTextFromPDF(currDocURL, currDocPage);
       setCurrDocText(text);
       setTTSText(text);
+
     } catch (error) {
       console.error('Error loading PDF text:', error);
     }

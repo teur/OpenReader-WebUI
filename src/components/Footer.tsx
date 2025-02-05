@@ -1,12 +1,22 @@
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react'
+import { GithubIcon } from './icons/Icons'
 
 export function Footer() {
   return (
     <footer className="m-8 text-sm text-muted">
       <div className="flex flex-col items-center space-y-2">
         <div className="flex flex-wrap sm:flex-nowrap items-center justify-center text-center sm:space-x-3">
+          <a
+            href="https://github.com/richardr1126/OpenReader-WebUI"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-foreground transition-colors"
+          >
+            <GithubIcon className="w-5 h-5" />
+          </a>
+          <span className='w-full sm:w-fit'>•</span>
           <Popover className="flex">
-            <PopoverButton className="hover:text-foreground transition-colors">
+            <PopoverButton className="hover:text-foreground transition-colors flex items-center gap-1">
               Privacy info
             </PopoverButton>
             <PopoverPanel anchor="top" className="bg-base p-4 rounded-lg shadow-lg w-64">

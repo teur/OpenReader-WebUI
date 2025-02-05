@@ -87,7 +87,8 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     isLoading: configIsLoading,
     voiceSpeed,
     voice: configVoice,
-    updateConfigKey
+    updateConfigKey,
+    skipBlank,
   } = useConfig();
 
   // OpenAI client reference
@@ -113,6 +114,17 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
   const [nextPageLoading, setNextPageLoading] = useState(false);
 
   /**
+   * Changes the current page by a specified amount
+   * 
+   * @param {number} [num=1] - The number of pages to increment by
+   * @returns {void}
+   */
+  const incrementPage = useCallback((num = 1) => {
+    setNextPageLoading(true);
+    setCurrDocPage(currDocPage + num);
+  }, [currDocPage]);
+
+  /**
    * Sets the current text and splits it into sentences
    * 
    * @param {string} text - The text to be processed
@@ -121,10 +133,17 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
   const setText = useCallback((text: string) => {
     console.log('Setting page text:', text);
     const newSentences = splitIntoSentences(text);
-    setSentences(newSentences);
 
+    // If skipBlank is enabled and there's no text and we are playing audio, automatically move to next page
+    if (isPlaying && skipBlank && newSentences.length === 0 && currDocPage < currDocPages!) {
+      console.log('Skipping blank page:', currDocPage);
+      incrementPage();
+      return;
+    }
+    
+    setSentences(newSentences);
     setNextPageLoading(false);
-  }, []);
+  }, [isPlaying, skipBlank, currDocPage, currDocPages, incrementPage]);
 
   /**
    * Stops the current audio playback and clears the active Howl instance
@@ -167,17 +186,6 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     setCurrentIndex(0);
     setCurrDocPage(page);
   }, [abortAudio]);
-
-  /**
-   * Changes the current page by a specified amount
-   * 
-   * @param {number} [num=1] - The number of pages to increment by
-   * @returns {void}
-   */
-  const incrementPage = useCallback((num = 1) => {
-    setNextPageLoading(true);
-    setCurrDocPage(currDocPage + num);
-  }, [currDocPage]);
 
   /**
    * Moves to the next or previous sentence

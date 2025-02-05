@@ -10,6 +10,7 @@ interface ConfigContextType {
   viewType: ViewType;
   voiceSpeed: number;
   voice: string;
+  skipBlank: boolean;
   updateConfig: (newConfig: Partial<{ apiKey: string; baseUrl: string; viewType: ViewType }>) => Promise<void>;
   updateConfigKey: <K extends keyof ConfigValues>(key: K, value: ConfigValues[K]) => Promise<void>;
   isLoading: boolean;
@@ -23,6 +24,7 @@ type ConfigValues = {
   viewType: ViewType;
   voiceSpeed: number;
   voice: string;
+  skipBlank: boolean;
 };
 
 const ConfigContext = createContext<ConfigContextType | undefined>(undefined);
@@ -34,7 +36,7 @@ export function ConfigProvider({ children }: { children: React.ReactNode }) {
   const [viewType, setViewType] = useState<ViewType>('single');
   const [voiceSpeed, setVoiceSpeed] = useState<number>(1);
   const [voice, setVoice] = useState<string>('af_sarah');
-
+  const [skipBlank, setSkipBlank] = useState<boolean>(true);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isDBReady, setIsDBReady] = useState(false);
@@ -52,12 +54,14 @@ export function ConfigProvider({ children }: { children: React.ReactNode }) {
         const cachedViewType = await getItem('viewType');
         const cachedVoiceSpeed = await getItem('voiceSpeed');
         const cachedVoice = await getItem('voice');
+        const cachedSkipBlank = await getItem('skipBlank');
 
         if (cachedApiKey) console.log('Cached API key found:', cachedApiKey);
         if (cachedBaseUrl) console.log('Cached base URL found:', cachedBaseUrl);
         if (cachedViewType) console.log('Cached view type found:', cachedViewType);
         if (cachedVoiceSpeed) console.log('Cached voice speed found:', cachedVoiceSpeed);
         if (cachedVoice) console.log('Cached voice found:', cachedVoice);
+        if (cachedSkipBlank) console.log('Cached skip blank found:', cachedSkipBlank);
 
         // If not in cache, use env variables
         const defaultApiKey = process.env.NEXT_PUBLIC_OPENAI_API_KEY || '';
@@ -69,6 +73,7 @@ export function ConfigProvider({ children }: { children: React.ReactNode }) {
         setViewType((cachedViewType || 'single') as ViewType);
         setVoiceSpeed(parseFloat(cachedVoiceSpeed || '1'));
         setVoice(cachedVoice || 'af_sarah');
+        setSkipBlank(cachedSkipBlank === 'false' ? false : true);
 
         // If not in cache, save to cache
         if (!cachedApiKey) {
@@ -79,6 +84,9 @@ export function ConfigProvider({ children }: { children: React.ReactNode }) {
         }
         if (!cachedViewType) {
           await setItem('viewType', 'single');
+        }
+        if (cachedSkipBlank === null) {
+          await setItem('skipBlank', 'true');
         }
         
       } catch (error) {
@@ -126,6 +134,9 @@ export function ConfigProvider({ children }: { children: React.ReactNode }) {
         case 'voice':
           setVoice(value as string);
           break;
+        case 'skipBlank':
+          setSkipBlank(value as boolean);
+          break;
       }
     } catch (error) {
       console.error(`Error updating config key ${key}:`, error);
@@ -140,6 +151,7 @@ export function ConfigProvider({ children }: { children: React.ReactNode }) {
       viewType, 
       voiceSpeed,
       voice,
+      skipBlank,
       updateConfig, 
       updateConfigKey,
       isLoading, 

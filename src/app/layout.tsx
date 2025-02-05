@@ -44,7 +44,8 @@ export const metadata: Metadata = {
   },
 };
 
-const isDev = process.env.NEXT_PUBLIC_NODE_ENV !== 'production';
+//const isDev = process.env.NEXT_PUBLIC_NODE_ENV !== 'production' || process.env.NODE_ENV == null;
+const isDev = false;
 
 export default function RootLayout({
   children,
