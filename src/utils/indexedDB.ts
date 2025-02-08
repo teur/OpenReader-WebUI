@@ -1,9 +1,18 @@
 const DB_NAME = 'openreader-db';
-const DB_VERSION = 1;
+const DB_VERSION = 2;  // Increased version number
 const PDF_STORE_NAME = 'pdf-documents';
+const EPUB_STORE_NAME = 'epub-documents';
 const CONFIG_STORE_NAME = 'config';
 
 export interface PDFDocument {
+  id: string;
+  name: string;
+  size: number;
+  lastModified: number;
+  data: Blob;
+}
+
+export interface EPUBDocument {
   id: string;
   name: string;
   size: number;
@@ -52,6 +61,11 @@ class IndexedDBService {
         if (!db.objectStoreNames.contains(PDF_STORE_NAME)) {
           console.log('Creating PDF documents store...');
           db.createObjectStore(PDF_STORE_NAME, { keyPath: 'id' });
+        }
+
+        if (!db.objectStoreNames.contains(EPUB_STORE_NAME)) {
+          console.log('Creating EPUB documents store...');
+          db.createObjectStore(EPUB_STORE_NAME, { keyPath: 'id' });
         }
 
         if (!db.objectStoreNames.contains(CONFIG_STORE_NAME)) {
@@ -176,6 +190,103 @@ class IndexedDBService {
         };
       } catch (error) {
         console.error('Error in removeDocument transaction:', error);
+        reject(error);
+      }
+    });
+  }
+
+  // Add EPUB Document Methods
+  async addEpubDocument(document: EPUBDocument): Promise<void> {
+    if (!this.db) {
+      await this.init();
+    }
+
+    return new Promise((resolve, reject) => {
+      try {
+        const transaction = this.db!.transaction([EPUB_STORE_NAME], 'readwrite');
+        const store = transaction.objectStore(EPUB_STORE_NAME);
+        const request = store.put(document);
+
+        request.onerror = (event) => {
+          reject((event.target as IDBRequest).error);
+        };
+
+        transaction.oncomplete = () => {
+          resolve();
+        };
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  async getEpubDocument(id: string): Promise<EPUBDocument | undefined> {
+    if (!this.db) {
+      await this.init();
+    }
+
+    return new Promise((resolve, reject) => {
+      try {
+        const transaction = this.db!.transaction([EPUB_STORE_NAME], 'readonly');
+        const store = transaction.objectStore(EPUB_STORE_NAME);
+        const request = store.get(id);
+
+        request.onerror = (event) => {
+          reject((event.target as IDBRequest).error);
+        };
+
+        request.onsuccess = () => {
+          resolve(request.result);
+        };
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  async getAllEpubDocuments(): Promise<EPUBDocument[]> {
+    if (!this.db) {
+      await this.init();
+    }
+
+    return new Promise((resolve, reject) => {
+      try {
+        const transaction = this.db!.transaction([EPUB_STORE_NAME], 'readonly');
+        const store = transaction.objectStore(EPUB_STORE_NAME);
+        const request = store.getAll();
+
+        request.onerror = (event) => {
+          reject((event.target as IDBRequest).error);
+        };
+
+        request.onsuccess = () => {
+          resolve(request.result || []);
+        };
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  async removeEpubDocument(id: string): Promise<void> {
+    if (!this.db) {
+      await this.init();
+    }
+
+    return new Promise((resolve, reject) => {
+      try {
+        const transaction = this.db!.transaction([EPUB_STORE_NAME], 'readwrite');
+        const store = transaction.objectStore(EPUB_STORE_NAME);
+        const request = store.delete(id);
+
+        request.onerror = (event) => {
+          reject((event.target as IDBRequest).error);
+        };
+
+        transaction.oncomplete = () => {
+          resolve();
+        };
+      } catch (error) {
         reject(error);
       }
     });

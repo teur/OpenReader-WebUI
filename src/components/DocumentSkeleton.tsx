@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import toast from 'react-hot-toast';
 
-export function PDFSkeleton() {
+export function DocumentSkeleton() {
   useEffect(() => {
     const timer = setTimeout(() => {
       toast('There might be an issue with the file import. Please try again.', {

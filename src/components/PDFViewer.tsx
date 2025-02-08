@@ -4,7 +4,7 @@ import { RefObject, useCallback, useState, useEffect, useRef } from 'react';
 import { Document, Page } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
-import { PDFSkeleton } from './PDFSkeleton';
+import { DocumentSkeleton } from '@/components/DocumentSkeleton';
 import { useTTS } from '@/contexts/TTSContext';
 import { usePDF } from '@/contexts/PDFContext';
 import TTSPlayer from '@/components/player/TTSPlayer';
@@ -165,8 +165,8 @@ export function PDFViewer({ zoomLevel }: PDFViewerProps) {
   return (
     <div ref={containerRef} className="flex flex-col items-center overflow-auto max-h-[calc(100vh-100px)] w-full px-6">
       <Document
-        loading={<PDFSkeleton />}
-        noData={<PDFSkeleton />}
+        loading={<DocumentSkeleton />}
+        noData={<DocumentSkeleton />}
         file={currDocURL}
         onLoadSuccess={(pdf) => {
           onDocumentLoadSuccess(pdf);

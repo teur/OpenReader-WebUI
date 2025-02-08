@@ -5,7 +5,7 @@ import { usePDF } from '@/contexts/PDFContext';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
-import { PDFSkeleton } from '@/components/PDFSkeleton';
+import { DocumentSkeleton } from '@/components/DocumentSkeleton';
 import { useTTS } from '@/contexts/TTSContext';
 import { Button } from '@headlessui/react';
 import { PDFViewSettings } from '@/components/PDFViewSettings';
@@ -16,7 +16,7 @@ const PDFViewer = dynamic(
   () => import('@/components/PDFViewer').then((module) => module.PDFViewer),
   { 
     ssr: false,
-    loading: () => <PDFSkeleton />
+    loading: () => <DocumentSkeleton />
   }
 );
 
@@ -118,7 +118,7 @@ export default function PDFViewerPage() {
       </div>
       {isLoading ? (
         <div className="p-4">
-          <PDFSkeleton />
+          <DocumentSkeleton />
         </div>
       ) : (
         <PDFViewer zoomLevel={zoomLevel} />

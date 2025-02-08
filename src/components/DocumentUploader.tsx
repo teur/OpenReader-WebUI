@@ -4,36 +4,44 @@ import { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { usePDF } from '@/contexts/PDFContext';
 import { UploadIcon } from '@/components/icons/Icons';
+import { useEpubDocuments } from '@/hooks/epub/useEpubDocuments';
 
-interface PDFUploaderProps {
+interface DocumentUploaderProps {
   className?: string;
 }
 
-export function PDFUploader({ className = '' }: PDFUploaderProps) {
-  const { addDocument } = usePDF();
+export function DocumentUploader({ className = '' }: DocumentUploaderProps) {
+  const { addDocument: addPDF } = usePDF();
+  const { addDocument: addEPUB } = useEpubDocuments();
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
-    if (file && file.type === 'application/pdf') {
-      setIsUploading(true);
-      setError(null);
-      try {
-        await addDocument(file);
-      } catch (err) {
-        setError('Failed to upload PDF. Please try again.');
-        console.error('Upload error:', err);
-      } finally {
-        setIsUploading(false);
+    if (!file) return;
+
+    setIsUploading(true);
+    setError(null);
+    
+    try {
+      if (file.type === 'application/pdf') {
+        await addPDF(file);
+      } else if (file.type === 'application/epub+zip') {
+        await addEPUB(file);
       }
+    } catch (err) {
+      setError('Failed to upload file. Please try again.');
+      console.error('Upload error:', err);
+    } finally {
+      setIsUploading(false);
     }
-  }, [addDocument]);
+  }, [addPDF, addEPUB]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
-      'application/pdf': ['.pdf']
+      'application/pdf': ['.pdf'],
+      'application/epub+zip': ['.epub']
     },
     multiple: false,
     disabled: isUploading
@@ -56,15 +64,15 @@ export function PDFUploader({ className = '' }: PDFUploaderProps) {
 
         {isUploading ? (
           <p className="text-sm sm:text-lg font-semibold text-foreground">
-            Uploading PDF...
+            Uploading file...
           </p>
         ) : (
           <>
             <p className="mb-2 text-sm sm:text-lg font-semibold text-foreground">
-              {isDragActive ? 'Drop your PDF here' : 'Drop your PDF here, or click to select'}
+              {isDragActive ? 'Drop your file here' : 'Drop your file here, or click to select'}
             </p>
             <p className="text-xs sm:text-sm text-muted">
-              Only PDF files are currently accepted
+              PDF and EPUB files are accepted
             </p>
             {error && <p className="mt-2 text-sm text-red-500">{error}</p>}
           </>
