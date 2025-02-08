@@ -2,17 +2,15 @@
 
 import { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { usePDF } from '@/contexts/PDFContext';
 import { UploadIcon } from '@/components/icons/Icons';
-import { useEpubDocuments } from '@/hooks/epub/useEpubDocuments';
+import { useDocuments } from '@/contexts/DocumentContext';
 
 interface DocumentUploaderProps {
   className?: string;
 }
 
 export function DocumentUploader({ className = '' }: DocumentUploaderProps) {
-  const { addDocument: addPDF } = usePDF();
-  const { addDocument: addEPUB } = useEpubDocuments();
+  const { addPDFDocument: addPDF, addEPUBDocument: addEPUB } = useDocuments();
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

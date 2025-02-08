@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { indexedDBService, type EPUBDocument } from '@/utils/indexedDB';
 import { useConfig } from '@/contexts/ConfigContext';
 
-export function useEpubDocuments() {
+export function useEPUBDocuments() {
   const { isDBReady } = useConfig();
   const [documents, setDocuments] = useState<EPUBDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -13,7 +13,7 @@ export function useEpubDocuments() {
   const loadDocuments = useCallback(async () => {
     if (isDBReady) {
       try {
-        const docs = await indexedDBService.getAllEpubDocuments();
+        const docs = await indexedDBService.getAllEPUBDocuments();
         setDocuments(docs);
       } catch (error) {
         console.error('Failed to load EPUB documents:', error);
@@ -29,16 +29,21 @@ export function useEpubDocuments() {
 
   const addDocument = useCallback(async (file: File): Promise<string> => {
     const id = uuidv4();
+    const arrayBuffer = await file.arrayBuffer();
+    
+    console.log('Original file size:', file.size);
+    console.log('ArrayBuffer size:', arrayBuffer.byteLength);
+    
     const newDoc: EPUBDocument = {
       id,
       name: file.name,
       size: file.size,
       lastModified: file.lastModified,
-      data: new Blob([file], { type: file.type }),
+      data: arrayBuffer,
     };
 
     try {
-      await indexedDBService.addEpubDocument(newDoc);
+      await indexedDBService.addEPUBDocument(newDoc);
       setDocuments((prev) => [...prev, newDoc]);
       return id;
     } catch (error) {
@@ -49,7 +54,7 @@ export function useEpubDocuments() {
 
   const removeDocument = useCallback(async (id: string): Promise<void> => {
     try {
-      await indexedDBService.removeEpubDocument(id);
+      await indexedDBService.removeEPUBDocument(id);
       setDocuments((prev) => prev.filter((doc) => doc.id !== id));
     } catch (error) {
       console.error('Failed to remove EPUB document:', error);

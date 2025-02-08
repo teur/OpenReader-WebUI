@@ -24,6 +24,7 @@
     "react-dropzone": "^14.3.5",
     "react-hot-toast": "^2.5.1",
     "react-pdf": "^9.2.1",
+    "react-reader": "^2.0.12",
     "string-similarity": "^4.0.4",
     "uuid": "^11.0.5"
   },

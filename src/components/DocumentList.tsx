@@ -1,9 +1,8 @@
-import { usePDF } from '@/contexts/PDFContext';
-import { useEpubDocuments } from '@/hooks/epub/useEpubDocuments';
 import Link from 'next/link';
 import { Button, Dialog } from '@headlessui/react';
 import { Transition, TransitionChild, DialogPanel, DialogTitle } from '@headlessui/react';
 import { Fragment, useState } from 'react';
+import { useDocuments } from '@/contexts/DocumentContext';
 
 type DocumentToDelete = {
   id: string;
@@ -12,8 +11,15 @@ type DocumentToDelete = {
 };
 
 export function DocumentList() {
-  const { documents: pdfDocs, removeDocument: removePDF, isDocsLoading: isPDFLoading } = usePDF();
-  const { documents: epubDocs, removeDocument: removeEPUB, isLoading: isEPUBLoading } = useEpubDocuments();
+  const {
+    pdfDocs,
+    removePDFDocument: removePDF,
+    isPDFLoading,
+    epubDocs,
+    removeEPUBDocument: removeEPUB,
+    isEPUBLoading,
+  } = useDocuments();
+
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [documentToDelete, setDocumentToDelete] = useState<DocumentToDelete | null>(null);
 

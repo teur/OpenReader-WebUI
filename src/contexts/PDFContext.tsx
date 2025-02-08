@@ -23,7 +23,7 @@ import {
   useMemo,
 } from 'react';
 
-import { indexedDBService, type PDFDocument } from '@/utils/indexedDB';
+import { indexedDBService } from '@/utils/indexedDB';
 import { useTTS } from '@/contexts/TTSContext';
 import {
   extractTextFromPDF,
@@ -32,18 +32,11 @@ import {
   clearHighlights,
   handleTextClick,
 } from '@/utils/pdf';
-import { usePDFDocuments } from '@/hooks/pdf/usePDFDocuments';
 
 /**
  * Interface defining all available methods and properties in the PDF context
  */
 interface PDFContextType {
-  // PDF document store management
-  addDocument: (file: File) => Promise<string>;
-  documents: PDFDocument[];
-  removeDocument: (id: string) => Promise<void>;
-  isDocsLoading: boolean;
-
   // Current document state
   currDocURL: string | undefined;
   currDocName: string | undefined;
@@ -76,15 +69,7 @@ const PDFContext = createContext<PDFContextType | undefined>(undefined);
  * Handles document loading, text processing, and integration with TTS.
  */
 export function PDFProvider({ children }: { children: ReactNode }) {
-  const {
-    setText: setTTSText,
-    currDocPage,
-    currDocPages,
-    setCurrDocPages,
-  } = useTTS();
-
-  // PDF Documents hook
-  const { addDocument, documents, removeDocument, isLoading: isDocsLoading } = usePDFDocuments();
+  const { setText: setTTSText, currDocPage, currDocPages, setCurrDocPages } = useTTS();
 
   // Current document state
   const [currDocURL, setCurrDocURL] = useState<string>();
@@ -157,10 +142,6 @@ export function PDFProvider({ children }: { children: ReactNode }) {
   // Context value memoization
   const contextValue = useMemo(
     () => ({
-      addDocument,
-      documents,
-      removeDocument,
-      isDocsLoading,
       onDocumentLoadSuccess,
       setCurrentDocument,
       currDocURL,
@@ -174,10 +155,6 @@ export function PDFProvider({ children }: { children: ReactNode }) {
       handleTextClick,
     }),
     [
-      addDocument,
-      documents,
-      removeDocument,
-      isDocsLoading,
       onDocumentLoadSuccess,
       setCurrentDocument,
       currDocURL,

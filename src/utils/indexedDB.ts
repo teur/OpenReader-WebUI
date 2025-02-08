@@ -17,7 +17,7 @@ export interface EPUBDocument {
   name: string;
   size: number;
   lastModified: number;
-  data: Blob;
+  data: ArrayBuffer;  // Changed from Blob to ArrayBuffer
 }
 
 export interface Config {
@@ -196,31 +196,49 @@ class IndexedDBService {
   }
 
   // Add EPUB Document Methods
-  async addEpubDocument(document: EPUBDocument): Promise<void> {
+  async addEPUBDocument(document: EPUBDocument): Promise<void> {
     if (!this.db) {
       await this.init();
     }
 
     return new Promise((resolve, reject) => {
       try {
+        if (document.data.byteLength === 0) {
+          throw new Error('Cannot store empty ArrayBuffer');
+        }
+
+        console.log('Storing document:', {
+          name: document.name,
+          size: document.size,
+          actualSize: document.data.byteLength
+        });
+
         const transaction = this.db!.transaction([EPUB_STORE_NAME], 'readwrite');
         const store = transaction.objectStore(EPUB_STORE_NAME);
-        const request = store.put(document);
+        
+        // Create a structured clone of the document to ensure proper storage
+        const request = store.put({
+          ...document,
+          data: document.data.slice(0) // Create a copy of the ArrayBuffer
+        });
 
         request.onerror = (event) => {
+          console.error('Error storing document:', (event.target as IDBRequest).error);
           reject((event.target as IDBRequest).error);
         };
 
         transaction.oncomplete = () => {
+          console.log('Document stored successfully');
           resolve();
         };
       } catch (error) {
+        console.error('Error in addEPUBDocument:', error);
         reject(error);
       }
     });
   }
 
-  async getEpubDocument(id: string): Promise<EPUBDocument | undefined> {
+  async getEPUBDocument(id: string): Promise<EPUBDocument | undefined> {
     if (!this.db) {
       await this.init();
     }
@@ -232,19 +250,29 @@ class IndexedDBService {
         const request = store.get(id);
 
         request.onerror = (event) => {
+          console.error('Error fetching document:', (event.target as IDBRequest).error);
           reject((event.target as IDBRequest).error);
         };
 
         request.onsuccess = () => {
-          resolve(request.result);
+          const doc = request.result;
+          if (doc) {
+            console.log('Retrieved document from DB:', {
+              name: doc.name,
+              size: doc.size,
+              actualSize: doc.data.byteLength
+            });
+          }
+          resolve(doc);
         };
       } catch (error) {
+        console.error('Error in getEPUBDocument:', error);
         reject(error);
       }
     });
   }
 
-  async getAllEpubDocuments(): Promise<EPUBDocument[]> {
+  async getAllEPUBDocuments(): Promise<EPUBDocument[]> {
     if (!this.db) {
       await this.init();
     }
@@ -268,7 +296,7 @@ class IndexedDBService {
     });
   }
 
-  async removeEpubDocument(id: string): Promise<void> {
+  async removeEPUBDocument(id: string): Promise<void> {
     if (!this.db) {
       await this.init();
     }
