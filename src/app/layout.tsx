@@ -7,8 +7,8 @@ import { Toaster } from 'react-hot-toast';
 
 export const metadata: Metadata = {
   title: "OpenReader WebUI",
-  description: 'A "bring your own TTS api" web interface for reading documents with high quality text-to-speech voices.',
-  keywords: "PDF reader, text to speech, tts open ai, kokoro tts, Kokoro-82M, OpenReader, TTS PDF reader, high quality text to speech",
+  description: 'A "bring your own TTS api" web interface for reading PDF and EPUB documents with high quality text-to-speech voices. Read books with ease, listen to articles on the go, or study like you have your own lecturer, all in one place.',
+  keywords: "PDF reader, EPUB reader, text to speech, tts open ai, kokoro tts, Kokoro-82M, OpenReader, TTS PDF reader, ebook reader, epub tts, high quality text to speech",
   authors: [{ name: "Richard Roberson" }],
   manifest: "/manifest.json",
   metadataBase: new URL("https://openreader.richardr.dev"), // Replace with your domain
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     url: "https://openreader.richardr.dev",
     siteName: "OpenReader WebUI",
     title: "OpenReader WebUI",
-    description: 'A "bring your own TTS api" web interface for reading documents with high quality text-to-speech voices.',
+    description: 'A "bring your own TTS api" web interface for reading PDF and EPUB documents with high quality text-to-speech voices. Read books with ease, listen to articles on the go, or study like you have your own lecturer, all in one place.',
     images: [
       {
         url: "/web-app-manifest-512x512.png",
