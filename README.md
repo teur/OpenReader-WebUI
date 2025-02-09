@@ -3,11 +3,13 @@
 
 # OpenReader WebUI
 
-OpenReader WebUI is a sleek, web-based PDF reader with built-in Text-to-Speech capabilities, offering a seamless reading experience with synchronized audio narration.
+OpenReader WebUI is a sleek, web-based reader with built-in Text-to-Speech capabilities, offering a seamless reading experience with synchronized audio narration for both PDF and EPUB documents. Read books with ease, listen to articles on the go, or study like you have your own lecturer, all in one place.
 
 - 🎯 **TTS API Integration**: Compatible with OpenAI API TTS and Kokoro FastAPI TTS, enabling high-quality voice narration
 - 💾 **Local-First Architecture**: Secure document handling with IndexedDB browser storage - no server uploads required
 - 🔍 **Smart Text Processing**: Real-time sentence detection and synchronized text highlighting during playback
+- 📚 **EPUB Support**: Read EPUB files with table of contents and synchronized text
+- 📄 **PDF Support**: Read PDF files with text extraction and page navigation
 - ⚡ **Modern Tech Stack**: Built with Next.js, React, and Tailwind CSS
 - 🎨 **Customizable Experience**: 
   - Adjustable playback speed
@@ -95,11 +97,14 @@ services:
 ## Stack
 
 - **Framework:** Next.js (React)
-- **Storage:** IndexedDB (in broswer db store)
+- **Storage:** IndexedDB (in browser db store)
 - **PDF Processing:** 
   - [react-pdf](https://github.com/wojtekmaj/react-pdf)
   - [pdf.js](https://mozilla.github.io/pdf.js/)
   - Compromise for text analysis
+- **EPUB Processing:**
+  - [react-reader](https://github.com/happyr/react-reader)
+  - [epubjs](https://github.com/futurepress/epub.js/)
 - **UI Components:** 
   - Headless UI
   - Tailwind CSS
@@ -126,11 +131,10 @@ This project is licensed under the MIT License.
 ## Acknowledgements
 
 - [react-pdf](https://github.com/wojtekmaj/react-pdf)
+- [react-reader](https://github.com/happyr/react-reader)
 - [Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M) for text-to-speech
 - [Kokoro-FastAPI](https://github.com/remsky/Kokoro-FastAPI) for the API wrapper
 
 ## Support
 
 If you encounter issues or have suggestions, please open an issue on GitHub.
-
-<!-- ...existing sections for further documentation or credits if needed... -->
