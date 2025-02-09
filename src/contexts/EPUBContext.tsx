@@ -10,35 +10,27 @@ import {
 } from 'react';
 import { indexedDBService } from '@/utils/indexedDB';
 import { useTTS } from '@/contexts/TTSContext';
+import { Book, Contents, Rendition } from 'epubjs';
 
 interface EPUBContextType {
-  // Current document state
-  currDocData: ArrayBuffer | undefined;  // Changed back to currDocData
+  currDocData: ArrayBuffer | undefined;
   currDocName: string | undefined;
   currDocPages: number | undefined;
   currDocPage: number;
   currDocText: string | undefined;
   setCurrentDocument: (id: string) => Promise<void>;
   clearCurrDoc: () => void;
-
-  // EPUB functionality
   onDocumentLoadSuccess: ({ numPages }: { numPages: number }) => void;
+  extractPageText: (book: Book, rendition: Rendition) => Promise<string>;
 }
 
-// Create the context
 const EPUBContext = createContext<EPUBContextType | undefined>(undefined);
 
-/**
- * EPUBProvider Component
- * 
- * Main provider component that manages EPUB state and functionality.
- * Handles document loading, text processing, and integration with TTS.
- */
 export function EPUBProvider({ children }: { children: ReactNode }) {
   const { setText: setTTSText, currDocPage, currDocPages, setCurrDocPages } = useTTS();
 
   // Current document state
-  const [currDocData, setCurrDocData] = useState<ArrayBuffer>();  // Changed back to currDocData
+  const [currDocData, setCurrDocData] = useState<ArrayBuffer>();
   const [currDocName, setCurrDocName] = useState<string>();
   const [currDocText, setCurrDocText] = useState<string>();
 
@@ -87,28 +79,55 @@ export function EPUBProvider({ children }: { children: ReactNode }) {
     }
   }, [clearCurrDoc]);
 
+  /**
+   * Extracts text content from the current EPUB page/location
+   */
+  const extractPageText = useCallback(async (book: Book, rendition: Rendition): Promise<string> => {
+    try {
+      console.log('Extracting EPUB text from current location');
+      
+      const { start } = rendition.location;
+      if (!start) return '';
+
+      const section = await book.spine.get(start.cfi);
+      if (!section) return '';
+
+      const content = await section.load();
+      const textContent = content.textContent || '';
+      
+      setTTSText(textContent);
+      setCurrDocText(textContent);
+      
+      return textContent;
+    } catch (error) {
+      console.error('Error extracting EPUB text:', error);
+      return '';
+    }
+  }, [setTTSText]);
 
   // Context value memoization
   const contextValue = useMemo(
     () => ({
       onDocumentLoadSuccess,
       setCurrentDocument,
-      currDocData,  // Changed back to currDocData
+      currDocData,
       currDocName,
       currDocPages,
       currDocPage,
       currDocText,
       clearCurrDoc,
+      extractPageText,
     }),
     [
       onDocumentLoadSuccess,
       setCurrentDocument,
-      currDocData,  // Changed back to currDocData
+      currDocData,
       currDocName,
       currDocPages,
       currDocPage,
       currDocText,
       clearCurrDoc,
+      extractPageText,
     ]
   );
 

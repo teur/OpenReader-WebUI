@@ -14,8 +14,8 @@ import { SpeedControl } from '@/components/player/SpeedControl';
 import { Navigator } from '@/components/player/Navigator';
 
 export default function TTSPlayer({ currentPage, numPages }: {
-  currentPage: number;
-  numPages: number | undefined;
+  currentPage?: number;
+  numPages?: number | undefined;
 }) {
   const {
     isPlaying,
@@ -36,7 +36,8 @@ export default function TTSPlayer({ currentPage, numPages }: {
         <SpeedControl setSpeedAndRestart={setSpeedAndRestart} />
 
         {/* Page Navigation */}
-        <Navigator currentPage={currentPage} numPages={numPages} skipToPage={skipToPage} />
+        {currentPage && numPages
+         && <Navigator currentPage={currentPage} numPages={numPages} skipToPage={skipToPage} />}
 
         {/* Playback Controls */}
         <Button

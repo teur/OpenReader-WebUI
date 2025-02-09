@@ -69,6 +69,7 @@ interface TTSContextType {
   setSpeedAndRestart: (speed: number) => void;
   setVoiceAndRestart: (voice: string) => void;
   skipToPage: (page: number) => void;
+  skipToLocation: (page: string | number, total: number) => void;
 }
 
 // Create the context
@@ -113,6 +114,8 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
   const [currDocPage, setCurrDocPage] = useState<number>(1);
   const [currDocPages, setCurrDocPages] = useState<number>();
   const [nextPageLoading, setNextPageLoading] = useState(false);
+
+  console.log('page:', currDocPage, 'pages:', currDocPages);
 
   /**
    * Changes the current page by a specified amount
@@ -199,6 +202,20 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     setNextPageLoading(true);
     setCurrentIndex(0);
     setCurrDocPage(page);
+  }, [abortAudio]);
+
+  /**
+   * Navigates to a specific location in the EPUB document
+   * Similar to skipToPage but for EPUB locations
+   */
+  const skipToLocation = useCallback((page: string | number, total: number) => {
+    setCurrDocPages(total);
+    setCurrDocPage(Number(page));
+
+    abortAudio();
+    setIsPlaying(false);
+    setNextPageLoading(true);
+    setCurrentIndex(0);
   }, [abortAudio]);
 
   /**
@@ -539,6 +556,7 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     setSpeedAndRestart,
     setVoiceAndRestart,
     skipToPage,
+    skipToLocation,  // Add this line
   }), [
     isPlaying,
     isProcessing,
@@ -557,6 +575,7 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     setSpeedAndRestart,
     setVoiceAndRestart,
     skipToPage,
+    skipToLocation,  // Add this line
   ]);
 
   // Use media session hook
