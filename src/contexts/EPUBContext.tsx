@@ -11,6 +11,7 @@ import {
 import { indexedDBService } from '@/utils/indexedDB';
 import { useTTS } from '@/contexts/TTSContext';
 import { Book, Contents, Rendition } from 'epubjs';
+import { createRangeCfi } from '@/utils/epub';
 
 interface EPUBContextType {
   currDocData: ArrayBuffer | undefined;
@@ -86,14 +87,14 @@ export function EPUBProvider({ children }: { children: ReactNode }) {
     try {
       console.log('Extracting EPUB text from current location');
       
-      const { start } = rendition.location;
-      if (!start) return '';
+      const { start, end } = rendition.location;
+      if (!start?.cfi || !end?.cfi) return '';
+      
+      
+      const rangeCfi = createRangeCfi(start.cfi, end.cfi);
 
-      const section = await book.spine.get(start.cfi);
-      if (!section) return '';
-
-      const content = await section.load();
-      const textContent = content.textContent || '';
+      const range = await book.getRange(rangeCfi);
+      const textContent = range.toString();
       
       setTTSText(textContent);
       setCurrDocText(textContent);

@@ -70,6 +70,7 @@ interface TTSContextType {
   setVoiceAndRestart: (voice: string) => void;
   skipToPage: (page: number) => void;
   skipToLocation: (page: string | number, total: number) => void;
+  registerLocationChangeHandler: (handler: (location: string | number) => void) => void;
 }
 
 // Create the context
@@ -101,6 +102,14 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
   const audioCache = useAudioCache(50);
   const { availableVoices, fetchVoices } = useVoiceManagement(openApiKey, openApiBaseUrl);
 
+  // Add ref for location change handler
+  const locationChangeHandlerRef = useRef<((location: string | number) => void) | null>(null);
+
+  // Add method to register location change handler
+  const registerLocationChangeHandler = useCallback((handler: (location: string | number) => void) => {
+    locationChangeHandlerRef.current = handler;
+  }, []);
+
   /**
    * State Management
    */
@@ -111,7 +120,7 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [speed, setSpeed] = useState(voiceSpeed);
   const [voice, setVoice] = useState(configVoice);
-  const [currDocPage, setCurrDocPage] = useState<number>(1);
+  const [currDocPage, setCurrDocPage] = useState<number>(0);
   const [currDocPages, setCurrDocPages] = useState<number>();
   const [nextPageLoading, setNextPageLoading] = useState(false);
 
@@ -209,13 +218,17 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
    * Similar to skipToPage but for EPUB locations
    */
   const skipToLocation = useCallback((page: string | number, total: number) => {
-    setCurrDocPages(total);
-    setCurrDocPage(Number(page));
-
     abortAudio();
     setIsPlaying(false);
     setNextPageLoading(true);
     setCurrentIndex(0);
+
+    setCurrDocPage(Number(page));
+    setCurrDocPages(total);
+
+    // if (locationChangeHandlerRef.current) {
+    //   setIsPlaying(true);
+    // }
   }, [abortAudio]);
 
   /**
@@ -232,15 +245,25 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
         return nextIndex;
       } else if (nextIndex >= sentences.length && currDocPage < currDocPages!) {
         console.log('Advancing to next page:', currDocPage + 1);
-
-        incrementPage();
-
+        
+        // Trigger page turn in React Reader
+        if (locationChangeHandlerRef.current) {
+          locationChangeHandlerRef.current('next');
+        } else {
+          incrementPage();
+        }
+        
         return 0;
       } else if (nextIndex < 0 && currDocPage > 1) {
         console.log('Advancing to previous page:', currDocPage - 1);
-
-        incrementPage(-1);
-
+        
+        // Trigger page turn in React Reader
+        if (locationChangeHandlerRef.current) {
+          locationChangeHandlerRef.current('prev');
+        } else {
+          incrementPage(-1);
+        }
+        
         return 0;
       } else if (nextIndex >= sentences.length && currDocPage >= currDocPages!) {
         console.log('Reached end of document');
@@ -249,7 +272,7 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
       }
       return prev;
     });
-  }, [sentences, currDocPage, currDocPages, incrementPage]);
+  }, [sentences, currDocPage, currDocPages]);
 
   /**
    * Moves forward one sentence in the text
@@ -557,6 +580,7 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     setVoiceAndRestart,
     skipToPage,
     skipToLocation,  // Add this line
+    registerLocationChangeHandler,
   }), [
     isPlaying,
     isProcessing,
@@ -576,6 +600,7 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     setVoiceAndRestart,
     skipToPage,
     skipToLocation,  // Add this line
+    registerLocationChangeHandler,
   ]);
 
   // Use media session hook

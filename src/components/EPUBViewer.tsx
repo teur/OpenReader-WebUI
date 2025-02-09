@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { useEPUB } from '@/contexts/EPUBContext';
 import { useTTS } from '@/contexts/TTSContext';
@@ -19,28 +19,40 @@ interface EPUBViewerProps {
 
 export function EPUBViewer({ className = '' }: EPUBViewerProps) {
   const { currDocData, currDocName, currDocPage, currDocPages, extractPageText } = useEPUB();
-  const { skipToLocation } = useTTS();
+  const { skipToLocation, registerLocationChangeHandler } = useTTS();
   const bookRef = useRef<Book | null>(null);
   const rendition = useRef<Rendition | undefined>(undefined);
   const toc = useRef<NavItem[]>([]);
   const locationRef = useRef<string | number>(currDocPage);
 
-  const handleLocationChanged = async (location: string | number) => {
+  const handleLocationChanged = useCallback((location: string | number) => {
+    // Handle special 'next' and 'prev' cases
+    if (location === 'next' && rendition.current) {
+      rendition.current.next();
+      return;
+    }
+    if (location === 'prev' && rendition.current) {
+      rendition.current.prev();
+      return;
+    }
+
     if (bookRef.current && rendition.current) {
-      const { displayed, href } = rendition.current.location.start
-      const chapter = toc.current.find((item) => item.href === href)
+      const { displayed, href } = rendition.current.location.start;
+      const chapter = toc.current.find((item) => item.href === href);
       
       console.log('Displayed:', displayed, 'Chapter:', chapter);
 
-      // Update the current location
       locationRef.current = location;
-      // Skip to the current location in the TTS
       skipToLocation(displayed.page, displayed.total);
 
-      // Extract text using the current rendition
-      await extractPageText(bookRef.current, rendition.current);
+      extractPageText(bookRef.current, rendition.current);
     }
-  };
+  }, [skipToLocation, extractPageText]);
+
+  // Register the location change handler
+  useEffect(() => {
+    registerLocationChangeHandler(handleLocationChanged);
+  }, [registerLocationChangeHandler, handleLocationChanged]);
 
   if (!currDocData) {
     return <DocumentSkeleton />;
