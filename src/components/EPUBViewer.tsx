@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { useEPUB } from '@/contexts/EPUBContext';
 import { useTTS } from '@/contexts/TTSContext';
@@ -18,8 +18,8 @@ interface EPUBViewerProps {
 }
 
 export function EPUBViewer({ className = '' }: EPUBViewerProps) {
-  const { currDocData, currDocName, currDocPage, currDocPages, extractPageText } = useEPUB();
-  const { skipToLocation, registerLocationChangeHandler } = useTTS();
+  const { currDocData, currDocName, currDocPage, extractPageText } = useEPUB();
+  const { setEPUBPageInChapter, registerLocationChangeHandler } = useTTS();
   const bookRef = useRef<Book | null>(null);
   const rendition = useRef<Rendition | undefined>(undefined);
   const toc = useRef<NavItem[]>([]);
@@ -43,11 +43,11 @@ export function EPUBViewer({ className = '' }: EPUBViewerProps) {
       console.log('Displayed:', displayed, 'Chapter:', chapter);
 
       locationRef.current = location;
-      skipToLocation(displayed.page, displayed.total);
+      setEPUBPageInChapter(displayed.page, displayed.total, chapter?.label || '');
 
       extractPageText(bookRef.current, rendition.current);
     }
-  }, [skipToLocation, extractPageText]);
+  }, [setEPUBPageInChapter, extractPageText]);
 
   // Register the location change handler
   useEffect(() => {

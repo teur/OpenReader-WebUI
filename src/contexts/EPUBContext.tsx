@@ -10,7 +10,7 @@ import {
 } from 'react';
 import { indexedDBService } from '@/utils/indexedDB';
 import { useTTS } from '@/contexts/TTSContext';
-import { Book, Contents, Rendition } from 'epubjs';
+import { Book, Rendition } from 'epubjs';
 import { createRangeCfi } from '@/utils/epub';
 
 interface EPUBContextType {
@@ -28,7 +28,7 @@ interface EPUBContextType {
 const EPUBContext = createContext<EPUBContextType | undefined>(undefined);
 
 export function EPUBProvider({ children }: { children: ReactNode }) {
-  const { setText: setTTSText, currDocPage, currDocPages, setCurrDocPages } = useTTS();
+  const { setText: setTTSText, stop, currDocPage, currDocPages, setCurrDocPages } = useTTS();
 
   // Current document state
   const [currDocData, setCurrDocData] = useState<ArrayBuffer>();
@@ -51,8 +51,8 @@ export function EPUBProvider({ children }: { children: ReactNode }) {
     setCurrDocName(undefined);
     setCurrDocText(undefined);
     setCurrDocPages(undefined);
-    setTTSText('');
-  }, [setCurrDocPages, setTTSText]);
+    stop();
+  }, [setCurrDocPages, stop]);
 
   /**
    * Sets the current document based on its ID
@@ -89,7 +89,6 @@ export function EPUBProvider({ children }: { children: ReactNode }) {
       
       const { start, end } = rendition.location;
       if (!start?.cfi || !end?.cfi) return '';
-      
       
       const rangeCfi = createRangeCfi(start.cfi, end.cfi);
 

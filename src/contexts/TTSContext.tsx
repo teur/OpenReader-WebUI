@@ -69,7 +69,7 @@ interface TTSContextType {
   setSpeedAndRestart: (speed: number) => void;
   setVoiceAndRestart: (voice: string) => void;
   skipToPage: (page: number) => void;
-  skipToLocation: (page: string | number, total: number) => void;
+  setEPUBPageInChapter: (page: string | number, total: number, chapter: string | number) => void;  // Add this line
   registerLocationChangeHandler: (handler: (location: string | number) => void) => void;
 }
 
@@ -120,7 +120,7 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [speed, setSpeed] = useState(voiceSpeed);
   const [voice, setVoice] = useState(configVoice);
-  const [currDocPage, setCurrDocPage] = useState<number>(0);
+  const [currDocPage, setCurrDocPage] = useState<number>(1);
   const [currDocPages, setCurrDocPages] = useState<number>();
   const [nextPageLoading, setNextPageLoading] = useState(false);
 
@@ -217,19 +217,25 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
    * Navigates to a specific location in the EPUB document
    * Similar to skipToPage but for EPUB locations
    */
-  const skipToLocation = useCallback((page: string | number, total: number) => {
+  const [currChapter, setCurrChapter] = useState<string | number>('');
+  const setEPUBPageInChapter = useCallback((page: string | number, total: number, chapter: string | number) => {
+    const alreadyPlaying = isPlaying;
+    if (chapter !== currChapter) {
+      setCurrDocPages(total);
+      setCurrChapter(chapter);
+    }
+
     abortAudio();
     setIsPlaying(false);
     setNextPageLoading(true);
     setCurrentIndex(0);
+    setSentences([]);
 
     setCurrDocPage(Number(page));
-    setCurrDocPages(total);
 
-    // if (locationChangeHandlerRef.current) {
-    //   setIsPlaying(true);
-    // }
-  }, [abortAudio]);
+    setIsPlaying(alreadyPlaying);
+
+  }, [abortAudio, currChapter]);
 
   /**
    * Moves to the next or previous sentence
@@ -238,41 +244,49 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
    * @returns {Promise<void>}
    */
   const advance = useCallback(async (backwards = false) => {
-    setCurrentIndex((prev) => {
-      const nextIndex = prev + (backwards ? -1 : 1);
-      if (nextIndex < sentences.length && nextIndex >= 0) {
-        console.log('Advancing to next sentence:', sentences[nextIndex]);
-        return nextIndex;
-      } else if (nextIndex >= sentences.length && currDocPage < currDocPages!) {
-        console.log('Advancing to next page:', currDocPage + 1);
-        
-        // Trigger page turn in React Reader
-        if (locationChangeHandlerRef.current) {
-          locationChangeHandlerRef.current('next');
-        } else {
-          incrementPage();
-        }
-        
-        return 0;
-      } else if (nextIndex < 0 && currDocPage > 1) {
-        console.log('Advancing to previous page:', currDocPage - 1);
-        
-        // Trigger page turn in React Reader
-        if (locationChangeHandlerRef.current) {
-          locationChangeHandlerRef.current('prev');
-        } else {
-          incrementPage(-1);
-        }
-        
-        return 0;
-      } else if (nextIndex >= sentences.length && currDocPage >= currDocPages!) {
-        console.log('Reached end of document');
-        setIsPlaying(false);
-        return prev;
+    const nextIndex = currentIndex + (backwards ? -1 : 1);
+    
+    // Handle within current page bounds
+    if (nextIndex < sentences.length && nextIndex >= 0) {
+      console.log('Advancing to next sentence:', sentences[nextIndex]);
+      setCurrentIndex(nextIndex);
+      return;
+    }
+    
+    // Handle next page
+    if (nextIndex >= sentences.length && currDocPage < currDocPages!) {
+      console.log('Advancing to next page:', currDocPage + 1);
+      setCurrentIndex(0);
+      
+      // Trigger page turn in React Reader
+      if (locationChangeHandlerRef.current) {
+        locationChangeHandlerRef.current('next');
+      } else {
+        incrementPage();
       }
-      return prev;
-    });
-  }, [sentences, currDocPage, currDocPages]);
+      return;
+    }
+    
+    // Handle previous page
+    if (nextIndex < 0 && currDocPage > 1) {
+      console.log('Advancing to previous page:', currDocPage - 1);
+      setCurrentIndex(0);
+      
+      // Trigger page turn in React Reader
+      if (locationChangeHandlerRef.current) {
+        locationChangeHandlerRef.current('prev');
+      } else {
+        incrementPage(-1);
+      }
+      return;
+    }
+    
+    // Handle end of document
+    if (nextIndex >= sentences.length && currDocPage >= currDocPages!) {
+      console.log('Reached end of document');
+      setIsPlaying(false);
+    }
+  }, [currentIndex, incrementPage, sentences, currDocPage, currDocPages]);
 
   /**
    * Moves forward one sentence in the text
@@ -502,9 +516,14 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
   const stop = useCallback(() => {
     // Cancel any ongoing request
     abortAudio();
-
+    locationChangeHandlerRef.current = null;
     setIsPlaying(false);
     setCurrentIndex(0);
+    setSentences([]);
+    setCurrChapter('');
+    setCurrDocPage(1);
+    setCurrDocPages(undefined);
+    setNextPageLoading(false);
     setIsProcessing(false);
   }, [abortAudio]);
 
@@ -579,7 +598,7 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     setSpeedAndRestart,
     setVoiceAndRestart,
     skipToPage,
-    skipToLocation,  // Add this line
+    setEPUBPageInChapter,  // Add this line
     registerLocationChangeHandler,
   }), [
     isPlaying,
@@ -599,7 +618,7 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     setSpeedAndRestart,
     setVoiceAndRestart,
     skipToPage,
-    skipToLocation,  // Add this line
+    setEPUBPageInChapter,  // Add this line
     registerLocationChangeHandler,
   ]);
 

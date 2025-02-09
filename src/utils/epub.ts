@@ -1,5 +1,3 @@
-import { EpubCFI } from 'epubjs';
-
 export function findCommonBase(startCfi: string, endCfi: string): string {
   // Remove 'epubcfi(' prefix and ')' suffix
   const start = startCfi.replace(/^epubcfi\(|\)$/g, '');
