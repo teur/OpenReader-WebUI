@@ -15,9 +15,31 @@ export const preprocessSentenceForAudio = (text: string): string => {
     .trim();
 };
 
+const isShortSentence = (sentence: string): boolean => {
+  const words = sentence.trim().split(/\s+/);
+  return words.length <= 5;
+};
+
 export const splitIntoSentences = (text: string): string[] => {
   // Preprocess the text before splitting into sentences
   const cleanedText = preprocessSentenceForAudio(text);
   const doc = nlp(cleanedText);
-  return doc.sentences().out('array') as string[];
+  const rawSentences = doc.sentences().out('array') as string[];
+  
+  // Combine short sentences with previous ones
+  const processedSentences: string[] = [];
+  
+  for (let i = 0; i < rawSentences.length; i++) {
+    const currentSentence = rawSentences[i].trim();
+    
+    if (isShortSentence(currentSentence) && processedSentences.length > 0) {
+      // Combine with previous sentence
+      const lastIndex = processedSentences.length - 1;
+      processedSentences[lastIndex] = `${processedSentences[lastIndex]} ${currentSentence}`;
+    } else {
+      processedSentences.push(currentSentence);
+    }
+  }
+  
+  return processedSentences;
 };

@@ -5,9 +5,10 @@ import { Dialog, DialogPanel, DialogTitle, Transition, TransitionChild, Listbox,
 import { useConfig, ViewType } from '@/contexts/ConfigContext';
 import { ChevronUpDownIcon, CheckIcon } from '@/components/icons/Icons';
 
-interface PDFViewSettingsProps {
+interface DocViewSettingsProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
+  epub?: boolean;
 }
 
 const viewTypes = [
@@ -16,7 +17,7 @@ const viewTypes = [
   { id: 'scroll', name: 'Continuous Scroll' },
 ];
 
-export function PDFViewSettings({ isOpen, setIsOpen }: PDFViewSettingsProps) {
+export function DocumentSettings({ isOpen, setIsOpen, epub }: DocViewSettingsProps) {
   const { viewType, skipBlank, updateConfigKey } = useConfig();
   const selectedView = viewTypes.find(v => v.id === viewType) || viewTypes[0];
 
@@ -55,7 +56,7 @@ export function PDFViewSettings({ isOpen, setIsOpen }: PDFViewSettingsProps) {
                 </DialogTitle>
                 <div className="mt-4">
                   <div className="space-y-4">
-                    <div className="space-y-2">
+                    {!epub && <div className="space-y-2">
                       <label className="block text-sm font-medium text-foreground">Mode</label>
                       <Listbox 
                         value={selectedView} 
@@ -108,7 +109,7 @@ export function PDFViewSettings({ isOpen, setIsOpen }: PDFViewSettingsProps) {
                           Note: Continuous scroll may perform poorly for larger documents.
                         </p>
                       )}
-                    </div>
+                    </div>}
                     <div className="space-y-2">
                       <label className="flex items-center space-x-2">
                         <input

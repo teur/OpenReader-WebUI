@@ -124,6 +124,9 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
   const [currDocPages, setCurrDocPages] = useState<number>();
   const [nextPageLoading, setNextPageLoading] = useState(false);
 
+  // Add this state to track if we're in EPUB mode
+  const [isEPUB, setIsEPUB] = useState(false);
+
   console.log('page:', currDocPage, 'pages:', currDocPages);
 
   /**
@@ -139,37 +142,55 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
 
   /**
    * Sets the current text and splits it into sentences
-   * 
-   * @param {string} text - The text to be processed
-   * @returns {void}
    */
   const setText = useCallback((text: string) => {
     console.log('Setting page text:', text);
     const newSentences = splitIntoSentences(text);
 
-    // If skipBlank is enabled and there's no text and we are playing audio, automatically move to next page
-    if (isPlaying && skipBlank && newSentences.length === 0 && currDocPage < currDocPages!) {
-      incrementPage();
-
-      toast.success(`Skipping blank page ${currDocPage}`, {
-        id: `page-${currDocPage}`,
-        iconTheme: {
-          primary: 'var(--accent)',
-          secondary: 'var(--background)',
-        },
-        style: {
-          background: 'var(--background)',
-          color: 'var(--accent)',
-        },
-        duration: 1000,
-        position: 'top-center',
-      });
-      return;
+    // If skipBlank is enabled and there's no text
+    if (isPlaying && skipBlank && newSentences.length === 0) {
+      if (isEPUB && locationChangeHandlerRef.current) {
+        // For EPUB, use the location handler to move to next section
+        locationChangeHandlerRef.current('next');
+        
+        toast.success('Skipping blank section', {
+          id: `epub-section-skip`,
+          iconTheme: {
+            primary: 'var(--accent)',
+            secondary: 'var(--background)',
+          },
+          style: {
+            background: 'var(--background)',
+            color: 'var(--accent)',
+          },
+          duration: 1000,
+          position: 'top-center',
+        });
+        return;
+      } else if (currDocPage < currDocPages!) {
+        // For PDF, increment the page
+        incrementPage();
+        
+        toast.success(`Skipping blank page ${currDocPage}`, {
+          id: `page-${currDocPage}`,
+          iconTheme: {
+            primary: 'var(--accent)',
+            secondary: 'var(--background)',
+          },
+          style: {
+            background: 'var(--background)',
+            color: 'var(--accent)',
+          },
+          duration: 1000,
+          position: 'top-center',
+        });
+        return;
+      }
     }
     
     setSentences(newSentences);
     setNextPageLoading(false);
-  }, [isPlaying, skipBlank, currDocPage, currDocPages, incrementPage]);
+  }, [isPlaying, skipBlank, currDocPage, currDocPages, incrementPage, isEPUB]);
 
   /**
    * Stops the current audio playback and clears the active Howl instance
@@ -220,22 +241,35 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
   const [currChapter, setCurrChapter] = useState<string | number>('');
   const setEPUBPageInChapter = useCallback((page: string | number, total: number, chapter: string | number) => {
     const alreadyPlaying = isPlaying;
-    if (chapter !== currChapter) {
+    const isNewChapter = chapter !== currChapter;
+
+    // Mark that we're in EPUB mode
+    setIsEPUB(true);
+
+    // Update chapter info
+    if (isNewChapter) {
       setCurrDocPages(total);
       setCurrChapter(chapter);
+      console.log('Changed to chapter:', chapter);
     }
 
+    // Reset state for new content
     abortAudio();
     setIsPlaying(false);
     setNextPageLoading(true);
     setCurrentIndex(0);
     setSentences([]);
 
+    // Update current page
     setCurrDocPage(Number(page));
 
-    setIsPlaying(alreadyPlaying);
+    // Resume playback if it was playing before
+    // Only auto-resume if this was triggered by automatic navigation (not manual page turns)
+    if (alreadyPlaying) {
+      setIsPlaying(true);
+    }
 
-  }, [abortAudio, currChapter]);
+  }, [abortAudio, currChapter, isPlaying]);
 
   /**
    * Moves to the next or previous sentence
@@ -253,40 +287,34 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     
-    // Handle next page
-    if (nextIndex >= sentences.length && currDocPage < currDocPages!) {
-      console.log('Advancing to next page:', currDocPage + 1);
+    // For EPUB documents, always try to advance to next/prev section
+    if (isEPUB && locationChangeHandlerRef.current) {
+      console.log('EPUB: Advancing to next/prev section');
       setCurrentIndex(0);
-      
-      // Trigger page turn in React Reader
-      if (locationChangeHandlerRef.current) {
-        locationChangeHandlerRef.current('next');
-      } else {
-        incrementPage();
-      }
+      setSentences([]);
+      locationChangeHandlerRef.current(nextIndex >= sentences.length ? 'next' : 'prev');
       return;
     }
     
-    // Handle previous page
-    if (nextIndex < 0 && currDocPage > 1) {
-      console.log('Advancing to previous page:', currDocPage - 1);
-      setCurrentIndex(0);
-      
-      // Trigger page turn in React Reader
-      if (locationChangeHandlerRef.current) {
-        locationChangeHandlerRef.current('prev');
-      } else {
-        incrementPage(-1);
+    // For PDFs and other documents, check page bounds
+    if (!isEPUB) {
+      // Handle next/previous page transitions
+      if ((nextIndex >= sentences.length && currDocPage < currDocPages!) || 
+          (nextIndex < 0 && currDocPage > 1)) {
+        console.log('PDF: Advancing to next/prev page');
+        setCurrentIndex(0);
+        setSentences([]);
+        incrementPage(nextIndex >= sentences.length ? 1 : -1);
+        return;
       }
-      return;
+      
+      // Handle end of document (PDF only)
+      if (nextIndex >= sentences.length && currDocPage >= currDocPages!) {
+        console.log('PDF: Reached end of document');
+        setIsPlaying(false);
+      }
     }
-    
-    // Handle end of document
-    if (nextIndex >= sentences.length && currDocPage >= currDocPages!) {
-      console.log('Reached end of document');
-      setIsPlaying(false);
-    }
-  }, [currentIndex, incrementPage, sentences, currDocPage, currDocPages]);
+  }, [currentIndex, incrementPage, sentences, currDocPage, currDocPages, isEPUB]);
 
   /**
    * Moves forward one sentence in the text
@@ -525,6 +553,7 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     setCurrDocPages(undefined);
     setNextPageLoading(false);
     setIsProcessing(false);
+    setIsEPUB(false);
   }, [abortAudio]);
 
   /**

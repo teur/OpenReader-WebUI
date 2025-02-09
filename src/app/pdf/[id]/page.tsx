@@ -8,7 +8,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { DocumentSkeleton } from '@/components/DocumentSkeleton';
 import { useTTS } from '@/contexts/TTSContext';
 import { Button } from '@headlessui/react';
-import { PDFViewSettings } from '@/components/PDFViewSettings';
+import { DocumentSettings } from '@/components/DocumentSettings';
 import { SettingsIcon } from '@/components/icons/Icons';
 
 // Dynamic import for client-side rendering only
@@ -123,7 +123,7 @@ export default function PDFViewerPage() {
       ) : (
         <PDFViewer zoomLevel={zoomLevel} />
       )}
-      <PDFViewSettings isOpen={isSettingsOpen} setIsOpen={setIsSettingsOpen} />
+      <DocumentSettings isOpen={isSettingsOpen} setIsOpen={setIsSettingsOpen} />
     </>
   );
 }

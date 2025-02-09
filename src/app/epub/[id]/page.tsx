@@ -6,12 +6,16 @@ import { useCallback, useEffect, useState } from 'react';
 import { useEPUB } from '@/contexts/EPUBContext';
 import { DocumentSkeleton } from '@/components/DocumentSkeleton';
 import { EPUBViewer } from '@/components/EPUBViewer';
+import { Button } from '@headlessui/react';
+import { DocumentSettings } from '@/components/DocumentSettings';
+import { SettingsIcon } from '@/components/icons/Icons';
 
 export default function EPUBPage() {
   const { id } = useParams();
   const { setCurrentDocument, currDocName, clearCurrDoc } = useEPUB();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const loadDocument = useCallback(async () => {
     if (!isLoading) return;
@@ -66,6 +70,13 @@ export default function EPUBPage() {
               </svg>
               Documents
             </Link>
+            <Button
+              onClick={() => setIsSettingsOpen(true)}
+              className="rounded-full p-1 text-foreground hover:bg-offbase transform transition-transform duration-200 ease-in-out hover:scale-[1.1] hover:text-accent"
+              aria-label="View Settings"
+            >
+              <SettingsIcon className="w-5 h-5 hover:animate-spin-slow" />
+            </Button>
           </div>
           <h1 className="ml-2 mr-2 text-md font-semibold text-foreground truncate">
             {isLoading ? 'Loading...' : currDocName}
@@ -79,6 +90,7 @@ export default function EPUBPage() {
       ) : (
         <EPUBViewer className="p-4" />
       )}
+      <DocumentSettings epub isOpen={isSettingsOpen} setIsOpen={setIsSettingsOpen} />
     </>
   );
 }
