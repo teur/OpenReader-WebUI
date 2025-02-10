@@ -32,6 +32,7 @@ export default function PDFViewerPage() {
   const loadDocument = useCallback(async () => {
     if (!isLoading) return; // Prevent calls when not loading new doc
     console.log('Loading new document (from page.tsx)');
+    stop(); // Reset TTS when loading new document
     try {
       if (!id) {
         setError('Document not found');
@@ -44,7 +45,7 @@ export default function PDFViewerPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [isLoading, id, setCurrentDocument]);
+  }, [isLoading, id, setCurrentDocument, stop]);
 
   useEffect(() => {
     loadDocument();
@@ -59,7 +60,7 @@ export default function PDFViewerPage() {
         <p className="text-red-500 mb-4">{error}</p>
         <Link
           href="/"
-          onClick={() => {clearCurrDoc(); stop();}}
+          onClick={() => {clearCurrDoc();}}
           className="inline-flex items-center px-3 py-1 bg-base text-foreground rounded-lg hover:bg-offbase transition-colors"
         >
           <svg className="w-4 h-4 mr-2 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -78,7 +79,7 @@ export default function PDFViewerPage() {
           <div className="flex items-center gap-2">
             <Link
               href="/"
-              onClick={() => {clearCurrDoc(); stop();}}
+              onClick={() => {clearCurrDoc();}}
               className="inline-flex items-center px-3 py-1 bg-base text-foreground rounded-lg hover:bg-offbase transform transition-transform duration-200 ease-in-out hover:scale-[1.02]"
             >
               <svg className="w-4 h-4 mr-2" fill="currentColor" stroke="currentColor" viewBox="0 0 24 24">

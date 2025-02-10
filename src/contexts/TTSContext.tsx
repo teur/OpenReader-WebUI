@@ -26,6 +26,7 @@ import React, {
 import OpenAI from 'openai';
 import { Howl } from 'howler';
 import toast from 'react-hot-toast';
+import { useParams } from 'next/navigation';
 
 import { useConfig } from '@/contexts/ConfigContext';
 import { splitIntoSentences, preprocessSentenceForAudio } from '@/utils/nlp';
@@ -34,6 +35,7 @@ import { useAudioCache } from '@/hooks/audio/useAudioCache';
 import { useVoiceManagement } from '@/hooks/audio/useVoiceManagement';
 import { useMediaSession } from '@/hooks/audio/useMediaSession';
 import { useAudioContext } from '@/hooks/audio/useAudioContext';
+import { getLastDocumentLocation } from '@/utils/indexedDB';
 
 // Media globals
 declare global {
@@ -52,7 +54,8 @@ interface TTSContextType {
   currentSentence: string;
 
   // Navigation
-  currDocPage: number;
+  currDocPage: string | number;  // Change this to allow both types
+  currDocPageNumber: number; // For PDF
   currDocPages: number | undefined;
 
   // Voice settings
@@ -110,6 +113,9 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     locationChangeHandlerRef.current = handler;
   }, []);
 
+  // Get document ID from URL params
+  const { id } = useParams();
+
   /**
    * State Management
    */
@@ -120,12 +126,14 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [speed, setSpeed] = useState(voiceSpeed);
   const [voice, setVoice] = useState(configVoice);
-  const [currDocPage, setCurrDocPage] = useState<number>(1);
+  const [currDocPage, setCurrDocPage] = useState<string | number>(1);
   const [currDocPages, setCurrDocPages] = useState<number>();
   const [nextPageLoading, setNextPageLoading] = useState(false);
 
   // Add this state to track if we're in EPUB mode
   const [isEPUB, setIsEPUB] = useState(false);
+
+  const currDocPageNumber = (!isEPUB ? parseInt(currDocPage.toString()) : 1);
 
   console.log('page:', currDocPage, 'pages:', currDocPages);
 
@@ -137,8 +145,8 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
    */
   const incrementPage = useCallback((num = 1) => {
     setNextPageLoading(true);
-    setCurrDocPage(currDocPage + num);
-  }, [currDocPage]);
+    setCurrDocPage(currDocPageNumber + num);
+  }, [currDocPageNumber]);
 
   /**
    * Sets the current text and splits it into sentences
@@ -167,12 +175,12 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
           position: 'top-center',
         });
         return;
-      } else if (currDocPage < currDocPages!) {
+      } else if (currDocPageNumber < currDocPages!) {
         // For PDF, increment the page
         incrementPage();
         
-        toast.success(`Skipping blank page ${currDocPage}`, {
-          id: `page-${currDocPage}`,
+        toast.success(`Skipping blank page ${currDocPageNumber}`, {
+          id: `page-${currDocPageNumber}`,
           iconTheme: {
             primary: 'var(--accent)',
             secondary: 'var(--background)',
@@ -190,7 +198,7 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     
     setSentences(newSentences);
     setNextPageLoading(false);
-  }, [isPlaying, skipBlank, currDocPage, currDocPages, incrementPage, isEPUB]);
+  }, [isPlaying, skipBlank, currDocPageNumber, currDocPages, incrementPage, isEPUB]);
 
   /**
    * Stops the current audio playback and clears the active Howl instance
@@ -299,8 +307,8 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     // For PDFs and other documents, check page bounds
     if (!isEPUB) {
       // Handle next/previous page transitions
-      if ((nextIndex >= sentences.length && currDocPage < currDocPages!) || 
-          (nextIndex < 0 && currDocPage > 1)) {
+      if ((nextIndex >= sentences.length && currDocPageNumber < currDocPages!) || 
+          (nextIndex < 0 && currDocPageNumber > 1)) {
         console.log('PDF: Advancing to next/prev page');
         setCurrentIndex(0);
         setSentences([]);
@@ -309,12 +317,12 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
       }
       
       // Handle end of document (PDF only)
-      if (nextIndex >= sentences.length && currDocPage >= currDocPages!) {
+      if (nextIndex >= sentences.length && currDocPageNumber >= currDocPages!) {
         console.log('PDF: Reached end of document');
         setIsPlaying(false);
       }
     }
-  }, [currentIndex, incrementPage, sentences, currDocPage, currDocPages, isEPUB]);
+  }, [currentIndex, incrementPage, sentences, currDocPageNumber, currDocPages, isEPUB]);
 
   /**
    * Moves forward one sentence in the text
@@ -637,6 +645,7 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     isProcessing,
     currentSentence: sentences[currentIndex] || '',
     currDocPage,
+    currDocPageNumber,
     currDocPages,
     availableVoices,
     togglePlay,
@@ -657,6 +666,7 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     sentences,
     currentIndex,
     currDocPage,
+    currDocPageNumber,
     currDocPages,
     availableVoices,
     togglePlay,
@@ -679,6 +689,20 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     skipForward,
     skipBackward,
   });
+
+  // Load last location on mount for EPUB only
+  useEffect(() => {
+    if (id && isEPUB) {
+      getLastDocumentLocation(id as string).then(lastLocation => {
+        if (lastLocation) {
+          setCurrDocPage(lastLocation);
+          if (locationChangeHandlerRef.current) {
+            locationChangeHandlerRef.current(lastLocation);
+          }
+        }
+      });
+    }
+  }, [id, isEPUB]);
 
   /**
    * Renders the TTS context provider with its children

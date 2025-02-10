@@ -17,7 +17,7 @@ interface EPUBContextType {
   currDocData: ArrayBuffer | undefined;
   currDocName: string | undefined;
   currDocPages: number | undefined;
-  currDocPage: number;
+  currDocPage: number | string;
   currDocText: string | undefined;
   setCurrentDocument: (id: string) => Promise<void>;
   clearCurrDoc: () => void;
@@ -28,7 +28,7 @@ interface EPUBContextType {
 const EPUBContext = createContext<EPUBContextType | undefined>(undefined);
 
 export function EPUBProvider({ children }: { children: ReactNode }) {
-  const { setText: setTTSText, stop, currDocPage, currDocPages, setCurrDocPages } = useTTS();
+  const { setText: setTTSText, currDocPage, currDocPages, setCurrDocPages } = useTTS();
 
   // Current document state
   const [currDocData, setCurrDocData] = useState<ArrayBuffer>();
@@ -51,8 +51,7 @@ export function EPUBProvider({ children }: { children: ReactNode }) {
     setCurrDocName(undefined);
     setCurrDocText(undefined);
     setCurrDocPages(undefined);
-    stop();
-  }, [setCurrDocPages, stop]);
+  }, [setCurrDocPages]);
 
   /**
    * Sets the current document based on its ID

@@ -9,16 +9,21 @@ import { EPUBViewer } from '@/components/EPUBViewer';
 import { Button } from '@headlessui/react';
 import { DocumentSettings } from '@/components/DocumentSettings';
 import { SettingsIcon } from '@/components/icons/Icons';
+import { useTTS } from "@/contexts/TTSContext";
 
 export default function EPUBPage() {
   const { id } = useParams();
   const { setCurrentDocument, currDocName, clearCurrDoc } = useEPUB();
+  const { stop } = useTTS();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const loadDocument = useCallback(async () => {
     if (!isLoading) return;
+    console.log('Loading new epub (from page.tsx)');
+    stop(); // Reset TTS when loading new document
+
     try {
       if (!id) {
         setError('Document not found');
@@ -31,7 +36,7 @@ export default function EPUBPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [isLoading, id, setCurrentDocument]);
+  }, [isLoading, id, setCurrentDocument, stop]);
 
   useEffect(() => {
     loadDocument();

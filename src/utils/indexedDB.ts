@@ -174,20 +174,40 @@ class IndexedDBService {
     return new Promise((resolve, reject) => {
       try {
         console.log('Removing document:', id);
-        const transaction = this.db!.transaction([PDF_STORE_NAME], 'readwrite');
-        const store = transaction.objectStore(PDF_STORE_NAME);
-        const request = store.delete(id);
+        const locationKey = `lastLocation_${id}`;
 
-        request.onerror = (event) => {
+        // Create two transactions - one for document deletion, one for location cleanup
+        const docTransaction = this.db!.transaction([PDF_STORE_NAME], 'readwrite');
+        const configTransaction = this.db!.transaction([CONFIG_STORE_NAME], 'readwrite');
+        
+        const docStore = docTransaction.objectStore(PDF_STORE_NAME);
+        const configStore = configTransaction.objectStore(CONFIG_STORE_NAME);
+
+        // Remove the document
+        const docRequest = docStore.delete(id);
+        // Remove any saved location
+        const locationRequest = configStore.delete(locationKey);
+
+        docRequest.onerror = (event) => {
           const error = (event.target as IDBRequest).error;
           console.error('Error removing document:', error);
           reject(error);
         };
 
-        transaction.oncomplete = () => {
-          console.log('Document removed successfully:', id);
-          resolve();
+        locationRequest.onerror = (event) => {
+          console.warn('Error cleaning up location:', (event.target as IDBRequest).error);
+          // Don't reject here, as document deletion is the primary operation
         };
+
+        // Wait for both transactions to complete
+        Promise.all([
+          new Promise<void>((res) => { docTransaction.oncomplete = () => res(); }),
+          new Promise<void>((res) => { configTransaction.oncomplete = () => res(); })
+        ]).then(() => {
+          console.log('Document and location data removed successfully:', id);
+          resolve();
+        }).catch(reject);
+
       } catch (error) {
         console.error('Error in removeDocument transaction:', error);
         reject(error);
@@ -303,18 +323,43 @@ class IndexedDBService {
 
     return new Promise((resolve, reject) => {
       try {
-        const transaction = this.db!.transaction([EPUB_STORE_NAME], 'readwrite');
-        const store = transaction.objectStore(EPUB_STORE_NAME);
-        const request = store.delete(id);
+        console.log('Removing EPUB document:', id);
+        const locationKey = `lastLocation_${id}`;
 
-        request.onerror = (event) => {
-          reject((event.target as IDBRequest).error);
+        // Create two transactions - one for document deletion, one for location cleanup
+        const docTransaction = this.db!.transaction([EPUB_STORE_NAME], 'readwrite');
+        const configTransaction = this.db!.transaction([CONFIG_STORE_NAME], 'readwrite');
+        
+        const docStore = docTransaction.objectStore(EPUB_STORE_NAME);
+        const configStore = configTransaction.objectStore(CONFIG_STORE_NAME);
+
+        // Remove the document
+        const docRequest = docStore.delete(id);
+        // Remove any saved location
+        const locationRequest = configStore.delete(locationKey);
+
+        docRequest.onerror = (event) => {
+          const error = (event.target as IDBRequest).error;
+          console.error('Error removing EPUB document:', error);
+          reject(error);
         };
 
-        transaction.oncomplete = () => {
+        locationRequest.onerror = (event) => {
+          console.warn('Error cleaning up location:', (event.target as IDBRequest).error);
+          // Don't reject here, as document deletion is the primary operation
+        };
+
+        // Wait for both transactions to complete
+        Promise.all([
+          new Promise<void>((res) => { docTransaction.oncomplete = () => res(); }),
+          new Promise<void>((res) => { configTransaction.oncomplete = () => res(); })
+        ]).then(() => {
+          console.log('EPUB document and location data removed successfully:', id);
           resolve();
-        };
+        }).catch(reject);
+
       } catch (error) {
+        console.error('Error in removeEPUBDocument transaction:', error);
         reject(error);
       }
     });
@@ -455,4 +500,15 @@ export async function getItem(key: string): Promise<string | null> {
 
 export async function setItem(key: string, value: string): Promise<void> {
   return indexedDBService.setConfigItem(key, value);
+}
+
+// Add these helper functions before the final export
+export async function getLastDocumentLocation(docId: string): Promise<string | null> {
+  const key = `lastLocation_${docId}`;
+  return indexedDBService.getConfigItem(key);
+}
+
+export async function setLastDocumentLocation(docId: string, location: string): Promise<void> {
+  const key = `lastLocation_${docId}`;
+  return indexedDBService.setConfigItem(key, location);
 }

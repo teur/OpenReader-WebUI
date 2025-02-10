@@ -69,7 +69,7 @@ const PDFContext = createContext<PDFContextType | undefined>(undefined);
  * Handles document loading, text processing, and integration with TTS.
  */
 export function PDFProvider({ children }: { children: ReactNode }) {
-  const { setText: setTTSText, currDocPage, currDocPages, setCurrDocPages } = useTTS();
+  const { setText: setTTSText, stop, currDocPageNumber: currDocPage, currDocPages, setCurrDocPages } = useTTS();
 
   // Current document state
   const [currDocURL, setCurrDocURL] = useState<string>();
@@ -136,8 +136,8 @@ export function PDFProvider({ children }: { children: ReactNode }) {
     setCurrDocURL(undefined);
     setCurrDocText(undefined);
     setCurrDocPages(undefined);
-    setTTSText('');
-  }, [setCurrDocPages, setTTSText]);
+    stop();
+  }, [setCurrDocPages, stop]);
 
   // Context value memoization
   const contextValue = useMemo(

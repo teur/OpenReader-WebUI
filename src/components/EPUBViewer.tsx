@@ -1,11 +1,13 @@
 'use client';
 
 import { useEffect, useRef, useCallback } from 'react';
+import { useParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { useEPUB } from '@/contexts/EPUBContext';
 import { useTTS } from '@/contexts/TTSContext';
 import { DocumentSkeleton } from '@/components/DocumentSkeleton';
 import TTSPlayer from '@/components/player/TTSPlayer';
+import { setLastDocumentLocation } from '@/utils/indexedDB';
 import type { Rendition, Book, NavItem } from 'epubjs';
 
 const ReactReader = dynamic(() => import('react-reader').then(mod => mod.ReactReader), {
@@ -18,12 +20,26 @@ interface EPUBViewerProps {
 }
 
 export function EPUBViewer({ className = '' }: EPUBViewerProps) {
+  const { id } = useParams();
   const { currDocData, currDocName, currDocPage, extractPageText } = useEPUB();
   const { setEPUBPageInChapter, registerLocationChangeHandler } = useTTS();
   const bookRef = useRef<Book | null>(null);
   const rendition = useRef<Rendition | undefined>(undefined);
   const toc = useRef<NavItem[]>([]);
   const locationRef = useRef<string | number>(currDocPage);
+
+  // Load the last location when component mounts
+  // useEffect(() => {
+  //   const loadLastLocation = async () => {
+  //     if (id) {
+  //       const lastLocation = await getLastDocumentLocation(id as string);
+  //       if (lastLocation) {
+  //         locationRef.current = lastLocation;
+  //       }
+  //     }
+  //   };
+  //   loadLastLocation();
+  // }, [id]);
 
   const handleLocationChanged = useCallback((location: string | number) => {
     // Handle special 'next' and 'prev' cases
@@ -42,12 +58,21 @@ export function EPUBViewer({ className = '' }: EPUBViewerProps) {
       
       console.log('Displayed:', displayed, 'Chapter:', chapter);
 
-      locationRef.current = location;
-      setEPUBPageInChapter(displayed.page, displayed.total, chapter?.label || '');
 
+      if (locationRef.current !== 1) {
+        // Save the location to IndexedDB
+        if (id) {
+          console.log('Saving location:', location);
+          setLastDocumentLocation(id as string, location.toString());
+        }
+      }
+
+      locationRef.current = location;
+      
+      setEPUBPageInChapter(displayed.page, displayed.total, chapter?.label || '');
       extractPageText(bookRef.current, rendition.current);
     }
-  }, [setEPUBPageInChapter, extractPageText]);
+  }, [id, setEPUBPageInChapter, extractPageText]);
 
   // Register the location change handler
   useEffect(() => {
