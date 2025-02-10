@@ -386,22 +386,35 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
 
     // If not cached, fetch the audio from OpenAI API
     if (openaiRef.current) {
-      console.log('Requesting audio for sentence:', sentence);
+      try {
+        console.log('Requesting audio for sentence:', sentence);
 
-      const response = await openaiRef.current.audio.speech.create({
-        model: 'tts-1',
-        voice: voice as "alloy",
-        input: sentence,
-        speed: speed,
-      });
+        const response = await openaiRef.current.audio.speech.create({
+          model: 'tts-1',
+          voice: voice as "alloy",
+          input: sentence,
+          speed: speed,
+        });
 
-      const arrayBuffer = await response.arrayBuffer();
-      const audioBuffer = await audioContext!.decodeAudioData(arrayBuffer);
+        const arrayBuffer = await response.arrayBuffer();
+        const audioBuffer = await audioContext!.decodeAudioData(arrayBuffer);
 
-      // Cache the audio buffer
-      audioCache.set(sentence, audioBuffer);
+        // Cache the audio buffer
+        audioCache.set(sentence, audioBuffer);
 
-      return audioBuffer;
+        return audioBuffer;
+      } catch (error) {
+        setIsPlaying(false);
+        toast.error('Failed to generate audio. API not responding.', {
+          id: 'tts-api-error',
+          style: {
+            background: 'var(--background)',
+            color: 'var(--accent)',
+          },
+          duration: 7000,
+        });
+        throw error;
+      }
     }
   }, [audioContext, voice, speed, audioCache]);
 
@@ -474,7 +487,16 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
       console.error('Error playing TTS:', error);
       setActiveHowl(null);
       setIsProcessing(false);
-      //setIsPlaying(false); // Stop playback on error
+      //setIsPlaying(false);
+      
+      toast.error('Failed to process audio. Skipping problematic sentence.', {
+        id: 'tts-processing-error',
+        style: {
+          background: 'var(--background)',
+          color: 'var(--accent)',
+        },
+        duration: 3000,
+      });
       
       advance(); // Skip problematic sentence
     }
