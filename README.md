@@ -20,7 +20,11 @@ OpenReader WebUI is a sleek, web-based reader with built-in Text-to-Speech capab
 
 ## **Demo**
 
-https://github.com/user-attachments/assets/323251e6-3b3b-43cc-b139-cdab01ca7d75
+
+
+https://github.com/user-attachments/assets/1bfc5fc4-8d66-4c71-a3c1-f3ec5b4f4b56
+
+
 
 ## 🐳 Docker Quick Start
 
