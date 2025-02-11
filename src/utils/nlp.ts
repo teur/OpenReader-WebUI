@@ -15,10 +15,7 @@ export const preprocessSentenceForAudio = (text: string): string => {
     .trim();
 };
 
-const isShortSentence = (sentence: string): boolean => {
-  const words = sentence.trim().split(/\s+/);
-  return words.length <= 5;
-};
+const MAX_BLOCK_LENGTH = 250; // Maximum characters per block
 
 export const splitIntoSentences = (text: string): string[] => {
   // Preprocess the text before splitting into sentences
@@ -26,20 +23,28 @@ export const splitIntoSentences = (text: string): string[] => {
   const doc = nlp(cleanedText);
   const rawSentences = doc.sentences().out('array') as string[];
   
-  // Combine short sentences with previous ones
-  const processedSentences: string[] = [];
-  
-  for (let i = 0; i < rawSentences.length; i++) {
-    const currentSentence = rawSentences[i].trim();
+  const blocks: string[] = [];
+  let currentBlock = '';
+
+  for (const sentence of rawSentences) {
+    const trimmedSentence = sentence.trim();
     
-    if (isShortSentence(currentSentence) && processedSentences.length > 0) {
-      // Combine with previous sentence
-      const lastIndex = processedSentences.length - 1;
-      processedSentences[lastIndex] = `${processedSentences[lastIndex]} ${currentSentence}`;
+    // If adding this sentence would exceed the limit, start a new block
+    if (currentBlock && (currentBlock.length + trimmedSentence.length + 1) > MAX_BLOCK_LENGTH) {
+      blocks.push(currentBlock.trim());
+      currentBlock = trimmedSentence;
     } else {
-      processedSentences.push(currentSentence);
+      // Add to current block with a space if not empty
+      currentBlock = currentBlock 
+        ? `${currentBlock} ${trimmedSentence}`
+        : trimmedSentence;
     }
   }
+
+  // Add the last block if not empty
+  if (currentBlock) {
+    blocks.push(currentBlock.trim());
+  }
   
-  return processedSentences;
+  return blocks;
 };
