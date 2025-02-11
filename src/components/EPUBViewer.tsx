@@ -27,9 +27,10 @@ export function EPUBViewer({ className = '' }: EPUBViewerProps) {
   const rendition = useRef<Rendition | undefined>(undefined);
   const toc = useRef<NavItem[]>([]);
   const locationRef = useRef<string | number>(currDocPage);
+  
 
   const handleLocationChanged = useCallback((location: string | number, initial = false) => {
-    // Handle special 'next' and 'prev' cases
+    // Handle special 'next' and 'prev' cases, which 
     if (location === 'next' && rendition.current) {
       rendition.current.next();
       return;

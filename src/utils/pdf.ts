@@ -116,10 +116,12 @@ export function findBestTextMatch(
     lengthDiff: Infinity,
   };
 
+  const SPAN_SEARCH_LIMIT = 10;
+
   for (let i = 0; i < elements.length; i++) {
     let combinedText = '';
     const currentElements = [];
-    for (let j = i; j < Math.min(i + 10, elements.length); j++) {
+    for (let j = i; j < Math.min(i + SPAN_SEARCH_LIMIT, elements.length); j++) {
       const node = elements[j];
       const newText = combinedText ? `${combinedText} ${node.text}` : node.text;
       if (newText.length > maxCombinedLength) break;

@@ -102,7 +102,7 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
 
   // Use custom hooks
   const audioContext = useAudioContext();
-  const audioCache = useAudioCache(50);
+  const audioCache = useAudioCache(25);
   const { availableVoices, fetchVoices } = useVoiceManagement(openApiKey, openApiBaseUrl);
 
   // Add ref for location change handler
@@ -120,22 +120,21 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
    * State Management
    */
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isEPUB, setIsEPUB] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const [currDocPage, setCurrDocPage] = useState<string | number>(1);
+  const currDocPageNumber = (!isEPUB ? parseInt(currDocPage.toString()) : 1); // PDF uses numbers only
+  const [currDocPages, setCurrDocPages] = useState<number>();
+
   const [sentences, setSentences] = useState<string[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [activeHowl, setActiveHowl] = useState<Howl | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
   const [speed, setSpeed] = useState(voiceSpeed);
   const [voice, setVoice] = useState(configVoice);
-  const [currDocPage, setCurrDocPage] = useState<string | number>(1);
-  const [currDocPages, setCurrDocPages] = useState<number>();
   const [nextPageLoading, setNextPageLoading] = useState(false);
 
-  // Add this state to track if we're in EPUB mode
-  const [isEPUB, setIsEPUB] = useState(false);
-
-  const currDocPageNumber = (!isEPUB ? parseInt(currDocPage.toString()) : 1);
-
-  console.log('page:', currDocPage, 'pages:', currDocPages);
+  //console.log('page:', currDocPage, 'pages:', currDocPages);
 
   /**
    * Changes the current page by a specified amount

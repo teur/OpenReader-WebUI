@@ -84,9 +84,7 @@ export function EPUBProvider({ children }: { children: ReactNode }) {
    * Extracts text content from the current EPUB page/location
    */
   const extractPageText = useCallback(async (book: Book, rendition: Rendition): Promise<string> => {
-    try {
-      console.log('Extracting EPUB text from current location');
-      
+    try {      
       const { start, end } = rendition.location;
       if (!start?.cfi || !end?.cfi) return '';
       
