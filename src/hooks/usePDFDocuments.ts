@@ -71,10 +71,25 @@ export function usePDFDocuments() {
     }
   }, []);
 
+  const refresh = useCallback(async () => {
+    if (isDBReady) {
+      setIsLoading(true);
+      try {
+        const docs = await indexedDBService.getAllDocuments();
+        setDocuments(docs);
+      } catch (error) {
+        console.error('Failed to refresh documents:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  }, [isDBReady]);
+
   return {
     documents,
     isLoading,
     addDocument,
     removeDocument,
+    refresh,  // Add refresh to return value
   };
 }

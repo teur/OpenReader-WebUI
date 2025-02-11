@@ -5,6 +5,10 @@ import { Dialog, DialogPanel, DialogTitle, Transition, TransitionChild, Listbox,
 import { useTheme } from '@/contexts/ThemeContext';
 import { useConfig } from '@/contexts/ConfigContext';
 import { ChevronUpDownIcon, CheckIcon } from './icons/Icons';
+import { indexedDBService } from '@/utils/indexedDB';
+import { useDocuments } from '@/contexts/DocumentContext';
+
+const isDev = process.env.NEXT_PUBLIC_NODE_ENV !== 'production' || process.env.NODE_ENV == null;
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -20,14 +24,40 @@ const themes = [
 export function SettingsModal({ isOpen, setIsOpen }: SettingsModalProps) {
   const { theme, setTheme } = useTheme();
   const { apiKey, baseUrl, updateConfig } = useConfig();
+  const { refreshPDFs, refreshEPUBs } = useDocuments();
   const [localApiKey, setLocalApiKey] = useState(apiKey);
   const [localBaseUrl, setLocalBaseUrl] = useState(baseUrl);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const selectedTheme = themes.find(t => t.id === theme) || themes[0];
 
   useEffect(() => {
     setLocalApiKey(apiKey);
     setLocalBaseUrl(baseUrl);
   }, [apiKey, baseUrl]);
+
+  const handleSync = async () => {
+    try {
+      setIsSyncing(true);
+      await indexedDBService.syncToServer();
+    } catch (error) {
+      console.error('Sync failed:', error);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleLoad = async () => {
+    try {
+      setIsLoading(true);
+      await indexedDBService.loadFromServer();
+      await Promise.all([refreshPDFs(), refreshEPUBs()]);
+    } catch (error) {
+      console.error('Load failed:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <Transition appear show={isOpen} as={Fragment}>
@@ -130,6 +160,38 @@ export function SettingsModal({ isOpen, setIsOpen }: SettingsModalProps) {
                         className="w-full rounded-lg bg-background py-2 px-3 text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-accent"
                       />
                     </div>
+
+                    {isDev && <div className="space-y-2">
+                      <label className="block text-sm font-medium text-foreground">Document Sync</label>
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-2">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={handleSync}
+                              disabled={isSyncing || isLoading}
+                              className="inline-flex justify-center rounded-lg bg-background px-4 py-2 text-sm 
+                                       font-medium text-foreground hover:bg-background/90 focus:outline-none 
+                                       focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2
+                                       transform transition-transform duration-200 ease-in-out hover:scale-[1.04] hover:text-accent
+                                       disabled:opacity-50"
+                            >
+                              {isSyncing ? 'Saving...' : 'Save to Server'}
+                            </button>
+                            <button
+                              onClick={handleLoad}
+                              disabled={isSyncing || isLoading}
+                              className="inline-flex justify-center rounded-lg bg-background px-4 py-2 text-sm 
+                                       font-medium text-foreground hover:bg-background/90 focus:outline-none 
+                                       focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2
+                                       transform transition-transform duration-200 ease-in-out hover:scale-[1.04] hover:text-accent
+                                       disabled:opacity-50"
+                            >
+                              {isLoading ? 'Loading...' : 'Load from Server'}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>}
                   </div>
                 </div>
 

@@ -62,10 +62,25 @@ export function useEPUBDocuments() {
     }
   }, []);
 
+  const refresh = useCallback(async () => {
+    if (isDBReady) {
+      setIsLoading(true);
+      try {
+        const docs = await indexedDBService.getAllEPUBDocuments();
+        setDocuments(docs);
+      } catch (error) {
+        console.error('Failed to refresh documents:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  }, [isDBReady]);
+
   return {
     documents,
     isLoading,
     addDocument,
     removeDocument,
+    refresh,
   };
 }

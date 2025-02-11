@@ -487,6 +487,81 @@ class IndexedDBService {
       }
     });
   }
+
+  async syncToServer(): Promise<{ lastSync: number }> {
+    const pdfDocs = await this.getAllDocuments();
+    const epubDocs = await this.getAllEPUBDocuments();
+    
+    const documents = [];
+    
+    // Process PDF documents - store the raw PDF data
+    for (const doc of pdfDocs) {
+      const arrayBuffer = await doc.data.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+      documents.push({
+        ...doc,
+        type: 'pdf',
+        data: Array.from(uint8Array) // Convert to regular array for JSON serialization
+      });
+    }
+
+    // Process EPUB documents
+    for (const doc of epubDocs) {
+      documents.push({
+        ...doc,
+        type: 'epub',
+        data: Array.from(new Uint8Array(doc.data)) // Convert to regular array for JSON serialization
+      });
+    }
+
+    const response = await fetch('/api/documents', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ documents })
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to sync documents to server');
+    }
+
+    return { lastSync: Date.now() };
+  }
+
+  async loadFromServer(): Promise<{ lastSync: number }> {
+    const response = await fetch('/api/documents');
+    if (!response.ok) {
+      throw new Error('Failed to fetch documents from server');
+    }
+
+    const { documents } = await response.json();
+    
+    // Process each document
+    for (const doc of documents) {
+      if (doc.type === 'pdf') {
+        // Create a Blob from the raw binary data
+        const blob = new Blob([new Uint8Array(doc.data)], { type: 'application/pdf' });
+        await this.addDocument({
+          id: doc.id,
+          name: doc.name,
+          size: doc.size,
+          lastModified: doc.lastModified,
+          data: blob
+        });
+      } else if (doc.type === 'epub') {
+        // Convert the numeric array back to ArrayBuffer for EPUB
+        const uint8Array = new Uint8Array(doc.data);
+        await this.addEPUBDocument({
+          id: doc.id,
+          name: doc.name,
+          size: doc.size,
+          lastModified: doc.lastModified,
+          data: uint8Array.buffer
+        });
+      }
+    }
+
+    return { lastSync: Date.now() };
+  }
 }
 
 // Make sure we export a singleton instance
