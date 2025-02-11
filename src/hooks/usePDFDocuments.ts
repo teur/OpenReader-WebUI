@@ -85,11 +85,22 @@ export function usePDFDocuments() {
     }
   }, [isDBReady]);
 
+  const clearDocuments = useCallback(async (): Promise<void> => {
+    try {
+      await indexedDBService.clearPDFDocuments();
+      setDocuments([]);
+    } catch (error) {
+      console.error('Failed to clear PDF documents:', error);
+      throw error;
+    }
+  }, []);
+
   return {
     documents,
     isLoading,
     addDocument,
     removeDocument,
-    refresh,  // Add refresh to return value
+    refresh,
+    clearDocuments,  // Add clearDocuments to return value
   };
 }

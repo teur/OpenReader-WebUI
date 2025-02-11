@@ -1,4 +1,4 @@
-import { writeFile, readFile, readdir, mkdir } from 'fs/promises';
+import { writeFile, readFile, readdir, mkdir, unlink } from 'fs/promises';
 import { NextRequest, NextResponse } from 'next/server';
 import path from 'path';
 
@@ -79,5 +79,22 @@ export async function GET() {
   } catch (error) {
     console.error('Error loading documents:', error);
     return NextResponse.json({ error: 'Failed to load documents' }, { status: 500 });
+  }
+}
+
+export async function DELETE() {
+  try {
+    await ensureDocsDir();
+    const files = await readdir(DOCS_DIR);
+    
+    for (const file of files) {
+      const filePath = path.join(DOCS_DIR, file);
+      await unlink(filePath);
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting documents:', error);
+    return NextResponse.json({ error: 'Failed to delete documents' }, { status: 500 });
   }
 }

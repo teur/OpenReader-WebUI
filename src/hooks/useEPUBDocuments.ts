@@ -76,11 +76,22 @@ export function useEPUBDocuments() {
     }
   }, [isDBReady]);
 
+  const clearDocuments = useCallback(async (): Promise<void> => {
+    try {
+      await indexedDBService.clearEPUBDocuments();
+      setDocuments([]);
+    } catch (error) {
+      console.error('Failed to clear EPUB documents:', error);
+      throw error;
+    }
+  }, []);
+
   return {
     documents,
     isLoading,
     addDocument,
     removeDocument,
     refresh,
+    clearDocuments,  // Add clearDocuments to return value
   };
 }

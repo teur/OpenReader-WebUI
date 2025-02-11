@@ -562,6 +562,64 @@ class IndexedDBService {
 
     return { lastSync: Date.now() };
   }
+
+  async clearPDFDocuments(): Promise<void> {
+    if (!this.db) {
+      await this.init();
+    }
+
+    return new Promise((resolve, reject) => {
+      try {
+        console.log('Clearing all PDF documents');
+        const transaction = this.db!.transaction([PDF_STORE_NAME], 'readwrite');
+        const store = transaction.objectStore(PDF_STORE_NAME);
+        const request = store.clear();
+
+        request.onerror = (event) => {
+          const error = (event.target as IDBRequest).error;
+          console.error('Error clearing PDF documents:', error);
+          reject(error);
+        };
+
+        transaction.oncomplete = () => {
+          console.log('All PDF documents cleared successfully');
+          resolve();
+        };
+      } catch (error) {
+        console.error('Error in clearPDFDocuments transaction:', error);
+        reject(error);
+      }
+    });
+  }
+
+  async clearEPUBDocuments(): Promise<void> {
+    if (!this.db) {
+      await this.init();
+    }
+
+    return new Promise((resolve, reject) => {
+      try {
+        console.log('Clearing all EPUB documents');
+        const transaction = this.db!.transaction([EPUB_STORE_NAME], 'readwrite');
+        const store = transaction.objectStore(EPUB_STORE_NAME);
+        const request = store.clear();
+
+        request.onerror = (event) => {
+          const error = (event.target as IDBRequest).error;
+          console.error('Error clearing EPUB documents:', error);
+          reject(error);
+        };
+
+        transaction.oncomplete = () => {
+          console.log('All EPUB documents cleared successfully');
+          resolve();
+        };
+      } catch (error) {
+        console.error('Error in clearEPUBDocuments transaction:', error);
+        reject(error);
+      }
+    });
+  }
 }
 
 // Make sure we export a singleton instance

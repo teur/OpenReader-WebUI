@@ -5,11 +5,11 @@
 :root,
 html.light {
   --background: #ffffff;
-  --foreground: #171717;
-  --base: #f5f5f5;
-  --offbase: #dbdbdb;
+  --foreground: #2d3748;
+  --base: #f7fafc;
+  --offbase: #e2e8f0;
   --accent: #ef4444;
-  --muted: #737373;
+  --muted: #718096;
 }
 
 html.dark {
@@ -19,6 +19,33 @@ html.dark {
   --offbase: #4a4a4a;
   --accent: #f87171;
   --muted: #a3a3a3;
+}
+
+html.aqua {
+  --background: #020617;
+  --foreground: #e2e8f0;
+  --base: #0f172a;
+  --offbase: #1e293b;
+  --accent: #38bdf8;
+  --muted: #94a3b8;
+}
+
+html.forest {
+  --background: #0a0f0c;
+  --foreground: #d4e8d0;
+  --base: #111a15;
+  --offbase: #1a2820;
+  --accent: #4ade80;
+  --muted: #7c8f85;
+}
+
+html.vibrant {
+  --background: #090420;
+  --foreground: #ffffff;
+  --base: #1a0942;
+  --offbase: #2d1163;
+  --accent: #ff3d81;
+  --muted: #9d7dcc;
 }
 
 /* Ensure background color is set before content loads */

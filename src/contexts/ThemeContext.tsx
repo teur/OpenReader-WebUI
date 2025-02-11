@@ -2,7 +2,8 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
 
-type Theme = 'light' | 'dark' | 'system';
+const THEMES = ['system', 'light', 'dark', 'aqua', 'forest', 'vibrant'] as const;
+type Theme = (typeof THEMES)[number];
 
 interface ThemeContextType {
   theme: Theme;
@@ -16,7 +17,7 @@ const getSystemTheme = () => {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 };
 
-const getEffectiveTheme = (theme: Theme): 'light' | 'dark' => {
+const getEffectiveTheme = (theme: Theme): Theme => {
   if (theme === 'system') {
     return getSystemTheme();
   }
@@ -33,7 +34,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const root = window.document.documentElement;
     const effectiveTheme = getEffectiveTheme(newTheme);
     
-    root.classList.remove('light', 'dark');
+    root.classList.remove(...THEMES);
     root.classList.add(effectiveTheme);
     root.style.colorScheme = effectiveTheme;
     
@@ -57,7 +58,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       if (theme === 'system') {
         const effectiveTheme = getSystemTheme();
         const root = window.document.documentElement;
-        root.classList.remove('light', 'dark');
+        root.classList.remove(...THEMES);
         root.classList.add(effectiveTheme);
         root.style.colorScheme = effectiveTheme;
       }
@@ -81,3 +82,5 @@ export function useTheme() {
   }
   return context;
 }
+
+export { THEMES };

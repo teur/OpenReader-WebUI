@@ -20,6 +20,9 @@ interface DocumentContextType {
 
   refreshPDFs: () => Promise<void>;
   refreshEPUBs: () => Promise<void>;
+
+  clearPDFs: () => Promise<void>;
+  clearEPUBs: () => Promise<void>;
 }
 
 const DocumentContext = createContext<DocumentContextType | undefined>(undefined);
@@ -30,7 +33,8 @@ export function DocumentProvider({ children }: { children: ReactNode }) {
     addDocument: addPDFDocument,
     removeDocument: removePDFDocument,
     isLoading: isPDFLoading,
-    refresh: refreshPDFs
+    refresh: refreshPDFs,
+    clearDocuments: clearPDFs
   } = usePDFDocuments();
 
   const {
@@ -38,7 +42,8 @@ export function DocumentProvider({ children }: { children: ReactNode }) {
     addDocument: addEPUBDocument,
     removeDocument: removeEPUBDocument,
     isLoading: isEPUBLoading,
-    refresh: refreshEPUBs
+    refresh: refreshEPUBs,
+    clearDocuments: clearEPUBs
   } = useEPUBDocuments();
 
   return (
@@ -52,7 +57,9 @@ export function DocumentProvider({ children }: { children: ReactNode }) {
       removeEPUBDocument,
       isEPUBLoading,
       refreshPDFs,
-      refreshEPUBs
+      refreshEPUBs,
+      clearPDFs,
+      clearEPUBs
     }}>
       {children}
     </DocumentContext.Provider>
