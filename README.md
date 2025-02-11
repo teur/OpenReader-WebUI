@@ -31,17 +31,30 @@ https://github.com/user-attachments/assets/1bfc5fc4-8d66-4c71-a3c1-f3ec5b4f4b56
 ```bash
 docker run --name openreader-webui -p 3003:3003 richardr1126/openreader-webui:latest
 ```
+or with server-side doc storage:
+
+```bash
+docker run --name openreader-webui \
+  -p 3003:3003 \
+  -v openreader_docstore:/app/docstore \
+  richardr1126/openreader-webui:latest
+```
 Visit [http://localhost:3003](http://localhost:3003) to run the app.
 
 ### Using Docker Compose
 Create or add to a `docker-compose.yml`:
 ```yaml
+volumes:
+  openreader_docstore:
+
 services:
   openreader-webui:
     container_name: openreader-webui
     image: richardr1126/openreader-webui:latest
     ports:
       - "3003:3003"
+    volumes:
+      - openreader_docstore:/app/docstore
     restart: unless-stopped
 ```
 
