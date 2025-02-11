@@ -1,37 +1,31 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](#license)
 [![Contributions Welcome](https://img.shields.io/badge/Contributions-Welcome-orange.svg)](../../pulls)
 
-# OpenReader WebUI
+# OpenReader WebUI 📄🔊
 
 OpenReader WebUI is web-based reader Text-to-Speech capabilities, offering a TTS read along experience with narration for both PDF and EPUB documents. It can use any OpenAI compatible TTS endpoint, including [Kokoro-FastAPI](https://github.com/remsky/Kokoro-FastAPI/tree/v0.0.5post1-stable).
 
-- 🎯 **TTS API Integration**: Compatible with OpenAI API TTS and Kokoro FastAPI TTS, enabling high-quality voice narration
-- 💾 **Local-First Architecture**: Secure document handling with IndexedDB browser storage - no server uploads required
-- 🔍 **Smart Text Processing**: Real-time sentence detection and synchronized text highlighting during playback
+- 🎯 **TTS API Integration**: Compatible with OpenAI text to speech API, Kokoro FastAPI TTS, or any other compatible service; enabling high-quality voice narration
+- 💾 **Local-First Architecture**: Uses IndexedDB browser storage - no server uploads required
+- 🛜 **Optional Server-side documents**: Manually upload documents to the next backend for all users to download
+- 🔍 **Smart Text Processing**: Splits content into sentence blocks (ePub tries to split at paragraphs)
 - 📚 **EPUB Support**: Read EPUB files with table of contents and synchronized text
 - 📄 **PDF Support**: Read PDF files with text extraction and page navigation
-- ⚡ **Modern Tech Stack**: Built with Next.js, React, and Tailwind CSS
+- ⚡ **Modern Tech Stack**: Built with Next.js, React, Tailwind CSS, and some Headless UI React
 - 🎨 **Customizable Experience**: 
+  - Set TTS API base URL (with optional API key)
   - Adjustable playback speed
-  - Multiple voice options
-  - Dark/light/system theme support
+  - Multiple voice options (checks `/v1/audio/voices` endpoint)
+  - Multiple app layout theme options
   - Persistent user settings
-- 📱 **Cross-Platform**: Responsive design works seamlessly across desktop and mobile devices
 
-## **Demo**
-
+## [**Demo**](https://openreader.richardr.dev/)
 
 
 https://github.com/user-attachments/assets/1bfc5fc4-8d66-4c71-a3c1-f3ec5b4f4b56
 
 
-
 ## 🐳 Docker Quick Start
-
-```bash
-docker run --name openreader-webui -p 3003:3003 richardr1126/openreader-webui:latest
-```
-or with server-side doc storage:
 
 ```bash
 docker run --name openreader-webui \
@@ -39,6 +33,8 @@ docker run --name openreader-webui \
   -v openreader_docstore:/app/docstore \
   richardr1126/openreader-webui:latest
 ```
+> Note: The `openreader_docstore` volume is used to store server-side documents. You can mount a local directory instead. Or remove it if you don't need server-side documents.
+
 Visit [http://localhost:3003](http://localhost:3003) to run the app.
 
 ### Using Docker Compose
@@ -56,6 +52,12 @@ services:
     volumes:
       - openreader_docstore:/app/docstore
     restart: unless-stopped
+```
+
+### ⬆️ Update Docker Image
+```bash
+docker stop openreader-webui && docker rm openreader-webui
+docker pull richardr1126/openreader-webui:latest
 ```
 
 ## Dev Installation
@@ -97,61 +99,50 @@ services:
 
    > Dev server runs on port 3000 by default, while the production server runs on port 3003.
 
-#### Docker Supported Architectures
+
+## 💡 Feature requests
+
+For feature requests or ideas you have for the project, please use the [Discussions](https://github.com/richardr1126/OpenReader-WebUI/discussions) tab.
+
+## 🙋‍♂️ Support and issues
+
+For general questions, you can reach out to me on [Bluesky](https://bsky.app/profile/richardr.dev). If you encounter issues, please open an issue on GitHub following the template (which is very simple).
+
+## 👥 Contributing
+
+Contributions are welcome! Fork the repository and submit a pull request with your changes.
+
+## ❤️ Acknowledgements
+
+- [Kokoro-FastAPI](https://github.com/remsky/Kokoro-FastAPI) for the API wrapper
+- [react-pdf](https://github.com/wojtekmaj/react-pdf)
+- [react-reader](https://github.com/happyr/react-reader)
+- [Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M) for text-to-speech
+
+## Docker Supported Architectures
 - linux/amd64 (x86_64)
 - linux/arm64 (Apple Silicon)
 - linux/arm/v7 (Raspberry Pi)
 
-## **Features**
-  - Real-time sentence by sentence text-to-speech via OpenAI API TTS, [Kokoro FastAPI TTS](https://github.com/remsky/Kokoro-FastAPI), or others compatible with the `/v1/audio/speech` endpoint
-  - IndexedDB-powered local storage
-  - Synchronized text highlighting during playback (using string similarity for best match on the page)
-  - Configurable playback speed and voice options, which checks `/v1/audio/voices` for available voices
-  - Click-to-skip on the same page for navigation
-  - Responsive design with light, dark, and system themes
-  - All configuration settings saved in IndexedDB
-
 ## Stack
 
 - **Framework:** Next.js (React)
+- **Containerization:** Docker
 - **Storage:** IndexedDB (in browser db store)
 - **PDF Processing:** 
   - [react-pdf](https://github.com/wojtekmaj/react-pdf)
   - [pdf.js](https://mozilla.github.io/pdf.js/)
-  - Compromise for text analysis
+  - [compromise](https://github.com/spencermountain/compromise): NLP library for sentence splitting
 - **EPUB Processing:**
   - [react-reader](https://github.com/happyr/react-reader)
   - [epubjs](https://github.com/futurepress/epub.js/)
 - **UI Components:** 
-  - Headless UI
-  - Tailwind CSS
-- **TTS Integration:** anything you want
-
-## Project Structure
-
-```
-src/
-├── app/           // Next.js app router
-├── components/    // Reusable UI components
-├── contexts/      // State management contexts
-└── services/      // Utility functions & integrations
-```
-
-## Contributing
-
-Contributions are welcome! Fork the repository and submit a pull request with your changes. For significant alterations, please open an issue first.
+  - [Headless UI](https://headlessui.com)
+  - [Tailwind CSS](https://tailwindcss.com)
+- **TTS Integration:** (tested on)
+  - [OpenAI API](https://platform.openai.com/docs/api-reference/text-to-speech)
+  - [Kokoro FastAPI TTS](https://github.com/remsky/Kokoro-FastAPI/tree/v0.0.5post1-stable)
 
 ## License
 
 This project is licensed under the MIT License.
-
-## Acknowledgements
-
-- [react-pdf](https://github.com/wojtekmaj/react-pdf)
-- [react-reader](https://github.com/happyr/react-reader)
-- [Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M) for text-to-speech
-- [Kokoro-FastAPI](https://github.com/remsky/Kokoro-FastAPI) for the API wrapper
-
-## Support
-
-If you encounter issues or have suggestions, please open an issue on GitHub.
