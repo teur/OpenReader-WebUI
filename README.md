@@ -3,7 +3,7 @@
 
 # OpenReader WebUI
 
-OpenReader WebUI is a sleek, web-based reader with built-in Text-to-Speech capabilities, offering a seamless reading experience with synchronized audio narration for both PDF and EPUB documents. Read books with ease, listen to articles on the go, or study like you have your own lecturer, all in one place.
+OpenReader WebUI is web-based reader Text-to-Speech capabilities, offering a TTS read along experience with narration for both PDF and EPUB documents. It can use any OpenAI compatible TTS endpoint, including [Kokoro-FastAPI](https://github.com/remsky/Kokoro-FastAPI/tree/v0.0.5post1-stable).
 
 - 🎯 **TTS API Integration**: Compatible with OpenAI API TTS and Kokoro FastAPI TTS, enabling high-quality voice narration
 - 💾 **Local-First Architecture**: Secure document handling with IndexedDB browser storage - no server uploads required
