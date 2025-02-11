@@ -1,5 +1,14 @@
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](#license)
-[![Contributions Welcome](https://img.shields.io/badge/Contributions-Welcome-orange.svg)](../../pulls)
+[![GitHub Stars](https://img.shields.io/github/stars/richardr1126/OpenReader-WebUI)](../../stargazers)
+[![GitHub Forks](https://img.shields.io/github/forks/richardr1126/OpenReader-WebUI)](../../network/members)
+[![GitHub Watchers](https://img.shields.io/github/watchers/richardr1126/OpenReader-WebUI)](../../watchers)
+[![GitHub Issues](https://img.shields.io/github/issues/richardr1126/OpenReader-WebUI)](../../issues)
+[![GitHub Last Commit](https://img.shields.io/github/last-commit/richardr1126/OpenReader-WebUI)](../../commits)
+[![GitHub Release](https://img.shields.io/github/v/release/richardr1126/OpenReader-WebUI)](../../releases)
+
+[![Docker Image Size](https://img.shields.io/docker/image-size/richardr1126/openreader-webui/latest)](https://hub.docker.com/r/richardr1126/openreader-webui)
+[![Docker Image Version](https://img.shields.io/docker/v/richardr1126/openreader-webui/latest?label=latest%20docker)](https://hub.docker.com/r/richardr1126/openreader-webui/tags)
+[![Docker Hub](https://img.shields.io/docker/pulls/richardr1126/openreader-webui)](https://hub.docker.com/r/richardr1126/openreader-webui)
+
 
 # OpenReader WebUI 📄🔊
 
