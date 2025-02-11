@@ -28,20 +28,7 @@ export function EPUBViewer({ className = '' }: EPUBViewerProps) {
   const toc = useRef<NavItem[]>([]);
   const locationRef = useRef<string | number>(currDocPage);
 
-  // Load the last location when component mounts
-  // useEffect(() => {
-  //   const loadLastLocation = async () => {
-  //     if (id) {
-  //       const lastLocation = await getLastDocumentLocation(id as string);
-  //       if (lastLocation) {
-  //         locationRef.current = lastLocation;
-  //       }
-  //     }
-  //   };
-  //   loadLastLocation();
-  // }, [id]);
-
-  const handleLocationChanged = useCallback((location: string | number) => {
+  const handleLocationChanged = useCallback((location: string | number, initial = false) => {
     // Handle special 'next' and 'prev' cases
     if (location === 'next' && rendition.current) {
       rendition.current.next();
@@ -58,7 +45,6 @@ export function EPUBViewer({ className = '' }: EPUBViewerProps) {
       
       console.log('Displayed:', displayed, 'Chapter:', chapter);
 
-
       if (locationRef.current !== 1) {
         // Save the location to IndexedDB
         if (id) {
@@ -70,7 +56,17 @@ export function EPUBViewer({ className = '' }: EPUBViewerProps) {
       locationRef.current = location;
       
       setEPUBPageInChapter(displayed.page, displayed.total, chapter?.label || '');
-      extractPageText(bookRef.current, rendition.current);
+      
+      // Add a small delay for initial load to ensure rendition is ready
+      if (initial) {
+        setTimeout(() => {
+          if (bookRef.current && rendition.current) {
+            extractPageText(bookRef.current, rendition.current);
+          }
+        }, 100);
+      } else {
+        extractPageText(bookRef.current, rendition.current);
+      }
     }
   }, [id, setEPUBPageInChapter, extractPageText]);
 

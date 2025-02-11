@@ -73,7 +73,7 @@ interface TTSContextType {
   setVoiceAndRestart: (voice: string) => void;
   skipToPage: (page: number) => void;
   setEPUBPageInChapter: (page: string | number, total: number, chapter: string | number) => void;  // Add this line
-  registerLocationChangeHandler: (handler: (location: string | number) => void) => void;
+  registerLocationChangeHandler: (handler: (location: string | number, initial?: boolean) => void) => void;
 }
 
 // Create the context
@@ -106,10 +106,10 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
   const { availableVoices, fetchVoices } = useVoiceManagement(openApiKey, openApiBaseUrl);
 
   // Add ref for location change handler
-  const locationChangeHandlerRef = useRef<((location: string | number) => void) | null>(null);
+  const locationChangeHandlerRef = useRef<((location: string | number, initial?: boolean) => void) | null>(null);
 
   // Add method to register location change handler
-  const registerLocationChangeHandler = useCallback((handler: (location: string | number) => void) => {
+  const registerLocationChangeHandler = useCallback((handler: (location: string | number, initial?: boolean) => void) => {
     locationChangeHandlerRef.current = handler;
   }, []);
 
@@ -695,9 +695,10 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     if (id && isEPUB) {
       getLastDocumentLocation(id as string).then(lastLocation => {
         if (lastLocation) {
+          console.log('Setting last location:', lastLocation);
           setCurrDocPage(lastLocation);
           if (locationChangeHandlerRef.current) {
-            locationChangeHandlerRef.current(lastLocation);
+            locationChangeHandlerRef.current(lastLocation, true);
           }
         }
       });
