@@ -29,7 +29,6 @@ import toast from 'react-hot-toast';
 import { useParams } from 'next/navigation';
 
 import { useConfig } from '@/contexts/ConfigContext';
-import { splitIntoSentences, preprocessSentenceForAudio } from '@/utils/nlp';
 import { audioBufferToURL } from '@/utils/audio';
 import { useAudioCache } from '@/hooks/audio/useAudioCache';
 import { useVoiceManagement } from '@/hooks/audio/useVoiceManagement';
@@ -152,51 +151,71 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
    */
   const setText = useCallback((text: string) => {
     console.log('Setting page text:', text);
-    const newSentences = splitIntoSentences(text);
-
-    // If skipBlank is enabled and there's no text
-    if (isPlaying && skipBlank && newSentences.length === 0) {
-      if (isEPUB && locationChangeHandlerRef.current) {
-        // For EPUB, use the location handler to move to next section
-        locationChangeHandlerRef.current('next');
-        
-        toast.success('Skipping blank section', {
-          id: `epub-section-skip`,
-          iconTheme: {
-            primary: 'var(--accent)',
-            secondary: 'var(--background)',
-          },
-          style: {
-            background: 'var(--background)',
-            color: 'var(--accent)',
-          },
-          duration: 1000,
-          position: 'top-center',
-        });
-        return;
-      } else if (currDocPageNumber < currDocPages!) {
-        // For PDF, increment the page
-        incrementPage();
-        
-        toast.success(`Skipping blank page ${currDocPageNumber}`, {
-          id: `page-${currDocPageNumber}`,
-          iconTheme: {
-            primary: 'var(--accent)',
-            secondary: 'var(--background)',
-          },
-          style: {
-            background: 'var(--background)',
-            color: 'var(--accent)',
-          },
-          duration: 1000,
-          position: 'top-center',
-        });
-        return;
-      }
-    }
     
-    setSentences(newSentences);
-    setNextPageLoading(false);
+    fetch('/api/nlp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Failed to process text');
+        }
+        return response.json();
+      })
+      .then(({ sentences: newSentences }) => {
+        // If skipBlank is enabled and there's no text
+        if (isPlaying && skipBlank && newSentences.length === 0) {
+          if (isEPUB && locationChangeHandlerRef.current) {
+            locationChangeHandlerRef.current('next');
+            
+            toast.success('Skipping blank section', {
+              id: `epub-section-skip`,
+              iconTheme: {
+                primary: 'var(--accent)',
+                secondary: 'var(--background)',
+              },
+              style: {
+                background: 'var(--background)',
+                color: 'var(--accent)',
+              },
+              duration: 1000,
+              position: 'top-center',
+            });
+            return;
+          } else if (currDocPageNumber < currDocPages!) {
+            incrementPage();
+            
+            toast.success(`Skipping blank page ${currDocPageNumber}`, {
+              id: `page-${currDocPageNumber}`,
+              iconTheme: {
+                primary: 'var(--accent)',
+                secondary: 'var(--background)',
+              },
+              style: {
+                background: 'var(--background)',
+                color: 'var(--accent)',
+              },
+              duration: 1000,
+              position: 'top-center',
+            });
+            return;
+          }
+        }
+        
+        setSentences(newSentences);
+        setNextPageLoading(false);
+      })
+      .catch(error => {
+        console.error('Error processing text:', error);
+        toast.error('Failed to process text', {
+          style: {
+            background: 'var(--background)',
+            color: 'var(--accent)',
+          },
+          duration: 3000,
+        });
+      });
   }, [isPlaying, skipBlank, currDocPageNumber, currDocPages, incrementPage, isEPUB]);
 
   /**
@@ -437,9 +456,8 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     // Only set processing state if not preloading
     if (!preload) setIsProcessing(true);
   
-    const cleanedSentence = preprocessSentenceForAudio(sentence);
-    const audioBuffer = await getAudio(cleanedSentence);
-    
+    // No need to preprocess again since setText already did it
+    const audioBuffer = await getAudio(sentence);
     return audioBufferToURL(audioBuffer!);
   }, [isProcessing, audioContext, getAudio]);
 
