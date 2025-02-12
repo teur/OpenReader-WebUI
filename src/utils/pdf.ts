@@ -2,9 +2,11 @@ import { pdfjs } from 'react-pdf';
 import nlp from 'compromise';
 import stringSimilarity from 'string-similarity';
 import type { TextItem } from 'pdfjs-dist/types/src/display/api';
+import type { PDFDocumentProxy } from 'pdfjs-dist';
 
-// Set worker from public directory
+// Set worker from public directory and compatibility mode
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.mjs';
+pdfjs.GlobalWorkerOptions.workerPort = null;
 
 interface TextMatch {
   elements: HTMLElement[];
@@ -24,17 +26,8 @@ export function convertPDFDataToURL(pdfData: Blob): Promise<string> {
 }
 
 // Text Processing functions
-export async function extractTextFromPDF(pdfURL: string, pageNumber: number): Promise<string> {
+export async function extractTextFromPDF(pdf: PDFDocumentProxy, pageNumber: number): Promise<string> {
   try {
-    const base64Data = pdfURL.split(',')[1];
-    const binaryData = atob(base64Data);
-    const bytes = new Uint8Array(binaryData.length);
-    for (let i = 0; i < binaryData.length; i++) {
-      bytes[i] = binaryData.charCodeAt(i);
-    }
-
-    const loadingTask = pdfjs.getDocument({ data: bytes });
-    const pdf = await loadingTask.promise;
     const page = await pdf.getPage(pageNumber);
     const textContent = await page.getTextContent();
 

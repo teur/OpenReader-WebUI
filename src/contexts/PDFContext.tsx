@@ -33,6 +33,8 @@ import {
   handleTextClick,
 } from '@/utils/pdf';
 
+import type { PDFDocumentProxy } from 'pdfjs-dist';
+
 /**
  * Interface defining all available methods and properties in the PDF context
  */
@@ -43,11 +45,12 @@ interface PDFContextType {
   currDocPages: number | undefined;
   currDocPage: number;
   currDocText: string | undefined;
+  pdfDocument: PDFDocumentProxy | undefined;
   setCurrentDocument: (id: string) => Promise<void>;
   clearCurrDoc: () => void;
 
   // PDF functionality
-  onDocumentLoadSuccess: ({ numPages }: { numPages: number }) => void;
+  onDocumentLoadSuccess: (pdf: PDFDocumentProxy) => void;
   highlightPattern: (text: string, pattern: string, containerRef: React.RefObject<HTMLDivElement>) => void;
   clearHighlights: () => void;
   handleTextClick: (
@@ -75,15 +78,17 @@ export function PDFProvider({ children }: { children: ReactNode }) {
   const [currDocURL, setCurrDocURL] = useState<string>();
   const [currDocName, setCurrDocName] = useState<string>();
   const [currDocText, setCurrDocText] = useState<string>();
+  const [pdfDocument, setPdfDocument] = useState<PDFDocumentProxy>();
 
   /**
    * Handles successful document load
    * 
    * @param {Object} param0 - Object containing numPages
    */
-  const onDocumentLoadSuccess = useCallback(({ numPages }: { numPages: number }) => {
-    console.log('Document loaded:', numPages);
-    setCurrDocPages(numPages);
+  const onDocumentLoadSuccess = useCallback((pdf: PDFDocumentProxy) => {
+    console.log('Document loaded:', pdf.numPages);
+    setCurrDocPages(pdf.numPages);
+    setPdfDocument(pdf);
   }, [setCurrDocPages]);
 
   /**
@@ -91,15 +96,15 @@ export function PDFProvider({ children }: { children: ReactNode }) {
    */
   const loadCurrDocText = useCallback(async () => {
     try {
-      if (!currDocURL) return;
-      const text = await extractTextFromPDF(currDocURL, currDocPage);
+      if (!pdfDocument) return;
+      const text = await extractTextFromPDF(pdfDocument, currDocPage);
       setCurrDocText(text);
       setTTSText(text);
 
     } catch (error) {
       console.error('Error loading PDF text:', error);
     }
-  }, [currDocURL, currDocPage, setTTSText]);
+  }, [pdfDocument, currDocPage, setTTSText]);
 
   /**
    * Updates the current document text when the page changes
@@ -136,6 +141,7 @@ export function PDFProvider({ children }: { children: ReactNode }) {
     setCurrDocURL(undefined);
     setCurrDocText(undefined);
     setCurrDocPages(undefined);
+    setPdfDocument(undefined);
     stop();
   }, [setCurrDocPages, stop]);
 
@@ -153,6 +159,7 @@ export function PDFProvider({ children }: { children: ReactNode }) {
       highlightPattern,
       clearHighlights,
       handleTextClick,
+      pdfDocument,
     }),
     [
       onDocumentLoadSuccess,
@@ -163,6 +170,7 @@ export function PDFProvider({ children }: { children: ReactNode }) {
       currDocPage,
       currDocText,
       clearCurrDoc,
+      pdfDocument,
     ]
   );
 
