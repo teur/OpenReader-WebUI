@@ -1,31 +1,23 @@
+import { NextRequest, NextResponse } from 'next/server';
 import nlp from 'compromise';
 
-// Text preprocessing function to clean and normalize text
-export const preprocessSentenceForAudio = (text: string): string => {
+const MAX_BLOCK_LENGTH = 300;
+
+const preprocessSentenceForAudio = (text: string): string => {
   return text
-    // Replace URLs with descriptive text including domain
     .replace(/\S*(?:https?:\/\/|www\.)([^\/\s]+)(?:\/\S*)?/gi, '- (link to $1) -')
-    // Remove special characters except basic punctuation
-    //.replace(/[^\w\s.,!?;:'"()-]/g, ' ')
-    // Fix hyphenated words at line breaks (word- word -> wordword)
     .replace(/(\w+)-\s+(\w+)/g, '$1$2')
-    // Replace multiple spaces with single space
     .replace(/\s+/g, ' ')
-    // Trim whitespace
     .trim();
 };
 
-const MAX_BLOCK_LENGTH = 300; // Maximum characters per block
-
-export const splitIntoSentences = (text: string): string[] => {
-  // Split text into paragraphs first
+const splitIntoSentences = (text: string): string[] => {
   const paragraphs = text.split(/\n+/);
   const blocks: string[] = [];
 
   for (const paragraph of paragraphs) {
     if (!paragraph.trim()) continue;
 
-    // Preprocess each paragraph
     const cleanedText = preprocessSentenceForAudio(paragraph);
     const doc = nlp(cleanedText);
     const rawSentences = doc.sentences().out('array') as string[];
@@ -35,19 +27,16 @@ export const splitIntoSentences = (text: string): string[] => {
     for (const sentence of rawSentences) {
       const trimmedSentence = sentence.trim();
       
-      // If adding this sentence would exceed the limit, start a new block
       if (currentBlock && (currentBlock.length + trimmedSentence.length + 1) > MAX_BLOCK_LENGTH) {
         blocks.push(currentBlock.trim());
         currentBlock = trimmedSentence;
       } else {
-        // Add to current block with a space if not empty
         currentBlock = currentBlock 
           ? `${currentBlock} ${trimmedSentence}`
           : trimmedSentence;
       }
     }
 
-    // Add the last block if not empty
     if (currentBlock) {
       blocks.push(currentBlock.trim());
     }
@@ -55,3 +44,25 @@ export const splitIntoSentences = (text: string): string[] => {
   
   return blocks;
 };
+
+export async function POST(req: NextRequest) {
+  try {
+    const { text } = await req.json();
+    if (!text) {
+      return NextResponse.json({ error: 'No text provided' }, { status: 400 });
+    }
+
+    if (text.length <= MAX_BLOCK_LENGTH) {
+      // Single sentence preprocessing
+      const cleanedText = preprocessSentenceForAudio(text);
+      return NextResponse.json({ sentences: [cleanedText] });
+    }
+
+    // Full text splitting into sentences
+    const sentences = splitIntoSentences(text);
+    return NextResponse.json({ sentences });
+  } catch (error) {
+    console.error('Error processing text:', error);
+    return NextResponse.json({ error: 'Failed to process text' }, { status: 500 });
+  }
+}
