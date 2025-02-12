@@ -456,20 +456,8 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     // Only set processing state if not preloading
     if (!preload) setIsProcessing(true);
   
-    // Preprocess the sentence using the NLP API
-    const response = await fetch('/api/nlp', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: sentence }),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to process sentence');
-    }
-
-    const { sentences: [cleanedSentence] } = await response.json();
-    const audioBuffer = await getAudio(cleanedSentence);
-    
+    // No need to preprocess again since setText already did it
+    const audioBuffer = await getAudio(sentence);
     return audioBufferToURL(audioBuffer!);
   }, [isProcessing, audioContext, getAudio]);
 
