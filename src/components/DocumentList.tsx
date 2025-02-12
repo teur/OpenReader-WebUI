@@ -1,8 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { Button } from '@headlessui/react';
-import { Popover } from '@headlessui/react';
 import { useCallback, useState } from 'react';
 import { useDocuments } from '@/contexts/DocumentContext';
 import { PDFIcon, EPUBIcon, ChevronUpDownIcon } from '@/components/icons/Icons';
@@ -14,6 +12,9 @@ import {
   ListboxButton,
   ListboxOption,
   ListboxOptions,
+  Popover,
+  PopoverPanel,
+  Button,
 } from '@headlessui/react';
 
 type DocumentToDelete = {
@@ -210,7 +211,7 @@ export function DocumentList() {
     } catch (err) {
       console.error('Failed to remove document:', err);
     }
-  }, [documentToDelete]);
+  }, [documentToDelete, removePDF, removeEPUB]);
 
   const toggleFolderCollapse = (folderId: string) => {
     setCollapsedFolders(prev => {
@@ -422,7 +423,6 @@ export function DocumentList() {
         </div>
 
         <Popover className="fixed z-50">
-          {({ open }) => (
             <>
               {pendingFolderDocs && (
                 <div style={{ 
@@ -430,7 +430,7 @@ export function DocumentList() {
                   left: `${mousePosition.x}px`, 
                   top: `${mousePosition.y}px` 
                 }}>
-                  <Popover.Panel
+                  <PopoverPanel
                     static
                     className="bg-transparent backdrop-blur-md p-4 rounded-lg shadow-lg transform -translate-x-1/2 -translate-y-1/2"
                   >
@@ -447,11 +447,10 @@ export function DocumentList() {
                       />
                       <p className="text-xs text-muted">Press Enter to create</p>
                     </div>
-                  </Popover.Panel>
+                  </PopoverPanel>
                 </div>
               )}
             </>
-          )}
         </Popover>
 
         <ConfirmDialog
