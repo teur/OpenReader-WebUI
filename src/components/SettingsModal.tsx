@@ -150,7 +150,7 @@ export function SettingsModal({ isOpen, setIsOpen }: SettingsModalProps) {
                                 <ListboxOption
                                   key={theme.id}
                                   className={({ active }) =>
-                                    `cursor-pointer select-none py-2 pl-10 pr-4 ${active ? 'bg-accent/10 text-accent' : 'text-foreground'
+                                    `relative cursor-pointer select-none py-2 pl-10 pr-4 ${active ? 'bg-accent/10 text-accent' : 'text-foreground'
                                     }`
                                   }
                                   value={theme}
