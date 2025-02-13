@@ -1,6 +1,4 @@
-'use client';
-
-import { Fragment, useEffect } from 'react';
+import { Fragment, KeyboardEvent } from 'react';
 import { Dialog, DialogPanel, DialogTitle, Transition, TransitionChild } from '@headlessui/react';
 
 interface ConfirmDialogProps {
@@ -24,23 +22,21 @@ export function ConfirmDialog({
   cancelText = 'Cancel',
   isDangerous = false,
 }: ConfirmDialogProps) {
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        onConfirm();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onConfirm]);
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      onConfirm();
+    }
+  };
 
   return (
     <Transition appear show={isOpen} as={Fragment}>
-      <Dialog as="div" className="relative z-50" onClose={onClose}>
+      <Dialog 
+        as="div" 
+        className="relative z-50" 
+        onClose={onClose}
+        onKeyDown={handleKeyDown}
+      >
         <TransitionChild
           as={Fragment}
           enter="ease-out duration-300"

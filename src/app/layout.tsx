@@ -1,5 +1,6 @@
 import "./globals.css";
-import { Providers } from "./providers";
+import { ReactNode } from "react";
+import { Providers } from "@/app/providers";
 import { Metadata } from "next";
 import Script from "next/script";
 import { Footer } from "@/components/Footer";
@@ -48,12 +49,7 @@ export const metadata: Metadata = {
 const isDev = process.env.NEXT_PUBLIC_NODE_ENV !== 'production' || process.env.NODE_ENV == null;
 //const isDev = false;
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>

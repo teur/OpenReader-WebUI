@@ -14,7 +14,7 @@
 
 'use client';
 
-import React, {
+import {
   createContext,
   useContext,
   useState,
@@ -22,6 +22,7 @@ import React, {
   useEffect,
   useRef,
   useMemo,
+  ReactNode,
 } from 'react';
 import OpenAI from 'openai';
 import { Howl } from 'howler';
@@ -84,7 +85,7 @@ const TTSContext = createContext<TTSContextType | undefined>(undefined);
  * Main provider component that manages the TTS state and functionality.
  * Handles initialization of OpenAI client, audio context, and media session.
  */
-export function TTSProvider({ children }: { children: React.ReactNode }) {
+export function TTSProvider({ children }: { children: ReactNode }) {
   // Configuration context consumption
   const { 
     apiKey: openApiKey, 

@@ -21,6 +21,7 @@ import {
   useEffect,
   useCallback,
   useMemo,
+  RefObject,
 } from 'react';
 
 import { indexedDBService } from '@/utils/indexedDB';
@@ -51,12 +52,12 @@ interface PDFContextType {
 
   // PDF functionality
   onDocumentLoadSuccess: (pdf: PDFDocumentProxy) => void;
-  highlightPattern: (text: string, pattern: string, containerRef: React.RefObject<HTMLDivElement>) => void;
+  highlightPattern: (text: string, pattern: string, containerRef: RefObject<HTMLDivElement>) => void;
   clearHighlights: () => void;
   handleTextClick: (
     event: MouseEvent,
     pdfText: string,
-    containerRef: React.RefObject<HTMLDivElement>,
+    containerRef: RefObject<HTMLDivElement>,
     stopAndPlayFromIndex: (index: number) => void,
     isProcessing: boolean
   ) => void;

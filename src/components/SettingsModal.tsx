@@ -4,7 +4,7 @@ import { Fragment, useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogPanel, DialogTitle, Transition, TransitionChild, Listbox, ListboxButton, ListboxOptions, ListboxOption, Button } from '@headlessui/react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useConfig } from '@/contexts/ConfigContext';
-import { ChevronUpDownIcon, CheckIcon } from './icons/Icons';
+import { ChevronUpDownIcon, CheckIcon, SettingsIcon } from '@/components/icons/Icons';
 import { indexedDBService } from '@/utils/indexedDB';
 import { useDocuments } from '@/contexts/DocumentContext';
 import { setItem, getItem } from '@/utils/indexedDB';
@@ -13,17 +13,14 @@ import { THEMES } from '@/contexts/ThemeContext';
 
 const isDev = process.env.NEXT_PUBLIC_NODE_ENV !== 'production' || process.env.NODE_ENV == null;
 
-interface SettingsModalProps {
-  isOpen: boolean;
-  setIsOpen: (isOpen: boolean) => void;
-}
-
 const themes = THEMES.map(id => ({
   id,
   name: id.charAt(0).toUpperCase() + id.slice(1)
 }));
 
-export function SettingsModal({ isOpen, setIsOpen }: SettingsModalProps) {
+export function SettingsModal() {
+  const [isOpen, setIsOpen] = useState(false);
+
   const { theme, setTheme } = useTheme();
   const { apiKey, baseUrl, updateConfig } = useConfig();
   const { refreshPDFs, refreshEPUBs, clearPDFs, clearEPUBs } = useDocuments();
@@ -95,7 +92,14 @@ export function SettingsModal({ isOpen, setIsOpen }: SettingsModalProps) {
   };
 
   return (
-    <>
+    <Button
+      onClick={() => setIsOpen(true)}
+      className="rounded-full p-2 text-foreground hover:bg-offbase transform transition-transform duration-200 ease-in-out hover:scale-[1.1] hover:text-accent absolute top-1 left-1 sm:top-3 sm:left-3"
+      aria-label="Settings"
+      tabIndex={0}
+    >
+      <SettingsIcon className="w-4 h-4 sm:w-5 sm:h-5 hover:animate-spin-slow" />
+
       <Transition appear show={isOpen} as={Fragment}>
         <Dialog as="div" className="relative z-50" onClose={() => setIsOpen(false)}>
           <TransitionChild
@@ -306,6 +310,6 @@ export function SettingsModal({ isOpen, setIsOpen }: SettingsModalProps) {
         confirmText="Delete"
         isDangerous={true}
       />
-    </>
+    </Button>
   );
 }

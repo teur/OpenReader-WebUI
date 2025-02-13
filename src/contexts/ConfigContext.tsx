@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { getItem, indexedDBService, setItem } from '@/utils/indexedDB';
 
 export type ViewType = 'single' | 'dual' | 'scroll';
@@ -29,7 +29,7 @@ type ConfigValues = {
 
 const ConfigContext = createContext<ConfigContextType | undefined>(undefined);
 
-export function ConfigProvider({ children }: { children: React.ReactNode }) {
+export function ConfigProvider({ children }: { children: ReactNode }) {
   // Config state
   const [apiKey, setApiKey] = useState<string>('');
   const [baseUrl, setBaseUrl] = useState<string>('');
