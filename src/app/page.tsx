@@ -14,7 +14,7 @@ export default function Home() {
     <div className='p-3.5 sm:p-5'>
       <Button
         onClick={() => setIsSettingsOpen(true)}
-        className="rounded-full p-2 text-foreground hover:bg-offbase transform transition-transform duration-200 ease-in-out hover:scale-[1.1] hover:text-accent absolute top-1 right-1 sm:top-3 sm:right-3"
+        className="rounded-full p-2 text-foreground hover:bg-offbase transform transition-transform duration-200 ease-in-out hover:scale-[1.1] hover:text-accent absolute top-1 left-1 sm:top-3 sm:left-3"
         aria-label="Settings"
         tabIndex={0}
       >
