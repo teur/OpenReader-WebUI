@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode, useLayoutEffect } from 'react';
 
-const THEMES = ['system', 'light', 'dark', 'aqua', 'forest', 'vibrant'] as const;
+const THEMES = ['system', 'light', 'dark', 'ocean', 'forest', 'sunset', 'sea', 'mint'] as const;
 type Theme = (typeof THEMES)[number];
 
 interface ThemeContextType {

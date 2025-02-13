@@ -21,7 +21,7 @@ html.dark {
   --muted: #a3a3a3;
 }
 
-html.aqua {
+html.ocean {
   --background: #020617;
   --foreground: #e2e8f0;
   --base: #0f172a;
@@ -39,13 +39,31 @@ html.forest {
   --muted: #7c8f85;
 }
 
-html.vibrant {
-  --background: #090420;
-  --foreground: #ffffff;
-  --base: #1a0942;
-  --offbase: #2d1163;
-  --accent: #ff3d81;
-  --muted: #9d7dcc;
+html.sunset {
+  --background: #1a0f0f;
+  --foreground: #ffe4d6;
+  --base: #2c1810;
+  --offbase: #3d1f14;
+  --accent: #ff6b6b;
+  --muted: #bc8f8f;
+}
+
+html.sea {
+  --background: #0c1922;
+  --foreground: #e0f2fe;
+  --base: #102c3d;
+  --offbase: #1a3c52;
+  --accent: #06b6d4;
+  --muted: #7ca7c4;
+}
+
+html.mint {
+  --background: #0f1916;
+  --foreground: #dcfce7;
+  --base: #132d27;
+  --offbase: #1c3d35;
+  --accent: #2dd4bf;
+  --muted: #75a99c;
 }
 
 body {
