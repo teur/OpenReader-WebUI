@@ -70,7 +70,6 @@ export function DocumentList() {
   const [newFolderName, setNewFolderName] = useState('');
   const [pendingFolderDocs, setPendingFolderDocs] = useState<{ source: DocumentListDocument, target: DocumentListDocument } | null>(null);
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set());
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
     // Load saved state
@@ -164,7 +163,6 @@ export function DocumentList() {
       // Only highlight target if neither document is in a folder
       if (!doc.folderId) {
         setDropTargetDoc(doc);
-        setMousePosition({ x: e.clientX, y: e.clientY });
       }
     }
   };
@@ -213,9 +211,12 @@ export function DocumentList() {
   }, [pendingFolderDocs, newFolderName]);
 
   const handleFolderNameKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' || e.key === 'Escape') {
+    if (e.key === 'Enter') {
       e.preventDefault();
       createFolder();
+    } else if (e.key === 'Escape') {
+      setPendingFolderDocs(null);
+      setNewFolderName('');
     }
   };
 
@@ -328,17 +329,16 @@ export function DocumentList() {
               {(doc.size / 1024 / 1024).toFixed(2)} MB
             </p>
           </div>
-        
-          <Button
-            onClick={() => setDocumentToDelete({ id: doc.id, name: doc.name, type: doc.type })}
-            className="ml-4 p-2 text-muted hover:text-red-500 rounded-lg hover:bg-red-50 transition-colors"
-            aria-label="Delete document"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
-          </Button>
         </Link>
+        <Button
+          onClick={() => setDocumentToDelete({ id: doc.id, name: doc.name, type: doc.type })}
+          className="ml-4 p-2 text-muted hover:text-red-500 rounded-lg hover:bg-red-50 transition-colors"
+          aria-label="Delete document"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+        </Button>
       </div>
     </div>
   );
@@ -387,7 +387,7 @@ export function DocumentList() {
       className={`rounded-lg p-2 transition-all bg-offbase shadow-lg transition-shadow ${dropTargetDoc?.folderId === folder.id ? 'ring-2 ring-primary bg-primary/10' : ''
         }`}
     >
-      <div className={`flex items-center justify-between ${collapsedFolders.has(folder.id) ? 'mb-0': 'mb-2'}`}>
+      <div className={`flex items-center justify-between ${collapsedFolders.has(folder.id) ? 'mb-0' : 'mb-2'}`}>
         <div className="flex items-center">
           <h3 className="text-lg px-1 font-semibold">{folder.name}</h3>
           <Button
@@ -452,35 +452,32 @@ export function DocumentList() {
           </div>
         </div>
 
-        <Popover className="fixed z-50">
-            <>
-              {pendingFolderDocs && (
-                <div style={{ 
-                  position: 'fixed', 
-                  left: `${mousePosition.x}px`, 
-                  top: `${mousePosition.y}px` 
-                }}>
-                  <PopoverPanel
-                    static
-                    className="bg-transparent backdrop-blur-md p-4 rounded-lg shadow-lg transform -translate-x-1/2 -translate-y-1/2"
-                  >
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium text-foreground">Name your new folder</p>
-                      <input
-                        type="text"
-                        value={newFolderName}
-                        onChange={(e) => setNewFolderName(e.target.value)}
-                        onKeyDown={handleFolderNameKeyDown}
-                        placeholder="Enter folder name"
-                        className="w-full rounded-lg bg-background py-2 px-3 text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-accent"
-                        autoFocus
-                      />
-                      <p className="text-xs text-muted">Press Enter to create</p>
-                    </div>
-                  </PopoverPanel>
+        <Popover className="fixed">
+          {pendingFolderDocs && (
+            <div className="fixed inset-0 flex items-center justify-center">
+              <div className="fixed inset-0 bg-black/30 backdrop-blur-sm" />
+              <PopoverPanel
+                static
+                className="relative bg-background p-6 rounded-lg shadow-lg max-w-sm w-full"
+              >
+                <div className="space-y-2">
+                  <h3 className="text-lg font-semibold text-foreground">Create New Folder</h3>
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      value={newFolderName}
+                      onChange={(e) => setNewFolderName(e.target.value)}
+                      onKeyDown={handleFolderNameKeyDown}
+                      placeholder="Enter folder name"
+                      className="w-full rounded-lg bg-base py-2 px-3 text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                      autoFocus
+                    />
+                    <p className="text-xs text-muted"> Press Enter to create or Escape to cancel</p>
+                  </div>
                 </div>
-              )}
-            </>
+              </PopoverPanel>
+            </div>
+          )}
         </Popover>
 
         <ConfirmDialog
