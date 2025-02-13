@@ -1,24 +1,10 @@
+import { PDFDocument, EPUBDocument, DocumentListState } from '@/types/documents';
+
 const DB_NAME = 'openreader-db';
 const DB_VERSION = 2;  // Increased version number
 const PDF_STORE_NAME = 'pdf-documents';
 const EPUB_STORE_NAME = 'epub-documents';
 const CONFIG_STORE_NAME = 'config';
-
-export interface PDFDocument {
-  id: string;
-  name: string;
-  size: number;
-  lastModified: number;
-  data: Blob;
-}
-
-export interface EPUBDocument {
-  id: string;
-  name: string;
-  size: number;
-  lastModified: number;
-  data: ArrayBuffer;  // Changed from Blob to ArrayBuffer
-}
 
 export interface Config {
   key: string;
@@ -542,6 +528,7 @@ class IndexedDBService {
         const blob = new Blob([new Uint8Array(doc.data)], { type: 'application/pdf' });
         await this.addDocument({
           id: doc.id,
+          type: doc.type,
           name: doc.name,
           size: doc.size,
           lastModified: doc.lastModified,
@@ -552,6 +539,7 @@ class IndexedDBService {
         const uint8Array = new Uint8Array(doc.data);
         await this.addEPUBDocument({
           id: doc.id,
+          type: doc.type,
           name: doc.name,
           size: doc.size,
           lastModified: doc.lastModified,
@@ -620,6 +608,21 @@ class IndexedDBService {
       }
     });
   }
+
+  async saveDocumentListState(state: DocumentListState): Promise<void> {
+    return this.setConfigItem('documentListState', JSON.stringify(state));
+  }
+
+  async getDocumentListState(): Promise<DocumentListState | null> {
+    const stateStr = await this.getConfigItem('documentListState');
+    if (!stateStr) return null;
+    try {
+      return JSON.parse(stateStr);
+    } catch (error) {
+      console.error('Error parsing document list state:', error);
+      return null;
+    }
+  }
 }
 
 // Make sure we export a singleton instance
@@ -644,4 +647,12 @@ export async function getLastDocumentLocation(docId: string): Promise<string | n
 export async function setLastDocumentLocation(docId: string, location: string): Promise<void> {
   const key = `lastLocation_${docId}`;
   return indexedDBService.setConfigItem(key, location);
+}
+
+export async function getDocumentListState(): Promise<DocumentListState | null> {
+  return indexedDBService.getDocumentListState();
+}
+
+export async function saveDocumentListState(state: DocumentListState): Promise<void> {
+  return indexedDBService.saveDocumentListState(state);
 }

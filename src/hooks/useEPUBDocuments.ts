@@ -2,7 +2,8 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { indexedDBService, type EPUBDocument } from '@/utils/indexedDB';
+import { indexedDBService } from '@/utils/indexedDB';
+import type { EPUBDocument } from '@/types/documents';
 import { useConfig } from '@/contexts/ConfigContext';
 
 export function useEPUBDocuments() {
@@ -36,6 +37,7 @@ export function useEPUBDocuments() {
     
     const newDoc: EPUBDocument = {
       id,
+      type: 'epub',
       name: file.name,
       size: file.size,
       lastModified: file.lastModified,

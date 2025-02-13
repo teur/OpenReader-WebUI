@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { useDocuments } from '@/contexts/DocumentContext';
 import { PDFIcon, EPUBIcon, ChevronUpDownIcon } from '@/components/icons/Icons';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
@@ -16,32 +16,23 @@ import {
   PopoverPanel,
   Button,
 } from '@headlessui/react';
+import { getDocumentListState, saveDocumentListState } from '@/utils/indexedDB';
+import {
+  DocumentType,
+  DocumentListDocument,
+  Folder,
+  DocumentListState,
+  SortBy,
+  SortDirection
+} from '@/types/documents';
 
 type DocumentToDelete = {
   id: string;
   name: string;
-  type: 'pdf' | 'epub';
+  type: DocumentType;
 };
 
-type Folder = {
-  id: string;
-  name: string;
-  documents: Array<Document>;
-};
-
-type Document = {
-  id: string;
-  name: string;
-  type: 'pdf' | 'epub';
-  size: number;
-  lastModified: number;
-  folderId?: string;
-};
-
-type SortBy = 'name' | 'type' | 'date' | 'size';
-type SortDirection = 'asc' | 'desc';
-
-const generateDefaultFolderName = (doc1: Document, doc2: Document) => {
+const generateDefaultFolderName = (doc1: DocumentListDocument, doc2: DocumentListDocument) => {
   // Try to find common words between the two document names
   const words1 = doc1.name.toLowerCase().split(/[\s-_\.]+/);
   const words2 = doc2.name.toLowerCase().split(/[\s-_\.]+/);
@@ -74,16 +65,55 @@ export function DocumentList() {
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [folders, setFolders] = useState<Folder[]>([]);
   const [documentToDelete, setDocumentToDelete] = useState<DocumentToDelete | null>(null);
-  const [draggedDoc, setDraggedDoc] = useState<Document | null>(null);
-  const [dropTargetDoc, setDropTargetDoc] = useState<Document | null>(null);
+  const [draggedDoc, setDraggedDoc] = useState<DocumentListDocument | null>(null);
+  const [dropTargetDoc, setDropTargetDoc] = useState<DocumentListDocument | null>(null);
   const [newFolderName, setNewFolderName] = useState('');
-  const [pendingFolderDocs, setPendingFolderDocs] = useState<{ source: Document, target: Document } | null>(null);
+  const [pendingFolderDocs, setPendingFolderDocs] = useState<{ source: DocumentListDocument, target: DocumentListDocument } | null>(null);
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set());
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
 
-  const allDocuments: Document[] = [
-    ...pdfDocs.map(doc => ({ ...doc, type: 'pdf' as const })),
-    ...epubDocs.map(doc => ({ ...doc, type: 'epub' as const })),
+  useEffect(() => {
+    // Load saved state
+    const loadState = async () => {
+      const savedState = await getDocumentListState();
+      if (savedState) {
+        setSortBy(savedState.sortBy);
+        setSortDirection(savedState.sortDirection);
+        setFolders(savedState.folders);
+        setCollapsedFolders(new Set(savedState.collapsedFolders));
+      }
+    };
+    loadState();
+  }, []);
+
+  useEffect(() => {
+    const saveState = async () => {
+      const state: DocumentListState = {
+        sortBy,
+        sortDirection,
+        folders,
+        collapsedFolders: Array.from(collapsedFolders)
+      };
+      await saveDocumentListState(state);
+    };
+    saveState();
+  }, [sortBy, sortDirection, folders, collapsedFolders]);
+
+  const allDocuments: DocumentListDocument[] = [
+    ...pdfDocs.map(doc => ({
+      id: doc.id,
+      name: doc.name,
+      size: doc.size,
+      lastModified: doc.lastModified,
+      type: 'pdf' as const,
+    })),
+    ...epubDocs.map(doc => ({
+      id: doc.id,
+      name: doc.name,
+      size: doc.size,
+      lastModified: doc.lastModified,
+      type: 'epub' as const,
+    })),
   ];
 
   const sortOptions: Array<{ value: SortBy; label: string }> = [
@@ -93,7 +123,7 @@ export function DocumentList() {
     { value: 'size', label: 'Size' },
   ];
 
-  const sortDocuments = useCallback((docs: Document[]) => {
+  const sortDocuments = useCallback((docs: DocumentListDocument[]) => {
     return [...docs].sort((a, b) => {
       switch (sortBy) {
         case 'name':
@@ -116,7 +146,7 @@ export function DocumentList() {
     });
   }, [sortBy, sortDirection]);
 
-  const handleDragStart = (doc: Document) => {
+  const handleDragStart = (doc: DocumentListDocument) => {
     // Only allow dragging documents that aren't in folders
     if (!doc.folderId) {
       setDraggedDoc(doc);
@@ -128,7 +158,7 @@ export function DocumentList() {
     setDropTargetDoc(null);
   };
 
-  const handleDragOver = (e: React.DragEvent, doc: Document) => {
+  const handleDragOver = (e: React.DragEvent, doc: DocumentListDocument) => {
     e.preventDefault();
     if (draggedDoc && draggedDoc.id !== doc.id && !draggedDoc.folderId) {
       // Only highlight target if neither document is in a folder
@@ -143,7 +173,7 @@ export function DocumentList() {
     setDropTargetDoc(null);
   };
 
-  const handleDrop = useCallback((e: React.DragEvent, targetDoc: Document) => {
+  const handleDrop = useCallback((e: React.DragEvent, targetDoc: DocumentListDocument) => {
     e.preventDefault();
     if (!draggedDoc || draggedDoc.id === targetDoc.id || draggedDoc.folderId) return;
 
@@ -214,7 +244,7 @@ export function DocumentList() {
   }, [documentToDelete, removePDF, removeEPUB]);
 
   const toggleFolderCollapse = (folderId: string) => {
-    setCollapsedFolders(prev => {
+    setCollapsedFolders((prev: Set<string>) => {
       const next = new Set(prev);
       if (next.has(folderId)) {
         next.delete(folderId);
@@ -259,7 +289,7 @@ export function DocumentList() {
     </div>
   );
 
-  const renderDocument = (doc: Document) => (
+  const renderDocument = (doc: DocumentListDocument) => (
     <div
       key={`${doc.type}-${doc.id}`}
       draggable={!doc.folderId} // Only make unfoldered documents draggable
@@ -314,7 +344,7 @@ export function DocumentList() {
   );
 
   // Add this helper function before renderFolder
-  const calculateFolderSize = (documents: Document[]) => {
+  const calculateFolderSize = (documents: DocumentListDocument[]) => {
     return documents.reduce((total, doc) => total + doc.size, 0);
   };
 

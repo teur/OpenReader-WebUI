@@ -3,7 +3,7 @@
 import { createContext, useContext, ReactNode } from 'react';
 import { usePDFDocuments } from '@/hooks/usePDFDocuments';
 import { useEPUBDocuments } from '@/hooks/useEPUBDocuments';
-import { PDFDocument, EPUBDocument } from '@/utils/indexedDB';
+import { PDFDocument, EPUBDocument } from '@/types/documents';
 
 interface DocumentContextType {
   // PDF Documents

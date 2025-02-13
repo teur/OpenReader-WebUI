@@ -2,7 +2,8 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { indexedDBService, type PDFDocument } from '@/utils/indexedDB';
+import { indexedDBService } from '@/utils/indexedDB';
+import type { PDFDocument } from '@/types/documents';
 import { useConfig } from '@/contexts/ConfigContext';
 
 export function usePDFDocuments() {
@@ -40,6 +41,7 @@ export function usePDFDocuments() {
     const id = uuidv4();
     const newDoc: PDFDocument = {
       id,
+      type: 'pdf',
       name: file.name,
       size: file.size,
       lastModified: file.lastModified,
