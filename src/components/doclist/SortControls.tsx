@@ -39,7 +39,7 @@ export function SortControls({
             <span>{sortOptions.find(opt => opt.value === sortBy)?.label}</span>
             <ChevronUpDownIcon className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
           </ListboxButton>
-          <ListboxOptions className="absolute z-50 w-28 sm:w-32 overflow-auto rounded-lg bg-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+          <ListboxOptions anchor="top end" className="absolute z-50 w-28 sm:w-32 overflow-auto rounded-lg bg-background shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
             {sortOptions.map((option) => (
               <ListboxOption
                 key={option.value}
