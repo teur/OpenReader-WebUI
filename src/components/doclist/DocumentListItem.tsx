@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { DragEvent } from 'react';
 import { Button } from '@headlessui/react';
 import { PDFIcon, EPUBIcon } from '@/components/icons/Icons';
 import { DocumentListDocument } from '@/types/documents';
@@ -9,9 +10,9 @@ interface DocumentListItemProps {
   dragEnabled?: boolean;
   onDragStart?: (doc: DocumentListDocument) => void;
   onDragEnd?: () => void;
-  onDragOver?: (e: React.DragEvent, doc: DocumentListDocument) => void;
+  onDragOver?: (e: DragEvent, doc: DocumentListDocument) => void;
   onDragLeave?: () => void;
-  onDrop?: (e: React.DragEvent, doc: DocumentListDocument) => void;
+  onDrop?: (e: DragEvent, doc: DocumentListDocument) => void;
   isDropTarget?: boolean;
 }
 
@@ -26,17 +27,21 @@ export function DocumentListItem({
   onDrop,
   isDropTarget = false,
 }: DocumentListItemProps) {
+  // Only allow drag and drop interactions for documents not in folders
+  const isDraggable = dragEnabled && !doc.folderId;
+  const allowDropTarget = !doc.folderId;
+
   return (
     <div
-      draggable={dragEnabled && !doc.folderId}
+      draggable={isDraggable}
       onDragStart={() => onDragStart?.(doc)}
       onDragEnd={onDragEnd}
-      onDragOver={(e) => onDragOver?.(e, doc)}
-      onDragLeave={onDragLeave}
-      onDrop={(e) => onDrop?.(e, doc)}
+      onDragOver={(e) => allowDropTarget && onDragOver?.(e, doc)}
+      onDragLeave={() => allowDropTarget && onDragLeave?.()}
+      onDrop={(e) => allowDropTarget && onDrop?.(e, doc)}
       className={`
         w-full
-        ${!doc.folderId && isDropTarget ? 'ring-2 ring-accent bg-primary/10' : ''}
+        ${allowDropTarget && isDropTarget ? 'ring-2 ring-accent bg-primary/10' : ''}
         bg-background rounded-lg p-2 shadow hover:shadow-md transition-shadow
       `}
     >

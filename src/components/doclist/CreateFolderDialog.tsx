@@ -1,11 +1,11 @@
-import { Fragment } from 'react';
+import { Fragment, KeyboardEvent } from 'react';
 import { Dialog, DialogPanel, DialogTitle, Input, Transition, TransitionChild } from '@headlessui/react';
 
 interface CreateFolderDialogProps {
   isOpen: boolean;
   folderName: string;
   onFolderNameChange: (name: string) => void;
-  onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  onKeyDown: (e: KeyboardEvent<HTMLInputElement>) => void;
   onClose: () => void;
 }
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback, useState, useEffect, DragEvent, KeyboardEvent } from 'react';
 import { useDocuments } from '@/contexts/DocumentContext';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
@@ -172,7 +172,7 @@ export function DocumentList() {
     setDropTargetDoc(null);
   }, []);
 
-  const handleDragOver = useCallback((e: React.DragEvent, doc: DocumentListDocument) => {
+  const handleDragOver = useCallback((e: DragEvent, doc: DocumentListDocument) => {
     e.preventDefault();
     if (draggedDoc && draggedDoc.id !== doc.id && !draggedDoc.folderId) {
       // Only highlight target if neither document is in a folder
@@ -186,32 +186,39 @@ export function DocumentList() {
     setDropTargetDoc(null);
   }, []);
 
-  const handleDrop = useCallback((e: React.DragEvent, targetDoc: DocumentListDocument) => {
+  const handleDrop = useCallback((e: DragEvent, targetDoc: DocumentListDocument) => {
     e.preventDefault();
+    console.log('Dropped', draggedDoc?.name, 'on', targetDoc.name);
+
     if (!draggedDoc || draggedDoc.id === targetDoc.id || draggedDoc.folderId) return;
 
-    // If target has a folderId, we're dropping into an existing folder
-    if (targetDoc.folderId) {
-      const targetFolder = folders.find(f => f.id === targetDoc.folderId);
-      if (targetFolder && !targetFolder.documents.some(d => d.id === draggedDoc.id)) {
-        setFolders(prev => prev.map(f => {
-          if (f.id === targetDoc.folderId) {
-            return {
-              ...f,
-              documents: [...f.documents, { ...draggedDoc, folderId: f.id }]
-            };
-          }
-          return f;
-        }));
-      }
-    } else {
-      // Create new folder when dropping on an unfoldered document
+    // If target doc is unfoldered, create a new folder
+    if (!targetDoc.folderId) {
       setPendingFolderDocs({
         source: draggedDoc,
         target: targetDoc
       });
       setNewFolderName('');
     }
+
+    setDraggedDoc(null);
+    setDropTargetDoc(null);
+  }, [draggedDoc]);
+
+  const handleFolderDrop = useCallback((e: DragEvent, folderId: string) => {
+    e.preventDefault();
+    if (!draggedDoc || draggedDoc.folderId) return;
+
+    // Add document to existing folder
+    setFolders(folders.map(f => {
+      if (f.id === folderId && !f.documents.some(d => d.id === draggedDoc.id)) {
+        return {
+          ...f,
+          documents: [...f.documents, { ...draggedDoc, folderId }]
+        };
+      }
+      return f;
+    }));
 
     setDraggedDoc(null);
     setDropTargetDoc(null);
@@ -255,7 +262,7 @@ export function DocumentList() {
     setShowHint(false);
   }, [pendingFolderDocs, newFolderName]);
 
-  const handleFolderNameKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleFolderNameKeyDown = useCallback((e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault();
       createFolder();
@@ -316,15 +323,11 @@ export function DocumentList() {
               sortedDocuments={sortDocuments(folder.documents)}
               onDocumentDelete={setDocumentToDelete}
               draggedDoc={draggedDoc}
-              dropTargetDoc={dropTargetDoc}
               onDragStart={handleDragStart}
               onDragEnd={handleDragEnd}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
+              onDrop={handleFolderDrop}
             />
           ))}
-
 
           {sortDocuments(unfolderedDocuments).map(doc => (
             <DocumentListItem

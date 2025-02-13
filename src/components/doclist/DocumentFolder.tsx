@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, DragEvent } from 'react';
 import { Button } from '@headlessui/react';
 import { DocumentListItem } from './DocumentListItem';
 import { Folder, DocumentListDocument } from '@/types/documents';
@@ -11,12 +11,9 @@ interface DocumentFolderProps {
   sortedDocuments: DocumentListDocument[];
   onDocumentDelete: (doc: DocumentListDocument) => void;
   draggedDoc: DocumentListDocument | null;
-  dropTargetDoc: DocumentListDocument | null;
   onDragStart: (doc: DocumentListDocument) => void;
   onDragEnd: () => void;
-  onDragOver: (e: React.DragEvent, doc: DocumentListDocument) => void;
-  onDragLeave: () => void;
-  onDrop: (e: React.DragEvent, doc: DocumentListDocument) => void;
+  onDrop: (e: DragEvent, folderId: string) => void;
 }
 
 const ChevronIcon = ({ className = "w-5 h-5" }) => (
@@ -37,38 +34,33 @@ export function DocumentFolder({
   sortedDocuments,
   onDocumentDelete,
   draggedDoc,
-  dropTargetDoc,
   onDragStart,
   onDragEnd,
-  onDragOver,
-  onDragLeave,
   onDrop,
 }: DocumentFolderProps) {
   const [isHovering, setIsHovering] = useState(false);
-  const isDropTarget = isHovering && draggedDoc && !draggedDoc.folderId;
+  const isDropTarget = isHovering && draggedDoc && !draggedDoc.folderId && draggedDoc.id !== folder.id;
 
   return (
     <div
       onDragOver={(e) => {
         e.preventDefault();
         e.stopPropagation();
-        setIsHovering(true);
         if (draggedDoc && !draggedDoc.folderId) {
-          onDragOver(e, { ...draggedDoc, folderId: folder.id });
+          setIsHovering(true);
         }
       }}
       onDragLeave={(e) => {
         e.preventDefault();
         e.stopPropagation();
         setIsHovering(false);
-        onDragLeave();
       }}
       onDrop={(e) => {
         e.preventDefault();
         e.stopPropagation();
         setIsHovering(false);
         if (!draggedDoc || draggedDoc.folderId) return;
-        onDrop(e, { ...draggedDoc, folderId: folder.id });
+        onDrop(e, folder.id);
       }}
       className={`rounded-lg p-2 transition-all bg-offbase shadow hover:shadow-md ${
         isDropTarget ? 'ring-2 ring-accent bg-primary/10' : ''
@@ -105,13 +97,10 @@ export function DocumentFolder({
               key={`${doc.type}-${doc.id}`}
               doc={doc}
               onDelete={onDocumentDelete}
-              dragEnabled={true}
+              dragEnabled={false} // Documents in folders can't be dragged to other documents
               onDragStart={onDragStart}
               onDragEnd={onDragEnd}
-              onDragOver={onDragOver}
-              onDragLeave={onDragLeave}
-              onDrop={onDrop}
-              isDropTarget={dropTargetDoc?.id === doc.id}
+              isDropTarget={false}
             />
           ))}
         </div>
