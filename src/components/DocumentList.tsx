@@ -70,6 +70,7 @@ export function DocumentList() {
   const [newFolderName, setNewFolderName] = useState('');
   const [pendingFolderDocs, setPendingFolderDocs] = useState<{ source: DocumentListDocument, target: DocumentListDocument } | null>(null);
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set());
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
     // Load saved state
@@ -81,7 +82,9 @@ export function DocumentList() {
         setFolders(savedState.folders);
         setCollapsedFolders(new Set(savedState.collapsedFolders));
       }
+      setIsInitialized(true);
     };
+
     loadState();
   }, []);
 
@@ -95,7 +98,10 @@ export function DocumentList() {
       };
       await saveDocumentListState(state);
     };
-    saveState();
+
+    if (isInitialized) { // Prevents saving empty state on first render or back navigation
+      saveState();
+    }
   }, [sortBy, sortDirection, folders, collapsedFolders]);
 
   const allDocuments: DocumentListDocument[] = [
@@ -309,7 +315,7 @@ export function DocumentList() {
         <Link
           href={`/${doc.type}/${encodeURIComponent(doc.id)}`}
           draggable={false}
-          className="flex items-center align-center space-x-4 w-full hover:bg-base rounded-lg p-1 pr-4 transition-colors"
+          className="flex items-center align-center space-x-4 w-full truncate hover:bg-base rounded-lg p-1 pr-4 transition-colors"
         >
           <div className="flex-shrink-0">
             {doc.type === 'pdf' ? (
@@ -318,13 +324,8 @@ export function DocumentList() {
               <EPUBIcon />
             )}
           </div>
-          <div className="min-w-0 transform transition-transform duration-200 ease-in-out hover:scale-[1.02] w-full">
-            <div className="flex items-center gap-2">
-              <p className="text-sm sm:text-md text-foreground font-medium truncate">{doc.name}</p>
-              <span className="text-xs rounded-full bg-muted/20 text-muted uppercase">
-                {doc.type}
-              </span>
-            </div>
+          <div className="flex flex-col min-w-0 transform transition-transform duration-200 ease-in-out hover:scale-[1.02] w-full truncate">
+            <p className="text-sm sm:text-md text-foreground font-medium truncate">{doc.name}</p>
             <p className="text-xs sm:text-sm text-muted truncate">
               {(doc.size / 1024 / 1024).toFixed(2)} MB
             </p>
