@@ -101,7 +101,11 @@ export function SettingsModal() {
       <SettingsIcon className="w-4 h-4 sm:w-5 sm:h-5 hover:animate-spin-slow" />
 
       <Transition appear show={isOpen} as={Fragment}>
-        <Dialog as="div" className="relative z-50" onClose={() => setIsOpen(false)}>
+        <Dialog as="div" className="relative z-50" onClose={() => {
+          setIsOpen(false);
+          setLocalApiKey(apiKey);
+          setLocalBaseUrl(baseUrl);
+        }}>
           <TransitionChild
             as={Fragment}
             enter="ease-out duration-300"
@@ -252,7 +256,7 @@ export function SettingsModal() {
                     </div>
                   </div>
 
-                  <div className="mt-6 flex justify-end space-x-3">
+                  <div className="mt-6 flex justify-end">
                     <Button
                       type="button"
                       className="inline-flex justify-center rounded-lg bg-accent px-3 py-1.5 text-sm 
@@ -267,21 +271,7 @@ export function SettingsModal() {
                         setIsOpen(false);
                       }}
                     >
-                      Save
-                    </Button>
-                    <Button
-                      type="button"
-                      className="inline-flex justify-center rounded-lg bg-background px-3 py-1.5 text-sm 
-                               font-medium text-foreground hover:bg-background/90 focus:outline-none 
-                               focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2
-                               transform transition-transform duration-200 ease-in-out hover:scale-[1.04] hover:text-accent"
-                      onClick={() => {
-                        setLocalApiKey(apiKey);
-                        setLocalBaseUrl(baseUrl);
-                        setIsOpen(false);
-                      }}
-                    >
-                      Cancel
+                      Done
                     </Button>
                   </div>
                 </DialogPanel>
