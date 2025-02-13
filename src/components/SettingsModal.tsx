@@ -1,7 +1,7 @@
 'use client';
 
 import { Fragment, useState, useEffect, useCallback } from 'react';
-import { Dialog, DialogPanel, DialogTitle, Transition, TransitionChild, Listbox, ListboxButton, ListboxOptions, ListboxOption, Button } from '@headlessui/react';
+import { Dialog, DialogPanel, DialogTitle, Transition, TransitionChild, Listbox, ListboxButton, ListboxOptions, ListboxOption, Button, Input } from '@headlessui/react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useConfig } from '@/contexts/ConfigContext';
 import { ChevronUpDownIcon, CheckIcon, SettingsIcon } from '@/components/icons/Icons';
@@ -180,7 +180,7 @@ export function SettingsModal() {
 
                       <div className="space-y-2">
                         <label className="block text-sm font-medium text-foreground">OpenAI API Key</label>
-                        <input
+                        <Input
                           type="password"
                           value={localApiKey}
                           onChange={(e) => setLocalApiKey(e.target.value)}
@@ -190,7 +190,7 @@ export function SettingsModal() {
 
                       <div className="space-y-2">
                         <label className="block text-sm font-medium text-foreground">OpenAI API Base URL</label>
-                        <input
+                        <Input
                           type="text"
                           value={localBaseUrl}
                           onChange={(e) => setLocalBaseUrl(e.target.value)}

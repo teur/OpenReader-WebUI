@@ -1,5 +1,5 @@
 import { DocumentUploader } from '@/components/DocumentUploader';
-import { DocumentList } from '@/components/DocumentList';
+import { DocumentList } from '@/components/doclist/DocumentList';
 import { SettingsModal } from '@/components/SettingsModal';
 
 export default function Home() {
