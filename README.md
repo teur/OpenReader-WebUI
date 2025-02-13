@@ -12,7 +12,7 @@
 
 # OpenReader WebUI 📄🔊
 
-OpenReader WebUI is web-based reader Text-to-Speech capabilities, offering a TTS read along experience with narration for both PDF and EPUB documents. It can use any OpenAI compatible TTS endpoint, including [Kokoro-FastAPI](https://github.com/remsky/Kokoro-FastAPI/tree/v0.0.5post1-stable).
+OpenReader WebUI is a document reader with Text-to-Speech capabilities, offering a TTS read along experience with narration for both PDF and EPUB documents. It can use any OpenAI compatible TTS endpoint, including [Kokoro-FastAPI](https://github.com/remsky/Kokoro-FastAPI/tree/v0.0.5post1-stable).
 
 - 🎯 **TTS API Integration**: Compatible with OpenAI text to speech API, Kokoro FastAPI TTS, or any other compatible service; enabling high-quality voice narration
 - 💾 **Local-First Architecture**: Uses IndexedDB browser storage - no server uploads required
@@ -26,7 +26,7 @@ OpenReader WebUI is web-based reader Text-to-Speech capabilities, offering a TTS
   - Adjustable playback speed
   - Multiple voice options (checks `/v1/audio/voices` endpoint)
   - Multiple app layout theme options
-  - Persistent user settings
+  - Persistent settings
 
 ## [**Demo**](https://openreader.richardr.dev/)
 
@@ -46,11 +46,17 @@ docker run --name openreader-webui \
 
 Visit [http://localhost:3003](http://localhost:3003) to run the app.
 
+### ⬆️ Update Docker Image
+```bash
+docker stop openreader-webui && docker rm openreader-webui
+docker pull richardr1126/openreader-webui:latest
+```
+
 ### Using Docker Compose
 Create or add to a `docker-compose.yml`:
 ```yaml
 volumes:
-  openreader_docstore:
+  docstore:
 
 services:
   openreader-webui:
@@ -59,14 +65,8 @@ services:
     ports:
       - "3003:3003"
     volumes:
-      - openreader_docstore:/app/docstore
+      - docstore:/app/docstore
     restart: unless-stopped
-```
-
-### ⬆️ Update Docker Image
-```bash
-docker stop openreader-webui && docker rm openreader-webui
-docker pull richardr1126/openreader-webui:latest
 ```
 
 ## Dev Installation
