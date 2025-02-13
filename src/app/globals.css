@@ -48,11 +48,6 @@ html.vibrant {
   --muted: #9d7dcc;
 }
 
-/* Ensure background color is set before content loads */
-html {
-  background-color: var(--background);
-}
-
 body {
   color: var(--foreground);
   background: var(--background);

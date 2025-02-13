@@ -2,7 +2,6 @@ import "./globals.css";
 import { ReactNode } from "react";
 import { Providers } from "@/app/providers";
 import { Metadata } from "next";
-import Script from "next/script";
 import { Footer } from "@/components/Footer";
 import { Toaster } from 'react-hot-toast';
 
@@ -54,7 +53,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en" suppressHydrationWarning>
       <head>
         <meta name="color-scheme" content="light dark" />
-        <Script src="/theme.js" strategy="beforeInteractive" />
       </head>
       <body className="antialiased">
         <Providers>

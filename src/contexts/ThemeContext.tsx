@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode, useLayoutEffect } from 'react';
 
 const THEMES = ['system', 'light', 'dark', 'aqua', 'forest', 'vibrant'] as const;
 type Theme = (typeof THEMES)[number];
@@ -25,10 +25,20 @@ const getEffectiveTheme = (theme: Theme): Theme => {
 };
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<Theme>(() => {
-    if (typeof window === 'undefined') return 'system';
-    return (localStorage.getItem('theme') as Theme) || 'system';
-  });
+  const [theme, setTheme] = useState<Theme>('system');
+  const [mounted, setMounted] = useState(false);
+
+  // Initialize theme as early as possible to prevent flash
+  useLayoutEffect(() => {
+    const stored = localStorage.getItem('theme') as Theme;
+    if (stored && THEMES.includes(stored)) {
+      setTheme(stored);
+      const effectiveTheme = getEffectiveTheme(stored);
+      document.documentElement.classList.add(effectiveTheme);
+      document.documentElement.style.colorScheme = effectiveTheme;
+    }
+    setMounted(true);
+  }, []);
 
   const handleThemeChange = (newTheme: Theme) => {
     const root = window.document.documentElement;
@@ -42,16 +52,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setTheme(newTheme);
   };
 
-  // Handle system theme changes
   useEffect(() => {
-    /*
-     * Handles system theme changes by listening to prefers-color-scheme media query.
-     * Updates the theme when system preferences change and theme is set to 'system'.
-     * Cleans up event listener on unmount.
-     * 
-     * Dependencies:
-     * - theme: Re-runs when the theme changes to update system preference handling
-     */
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     
     const handleChange = () => {
@@ -67,6 +68,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     mediaQuery.addEventListener('change', handleChange);
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, [theme]);
+
+  // Prevent flash during SSR
+  if (!mounted) {
+    return null;
+  }
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme: handleThemeChange }}>
