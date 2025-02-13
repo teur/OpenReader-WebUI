@@ -42,6 +42,8 @@ const generateDefaultFolderName = (doc1: DocumentListDocument, doc2: DocumentLis
     // Use the first common word that's at least 3 characters long
     const significant = commonWords.find(word => word.length >= 3);
     if (significant) {
+      if (significant === 'pdf') return 'PDFs';
+      if (significant === 'epub') return 'EPUBs';
       return `${significant.charAt(0).toUpperCase()}${significant.slice(1)}`;
     }
   }
@@ -61,7 +63,7 @@ export function DocumentList() {
     isEPUBLoading,
   } = useDocuments();
 
-  const [sortBy, setSortBy] = useState<SortBy>('date');
+  const [sortBy, setSortBy] = useState<SortBy>('name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [folders, setFolders] = useState<Folder[]>([]);
   const [documentToDelete, setDocumentToDelete] = useState<DocumentToDelete | null>(null);
@@ -71,6 +73,7 @@ export function DocumentList() {
   const [pendingFolderDocs, setPendingFolderDocs] = useState<{ source: DocumentListDocument, target: DocumentListDocument } | null>(null);
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set());
   const [isInitialized, setIsInitialized] = useState(false);
+  const [showHint, setShowHint] = useState(true);
 
   useEffect(() => {
     // Load saved state
@@ -81,6 +84,7 @@ export function DocumentList() {
         setSortDirection(savedState.sortDirection);
         setFolders(savedState.folders);
         setCollapsedFolders(new Set(savedState.collapsedFolders));
+        setShowHint(savedState.showHint ?? true); // Use saved hint state or default to true
       }
       setIsInitialized(true);
     };
@@ -94,7 +98,8 @@ export function DocumentList() {
         sortBy,
         sortDirection,
         folders,
-        collapsedFolders: Array.from(collapsedFolders)
+        collapsedFolders: Array.from(collapsedFolders),
+        showHint
       };
       await saveDocumentListState(state);
     };
@@ -102,7 +107,7 @@ export function DocumentList() {
     if (isInitialized) { // Prevents saving empty state on first render or back navigation
       saveState();
     }
-  }, [sortBy, sortDirection, folders, collapsedFolders]);
+  }, [sortBy, sortDirection, folders, collapsedFolders, showHint, isInitialized]);
 
   const allDocuments: DocumentListDocument[] = [
     ...pdfDocs.map(doc => ({
@@ -214,6 +219,7 @@ export function DocumentList() {
     setNewFolderName('');
     setDropTargetDoc(null);
     setDraggedDoc(null);
+    setShowHint(false);
   }, [pendingFolderDocs, newFolderName]);
 
   const handleFolderNameKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -443,6 +449,21 @@ export function DocumentList() {
         </div>
 
         <div className="space-y-4">
+          {showHint && allDocuments.length > 1 && (
+            <div className="flex items-center justify-between bg-offbase rounded-lg px-3 py-2 text-sm">
+              <p className="text-sm">Drag files on top of each other to make folders</p>
+              <Button
+                onClick={() => setShowHint(false)}
+                className="p-1 hover:bg-accent rounded-lg transition-colors"
+                aria-label="Dismiss hint"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </Button>
+            </div>
+          )}
+
           {folders.map(renderFolder)}
 
           <div className="space-y-2">

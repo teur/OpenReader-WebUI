@@ -37,4 +37,5 @@ export interface DocumentListState {
   sortDirection: SortDirection;
   folders: Folder[];
   collapsedFolders: string[];
+  showHint: boolean;
 }

@@ -198,17 +198,6 @@ export function SettingsModal({ isOpen, setIsOpen }: SettingsModalProps) {
                         <label className="block text-sm font-medium text-foreground">Document Sync</label>
                         <div className="flex gap-2">
                           <Button
-                            onClick={handleSync}
-                            disabled={isSyncing || isLoading}
-                            className="justify-center rounded-lg bg-background px-3 py-1.5 text-sm 
-                                         font-medium text-foreground hover:bg-background/90 focus:outline-none 
-                                         focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2
-                                         transform transition-transform duration-200 ease-in-out hover:scale-[1.04] hover:text-accent
-                                         disabled:opacity-50"
-                          >
-                            {isSyncing ? 'Saving...' : 'Save to Server'}
-                          </Button>
-                          <Button
                             onClick={handleLoad}
                             disabled={isSyncing || isLoading}
                             className="justify-center rounded-lg bg-background px-3 py-1.5 text-sm 
@@ -217,13 +206,24 @@ export function SettingsModal({ isOpen, setIsOpen }: SettingsModalProps) {
                                          transform transition-transform duration-200 ease-in-out hover:scale-[1.04] hover:text-accent
                                          disabled:opacity-50"
                           >
-                            {isLoading ? 'Loading...' : 'Load from Server'}
+                            {isLoading ? 'Loading...' : 'Load docs from Server'}
+                          </Button>
+                          <Button
+                            onClick={handleSync}
+                            disabled={isSyncing || isLoading}
+                            className="justify-center rounded-lg bg-background px-3 py-1.5 text-sm 
+                                         font-medium text-foreground hover:bg-background/90 focus:outline-none 
+                                         focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2
+                                         transform transition-transform duration-200 ease-in-out hover:scale-[1.04] hover:text-accent
+                                         disabled:opacity-50"
+                          >
+                            {isSyncing ? 'Saving...' : 'Save local to Server'}
                           </Button>
                         </div>
                       </div>}
 
                       <div className="space-y-2">
-                        <label className="block text-sm font-medium text-foreground">Delete Documents</label>
+                        <label className="block text-sm font-medium text-foreground">Bulk Delete</label>
                         <div className="flex gap-2">
                           <Button
                             onClick={() => setShowClearLocalConfirm(true)}
