@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import nlp from 'compromise';
 
-const MAX_BLOCK_LENGTH = 300;
+const MAX_BLOCK_LENGTH = 450;
 
 const preprocessSentenceForAudio = (text: string): string => {
   return text
     .replace(/\S*(?:https?:\/\/|www\.)([^\/\s]+)(?:\/\S*)?/gi, '- (link to $1) -')
-    .replace(/(\w+)-\s+(\w+)/g, '$1$2')
+    .replace(/(\w+)-\s+(\w+)/g, '$1$2') // Remove hyphenation
+    // Remove special character *
+    .replace(/\*/g, '')
     .replace(/\s+/g, ' ')
     .trim();
 };
