@@ -18,7 +18,7 @@ const viewTypes = [
 ];
 
 export function DocumentSettings({ isOpen, setIsOpen, epub }: DocViewSettingsProps) {
-  const { viewType, skipBlank, updateConfigKey } = useConfig();
+  const { viewType, skipBlank, epubTheme, updateConfigKey } = useConfig();
   const selectedView = viewTypes.find(v => v.id === viewType) || viewTypes[0];
 
   return (
@@ -124,6 +124,22 @@ export function DocumentSettings({ isOpen, setIsOpen, epub }: DocViewSettingsPro
                         Automatically skip pages with no text content
                       </p>
                     </div>
+                    {epub && (
+                      <div className="space-y-2">
+                        <label className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            checked={epubTheme}
+                            onChange={(e) => updateConfigKey('epubTheme', e.target.checked)}
+                            className="form-checkbox h-4 w-4 text-accent rounded border-muted"
+                          />
+                          <span className="text-sm font-medium text-foreground">Use theme (experimental)</span>
+                        </label>
+                        <p className="text-sm text-muted pl-6">
+                          Apply the current app theme to the EPUB viewer
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
 

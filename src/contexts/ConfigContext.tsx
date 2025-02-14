@@ -11,6 +11,7 @@ interface ConfigContextType {
   voiceSpeed: number;
   voice: string;
   skipBlank: boolean;
+  epubTheme: boolean;  // Add this line
   updateConfig: (newConfig: Partial<{ apiKey: string; baseUrl: string; viewType: ViewType }>) => Promise<void>;
   updateConfigKey: <K extends keyof ConfigValues>(key: K, value: ConfigValues[K]) => Promise<void>;
   isLoading: boolean;
@@ -25,6 +26,7 @@ type ConfigValues = {
   voiceSpeed: number;
   voice: string;
   skipBlank: boolean;
+  epubTheme: boolean;  // Add this line
 };
 
 const ConfigContext = createContext<ConfigContextType | undefined>(undefined);
@@ -37,6 +39,7 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
   const [voiceSpeed, setVoiceSpeed] = useState<number>(1);
   const [voice, setVoice] = useState<string>('af_sarah');
   const [skipBlank, setSkipBlank] = useState<boolean>(true);
+  const [epubTheme, setEpubTheme] = useState<boolean>(false);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isDBReady, setIsDBReady] = useState(false);
@@ -55,6 +58,7 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
         const cachedVoiceSpeed = await getItem('voiceSpeed');
         const cachedVoice = await getItem('voice');
         const cachedSkipBlank = await getItem('skipBlank');
+        const cachedEpubTheme = await getItem('epubTheme');
 
         if (cachedApiKey) console.log('Cached API key found:', cachedApiKey);
         if (cachedBaseUrl) console.log('Cached base URL found:', cachedBaseUrl);
@@ -62,6 +66,7 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
         if (cachedVoiceSpeed) console.log('Cached voice speed found:', cachedVoiceSpeed);
         if (cachedVoice) console.log('Cached voice found:', cachedVoice);
         if (cachedSkipBlank) console.log('Cached skip blank found:', cachedSkipBlank);
+        if (cachedEpubTheme) console.log('Cached EPUB theme found:', cachedEpubTheme);
 
         // If not in cache, use env variables
         const defaultApiKey = process.env.NEXT_PUBLIC_OPENAI_API_KEY || '1234567890';
@@ -74,6 +79,7 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
         setVoiceSpeed(parseFloat(cachedVoiceSpeed || '1'));
         setVoice(cachedVoice || 'af_sarah');
         setSkipBlank(cachedSkipBlank === 'false' ? false : true);
+        setEpubTheme(cachedEpubTheme === 'true');
 
         // If not in cache, save to cache
         if (!cachedApiKey) {
@@ -87,6 +93,9 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
         }
         if (cachedSkipBlank === null) {
           await setItem('skipBlank', 'true');
+        }
+        if (cachedEpubTheme === null) {
+          await setItem('epubTheme', 'false');
         }
         
       } catch (error) {
@@ -137,6 +146,9 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
         case 'skipBlank':
           setSkipBlank(value as boolean);
           break;
+        case 'epubTheme':
+          setEpubTheme(value as boolean);
+          break;
       }
     } catch (error) {
       console.error(`Error updating config key ${key}:`, error);
@@ -152,6 +164,7 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
       voiceSpeed,
       voice,
       skipBlank,
+      epubTheme,
       updateConfig, 
       updateConfigKey,
       isLoading, 

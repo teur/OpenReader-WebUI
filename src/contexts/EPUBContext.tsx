@@ -85,8 +85,8 @@ export function EPUBProvider({ children }: { children: ReactNode }) {
    */
   const extractPageText = useCallback(async (book: Book, rendition: Rendition): Promise<string> => {
     try {      
-      const { start, end } = rendition.location;
-      if (!start?.cfi || !end?.cfi) return '';
+      const { start, end } = rendition?.location;
+      if (!start?.cfi || !end?.cfi || !book || !book.isOpen || !rendition) return '';
       
       const rangeCfi = createRangeCfi(start.cfi, end.cfi);
 

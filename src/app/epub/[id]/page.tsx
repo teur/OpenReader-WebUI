@@ -20,7 +20,6 @@ export default function EPUBPage() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const loadDocument = useCallback(async () => {
-    if (!isLoading) return;
     console.log('Loading new epub (from page.tsx)');
     stop(); // Reset TTS when loading new document
 
@@ -36,11 +35,13 @@ export default function EPUBPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [isLoading, id, setCurrentDocument, stop]);
+  }, [id, setCurrentDocument, stop]);
 
   useEffect(() => {
+    if (!isLoading) return;
+
     loadDocument();
-  }, [loadDocument]);
+  }, [loadDocument, isLoading]);
 
   if (error) {
     return (
