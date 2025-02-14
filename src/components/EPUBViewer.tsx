@@ -17,14 +17,6 @@ const ReactReader = dynamic(() => import('react-reader').then(mod => mod.ReactRe
   loading: () => <DocumentSkeleton />
 });
 
-const colors = {
-  background: getComputedStyle(document.documentElement).getPropertyValue('--background'),
-  foreground: getComputedStyle(document.documentElement).getPropertyValue('--foreground'),
-  base: getComputedStyle(document.documentElement).getPropertyValue('--base'),
-  offbase: getComputedStyle(document.documentElement).getPropertyValue('--offbase'),
-  muted: getComputedStyle(document.documentElement).getPropertyValue('--muted'),
-};
-
 const getThemeStyles = (): IReactReaderStyle => {
   const baseStyle = {
     ...ReactReaderStyle,
@@ -32,6 +24,14 @@ const getThemeStyles = (): IReactReaderStyle => {
       ...ReactReaderStyle.readerArea,
       transition: undefined,
     }
+  };
+
+  const colors = {
+    background: getComputedStyle(document.documentElement).getPropertyValue('--background'),
+    foreground: getComputedStyle(document.documentElement).getPropertyValue('--foreground'),
+    base: getComputedStyle(document.documentElement).getPropertyValue('--base'),
+    offbase: getComputedStyle(document.documentElement).getPropertyValue('--offbase'),
+    muted: getComputedStyle(document.documentElement).getPropertyValue('--muted'),
   };
 
   return {
@@ -124,15 +124,16 @@ export function EPUBViewer({ className = '' }: EPUBViewerProps) {
           setLastDocumentLocation(id as string, location.toString());
         }
       }
-
-      locationRef.current = location;
       
       setEPUBPageInChapter(displayed.page, displayed.total, chapter?.label || '');
       
       // Add a small delay for initial load to ensure rendition is ready
       if (initial) {
-        setInitialPrevLocLoad(true);
+        rendition.current.display(location.toString()).then(() => {
+          setInitialPrevLocLoad(true);
+        });
       } else {
+        locationRef.current = location;
         extractPageText(bookRef.current, rendition.current);
       }
     }
@@ -147,6 +148,11 @@ export function EPUBViewer({ className = '' }: EPUBViewerProps) {
 
   const updateTheme = useCallback((rendition: Rendition) => {
     if (!epubTheme) return; // Only apply theme if enabled
+
+    const colors = {
+      foreground: getComputedStyle(document.documentElement).getPropertyValue('--foreground'),
+      base: getComputedStyle(document.documentElement).getPropertyValue('--base'),
+    };
     
     rendition.themes.override('color', colors.foreground);
     rendition.themes.override('background', colors.base);
