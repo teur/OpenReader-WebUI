@@ -65,7 +65,7 @@ export default function EPUBPage() {
     <>
       <div className="p-2 pb-2 border-b border-offbase">
         <div className="flex flex-wrap items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <Link
               href="/"
               onClick={() => clearCurrDoc()}

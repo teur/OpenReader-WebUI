@@ -260,7 +260,7 @@ export function handleTextClick(
   }
 }
 
-// Add debounce utility at the top of the file
+// Debounce for PDF viewer
 export function debounce<T extends (...args: unknown[]) => unknown>(
   func: T,
   wait: number

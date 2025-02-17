@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { useEffect, useRef, useCallback, useState, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { useEPUB } from '@/contexts/EPUBContext';
@@ -139,12 +139,40 @@ export function EPUBViewer({ className = '' }: EPUBViewerProps) {
     }
   }, [id, setEPUBPageInChapter, extractPageText]);
 
-  // Load the initial location
+  // Replace the debounced text extraction with a proper implementation using useMemo
+  const debouncedExtractText = useMemo(() => {
+    let timeout: NodeJS.Timeout;
+    return (book: Book, rendition: Rendition) => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => {
+        extractPageText(book, rendition);
+      }, 150);
+    };
+  }, [extractPageText]);
+
+  // Load the initial location and setup resize handler
   useEffect(() => {
     if (bookRef.current && rendition.current) {
       extractPageText(bookRef.current, rendition.current);
+
+      // Add resize observer
+      const resizeObserver = new ResizeObserver(() => {
+        if (bookRef.current && rendition.current) {
+          debouncedExtractText(bookRef.current, rendition.current);
+        }
+      });
+
+      // Observe the container element
+      const container = document.querySelector('.epub-container');
+      if (container) {
+        resizeObserver.observe(container);
+      }
+
+      return () => {
+        resizeObserver.disconnect();
+      };
     }
-  }, [extractPageText, initialPrevLocLoad]);
+  }, [extractPageText, debouncedExtractText, initialPrevLocLoad]);
 
   const updateTheme = useCallback((rendition: Rendition) => {
     if (!epubTheme) return; // Only apply theme if enabled
