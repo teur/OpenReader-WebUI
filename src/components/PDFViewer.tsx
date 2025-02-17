@@ -9,6 +9,7 @@ import { useTTS } from '@/contexts/TTSContext';
 import { usePDF } from '@/contexts/PDFContext';
 import TTSPlayer from '@/components/player/TTSPlayer';
 import { useConfig } from '@/contexts/ConfigContext';
+import { debounce } from '@/utils/pdf';
 
 interface PDFViewerProps {
   zoomLevel: number;
@@ -17,6 +18,7 @@ interface PDFViewerProps {
 export function PDFViewer({ zoomLevel }: PDFViewerProps) {
   const [containerWidth, setContainerWidth] = useState<number>(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const scaleRef = useRef<number>(1);
 
   // Config context
   const { viewType } = useConfig();
@@ -124,7 +126,7 @@ export function PDFViewer({ zoomLevel }: PDFViewerProps) {
     ? (currDocPage % 2 === 0 ? currDocPage : currDocPage + 1)
     : null;
 
-  // Modify scale calculation to account for view type
+  // Modify scale calculation to be more efficient
   const calculateScale = useCallback((width = pageWidth, height = pageHeight): number => {
     const margin = viewType === 'dual' ? 48 : 24; // adjust margin based on view type
     const containerHeight = window.innerHeight - 100;
@@ -147,19 +149,34 @@ export function PDFViewer({ zoomLevel }: PDFViewerProps) {
     return baseScale * (zoomLevel / 100);
   }, [containerWidth, zoomLevel, pageWidth, pageHeight, viewType]);
 
-  // Add resize observer effect
+  // Add memoized scale to prevent unnecessary recalculations
+  const currentScale = useCallback(() => {
+    const newScale = calculateScale();
+    if (Math.abs(newScale - scaleRef.current) > 0.01) {
+      scaleRef.current = newScale;
+    }
+    return scaleRef.current;
+  }, [calculateScale]);
+
+  // Modify resize observer effect to use debouncing
   useEffect(() => {
     if (!containerRef.current) return;
+
+    const debouncedResize = debounce((width: unknown) => {
+      setContainerWidth(Number(width));
+    }, 150); // 150ms debounce
 
     const observer = new ResizeObserver(entries => {
       const width = entries[0]?.contentRect.width;
       if (width) {
-        setContainerWidth(width);
+        debouncedResize(width);
       }
     });
 
     observer.observe(containerRef.current);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+    };
   }, []);
 
   return (
@@ -184,7 +201,7 @@ export function PDFViewer({ zoomLevel }: PDFViewerProps) {
                   renderAnnotationLayer={true}
                   renderTextLayer={i + 1 === currDocPage}
                   className="shadow-lg"
-                  scale={calculateScale()}
+                  scale={currentScale()}
                   onLoadSuccess={(page) => {
                     setPageWidth(page.originalWidth);
                     setPageHeight(page.originalHeight);
@@ -202,7 +219,7 @@ export function PDFViewer({ zoomLevel }: PDFViewerProps) {
                   renderAnnotationLayer={true}
                   renderTextLayer={leftPage === currDocPage}
                   className="shadow-lg"
-                  scale={calculateScale()}
+                  scale={currentScale()}
                   onLoadSuccess={(page) => {
                     setPageWidth(page.originalWidth);
                     setPageHeight(page.originalHeight);
@@ -216,7 +233,7 @@ export function PDFViewer({ zoomLevel }: PDFViewerProps) {
                   renderAnnotationLayer={true}
                   renderTextLayer={rightPage === currDocPage}
                   className="shadow-lg"
-                  scale={calculateScale()}
+                  scale={currentScale()}
                   onLoadSuccess={(page) => {
                     setPageWidth(page.originalWidth);
                     setPageHeight(page.originalHeight);
