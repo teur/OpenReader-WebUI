@@ -44,6 +44,8 @@ docker run --name openreader-webui \
 ```
 > Note: The `openreader_docstore` volume is used to store server-side documents. You can mount a local directory instead. Or remove it if you don't need server-side documents.
 
+> Note: Requesting audio from the TTS API happens on the client not the Next.js server. So the API base URL needs to be accessible on the device that you are loading/hydrating the website on, not the device running the localhost:3003 Next.js server.
+
 Visit [http://localhost:3003](http://localhost:3003) to run the app.
 
 ### ⬆️ Update Docker Image
@@ -92,6 +94,7 @@ services:
    cp .env.template .env
    # Edit .env with your configuration settings
    ```
+   > Note: Requesting audio from the TTS API happens on the client not the Next.js server. So the API base URL needs to be accessible on the device that you are loading/hydrating the website on, not the device running the localhost:3003 Next.js server.
 
 4. Start the development server:
    ```bash
