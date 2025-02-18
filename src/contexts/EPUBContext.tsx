@@ -21,7 +21,6 @@ interface EPUBContextType {
   currDocText: string | undefined;
   setCurrentDocument: (id: string) => Promise<void>;
   clearCurrDoc: () => void;
-  onDocumentLoadSuccess: ({ numPages }: { numPages: number }) => void;
   extractPageText: (book: Book, rendition: Rendition) => Promise<string>;
 }
 
@@ -34,14 +33,6 @@ export function EPUBProvider({ children }: { children: ReactNode }) {
   const [currDocData, setCurrDocData] = useState<ArrayBuffer>();
   const [currDocName, setCurrDocName] = useState<string>();
   const [currDocText, setCurrDocText] = useState<string>();
-
-  /**
-   * Handles successful document load
-   */
-  const onDocumentLoadSuccess = useCallback(({ numPages }: { numPages: number }) => {
-    console.log('EPUB loaded:', numPages);
-    setCurrDocPages(numPages);
-  }, [setCurrDocPages]);
 
   /**
    * Clears the current document state
@@ -106,7 +97,6 @@ export function EPUBProvider({ children }: { children: ReactNode }) {
   // Context value memoization
   const contextValue = useMemo(
     () => ({
-      onDocumentLoadSuccess,
       setCurrentDocument,
       currDocData,
       currDocName,
@@ -117,7 +107,6 @@ export function EPUBProvider({ children }: { children: ReactNode }) {
       extractPageText,
     }),
     [
-      onDocumentLoadSuccess,
       setCurrentDocument,
       currDocData,
       currDocName,
