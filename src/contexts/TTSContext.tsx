@@ -71,19 +71,21 @@ interface TTSContextType {
   setCurrDocPages: (num: number | undefined) => void;
   setSpeedAndRestart: (speed: number) => void;
   setVoiceAndRestart: (voice: string) => void;
-  skipToPage: (page: number) => void;
-  setEPUBPageInChapter: (page: string | number, total: number, chapter: string | number) => void;  // Add this line
-  registerLocationChangeHandler: (handler: (location: string | number, initial?: boolean) => void) => void;
+  skipToLocation: (location: string | number) => void;
+  registerLocationChangeHandler: (handler: (location: string | number) => void) => void;  // EPUB-only: Handles chapter navigation
+  setIsEPUB: (isEPUB: boolean) => void;
 }
 
 // Create the context
 const TTSContext = createContext<TTSContextType | undefined>(undefined);
 
 /**
- * TTSProvider Component
- * 
  * Main provider component that manages the TTS state and functionality.
  * Handles initialization of OpenAI client, audio context, and media session.
+ * 
+ * @param {Object} props - Component props
+ * @param {ReactNode} props.children - Child components to be wrapped by the provider
+ * @returns {JSX.Element} TTSProvider component
  */
 export function TTSProvider({ children }: { children: ReactNode }) {
   // Configuration context consumption
@@ -106,10 +108,15 @@ export function TTSProvider({ children }: { children: ReactNode }) {
   const { availableVoices, fetchVoices } = useVoiceManagement(openApiKey, openApiBaseUrl);
 
   // Add ref for location change handler
-  const locationChangeHandlerRef = useRef<((location: string | number, initial?: boolean) => void) | null>(null);
+  const locationChangeHandlerRef = useRef<((location: string | number) => void) | null>(null);
 
-  // Add method to register location change handler
-  const registerLocationChangeHandler = useCallback((handler: (location: string | number, initial?: boolean) => void) => {
+  /**
+   * Registers a handler function for location changes in EPUB documents
+   * This is only used for EPUB documents to handle chapter navigation
+   * 
+   * @param {Function} handler - Function to handle location changes
+   */
+  const registerLocationChangeHandler = useCallback((handler: (location: string | number) => void) => {
     locationChangeHandlerRef.current = handler;
   }, []);
 
@@ -140,7 +147,6 @@ export function TTSProvider({ children }: { children: ReactNode }) {
    * Changes the current page by a specified amount
    * 
    * @param {number} [num=1] - The number of pages to increment by
-   * @returns {void}
    */
   const incrementPage = useCallback((num = 1) => {
     setNextPageLoading(true);
@@ -148,60 +154,90 @@ export function TTSProvider({ children }: { children: ReactNode }) {
   }, [currDocPageNumber]);
 
   /**
+   * Processes text through the NLP API to split it into sentences
+   * 
+   * @param {string} text - The text to be processed
+   * @returns {Promise<string[]>} Array of processed sentences
+   */
+  const processTextToSentences = useCallback(async (text: string): Promise<string[]> => {
+    const response = await fetch('/api/nlp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to process text');
+    }
+
+    const { sentences } = await response.json();
+    return sentences;
+  }, []);
+
+  /**
+   * Handles blank text sections based on document type
+   * 
+   * @param {string[]} sentences - Array of processed sentences
+   * @returns {boolean} - True if blank section was handled
+   */
+  const handleBlankSection = useCallback((sentences: string[]): boolean => {
+    if (!isPlaying || !skipBlank || sentences.length > 0) {
+      return false;
+    }
+
+    if (isEPUB && locationChangeHandlerRef.current) {
+      locationChangeHandlerRef.current('next');
+      
+      toast.success('Skipping blank section', {
+        id: `epub-section-skip`,
+        iconTheme: {
+          primary: 'var(--accent)',
+          secondary: 'var(--background)',
+        },
+        style: {
+          background: 'var(--background)',
+          color: 'var(--accent)',
+        },
+        duration: 1000,
+        position: 'top-center',
+      });
+      return true;
+    } 
+    
+    if (currDocPageNumber < currDocPages!) {
+      incrementPage();
+      
+      toast.success(`Skipping blank page ${currDocPageNumber}`, {
+        id: `page-${currDocPageNumber}`,
+        iconTheme: {
+          primary: 'var(--accent)',
+          secondary: 'var(--background)',
+        },
+        style: {
+          background: 'var(--background)',
+          color: 'var(--accent)',
+        },
+        duration: 1000,
+        position: 'top-center',
+      });
+      return true;
+    }
+
+    return false;
+  }, [isPlaying, skipBlank, isEPUB, currDocPageNumber, currDocPages, incrementPage]);
+
+  /**
    * Sets the current text and splits it into sentences
+   * 
+   * @param {string} text - The text to be processed
    */
   const setText = useCallback((text: string) => {
     console.log('Setting page text:', text);
     
-    fetch('/api/nlp', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text }),
-    })
-      .then(response => {
-        if (!response.ok) {
-          throw new Error('Failed to process text');
-        }
-        return response.json();
-      })
-      .then(({ sentences: newSentences }) => {
-        // If skipBlank is enabled and there's no text
-        if (isPlaying && skipBlank && newSentences.length === 0) {
-          if (isEPUB && locationChangeHandlerRef.current) {
-            locationChangeHandlerRef.current('next');
-            
-            toast.success('Skipping blank section', {
-              id: `epub-section-skip`,
-              iconTheme: {
-                primary: 'var(--accent)',
-                secondary: 'var(--background)',
-              },
-              style: {
-                background: 'var(--background)',
-                color: 'var(--accent)',
-              },
-              duration: 1000,
-              position: 'top-center',
-            });
-            return;
-          } else if (currDocPageNumber < currDocPages!) {
-            incrementPage();
-            
-            toast.success(`Skipping blank page ${currDocPageNumber}`, {
-              id: `page-${currDocPageNumber}`,
-              iconTheme: {
-                primary: 'var(--accent)',
-                secondary: 'var(--background)',
-              },
-              style: {
-                background: 'var(--background)',
-                color: 'var(--accent)',
-              },
-              duration: 1000,
-              position: 'top-center',
-            });
-            return;
-          }
+    processTextToSentences(text)
+      .then(newSentences => {
+        if (handleBlankSection(newSentences)) {
+          return;
         }
         
         setSentences(newSentences);
@@ -217,12 +253,10 @@ export function TTSProvider({ children }: { children: ReactNode }) {
           duration: 3000,
         });
       });
-  }, [isPlaying, skipBlank, currDocPageNumber, currDocPages, incrementPage, isEPUB]);
+  }, [processTextToSentences, handleBlankSection]);
 
   /**
    * Stops the current audio playback and clears the active Howl instance
-   * 
-   * @returns {void}
    */
   const abortAudio = useCallback(() => {
     if (activeHowl) {
@@ -233,8 +267,6 @@ export function TTSProvider({ children }: { children: ReactNode }) {
 
   /**
    * Toggles the playback state between playing and paused
-   * 
-   * @returns {void}
    */
   const togglePlay = useCallback(() => {
     setIsPlaying((prev) => {
@@ -248,61 +280,28 @@ export function TTSProvider({ children }: { children: ReactNode }) {
   }, [abortAudio]);
 
   /**
-   * Navigates to a specific page in the document
+   * Navigates to a specific location in the document
+   * Works for both PDF pages and EPUB locations
    * 
-   * @param {number} page - The target page number
-   * @returns {void}
+   * @param {string | number} location - The target location to navigate to
    */
-  const skipToPage = useCallback((page: number) => {
-    abortAudio();
-    setIsPlaying(false);
+  const skipToLocation = useCallback((location: string | number) => {
     setNextPageLoading(true);
-    setCurrentIndex(0);
-    setCurrDocPage(page);
-  }, [abortAudio]);
-
-  /**
-   * Navigates to a specific location in the EPUB document
-   * Similar to skipToPage but for EPUB locations
-   */
-  const [currChapter, setCurrChapter] = useState<string | number>('');
-  const setEPUBPageInChapter = useCallback((page: string | number, total: number, chapter: string | number) => {
-    const alreadyPlaying = isPlaying;
-    const isNewChapter = chapter !== currChapter;
-
-    // Mark that we're in EPUB mode
-    setIsEPUB(true);
-
-    // Update chapter info
-    if (isNewChapter) {
-      setCurrDocPages(total);
-      setCurrChapter(chapter);
-      console.log('Changed to chapter:', chapter);
-    }
 
     // Reset state for new content
     abortAudio();
     setIsPlaying(false);
-    setNextPageLoading(true);
     setCurrentIndex(0);
     setSentences([]);
 
-    // Update current page
-    setCurrDocPage(Number(page));
-
-    // Resume playback if it was playing before
-    // Only auto-resume if this was triggered by automatic navigation (not manual page turns)
-    if (alreadyPlaying) {
-      setIsPlaying(true);
-    }
-
-  }, [abortAudio, currChapter, isPlaying]);
+    // Update current page/location
+    setCurrDocPage(location);
+  }, [abortAudio]);
 
   /**
    * Moves to the next or previous sentence
    * 
    * @param {boolean} [backwards=false] - Whether to move backwards
-   * @returns {Promise<void>}
    */
   const advance = useCallback(async (backwards = false) => {
     const nextIndex = currentIndex + (backwards ? -1 : 1);
@@ -345,8 +344,6 @@ export function TTSProvider({ children }: { children: ReactNode }) {
 
   /**
    * Moves forward one sentence in the text
-   * 
-   * @returns {void}
    */
   const skipForward = useCallback(() => {
     setIsProcessing(true);
@@ -360,8 +357,6 @@ export function TTSProvider({ children }: { children: ReactNode }) {
 
   /**
    * Moves backward one sentence in the text
-   * 
-   * @returns {void}
    */
   const skipBackward = useCallback(() => {
     setIsProcessing(true);
@@ -375,8 +370,6 @@ export function TTSProvider({ children }: { children: ReactNode }) {
 
   /**
    * Updates the voice and speed settings from the configuration
-   * 
-   * @returns {void}
    */
   const updateVoiceAndSpeed = useCallback(() => {
     setVoice(configVoice);
@@ -401,7 +394,8 @@ export function TTSProvider({ children }: { children: ReactNode }) {
   /**
    * Generates and plays audio for the current sentence
    * 
-   * @returns {Promise<void>}
+   * @param {string} sentence - The sentence to generate audio for
+   * @returns {Promise<AudioBuffer | undefined>} The generated audio buffer
    */
   const getAudio = useCallback(async (sentence: string): Promise<AudioBuffer | undefined> => {
     // Check if the audio is already cached
@@ -448,7 +442,9 @@ export function TTSProvider({ children }: { children: ReactNode }) {
   /**
    * Processes and plays the current sentence
    * 
-   * @returns {Promise<void>}
+   * @param {string} sentence - The sentence to process
+   * @param {boolean} [preload=false] - Whether this is a preload request
+   * @returns {Promise<string>} The URL of the processed audio
    */
   const processSentence = useCallback(async (sentence: string, preload = false): Promise<string> => {
     if (isProcessing && !preload) throw new Error('Audio is already being processed');
@@ -465,7 +461,7 @@ export function TTSProvider({ children }: { children: ReactNode }) {
   /**
    * Plays the current sentence with Howl
    * 
-   * @returns {Promise<void>}
+   * @param {string} sentence - The sentence to play
    */
   const playSentenceWithHowl = useCallback(async (sentence: string) => {
     try {
@@ -530,8 +526,6 @@ export function TTSProvider({ children }: { children: ReactNode }) {
 
   /**
    * Preloads the next sentence's audio
-   * 
-   * @returns {void}
    */
   const preloadNextAudio = useCallback(() => {
     try {
@@ -545,8 +539,6 @@ export function TTSProvider({ children }: { children: ReactNode }) {
 
   /**
    * Plays the current sentence's audio
-   * 
-   * @returns {Promise<void>}
    */
   const playAudio = useCallback(async () => {
     await playSentenceWithHowl(sentences[currentIndex]);
@@ -585,9 +577,7 @@ export function TTSProvider({ children }: { children: ReactNode }) {
   ]);
 
   /**
-   * Stops the current audio playback
-   * 
-   * @returns {void}
+   * Stops the current audio playback and resets all state
    */
   const stop = useCallback(() => {
     // Cancel any ongoing request
@@ -596,7 +586,6 @@ export function TTSProvider({ children }: { children: ReactNode }) {
     setIsPlaying(false);
     setCurrentIndex(0);
     setSentences([]);
-    setCurrChapter('');
     setCurrDocPage(1);
     setCurrDocPages(undefined);
     setNextPageLoading(false);
@@ -608,7 +597,6 @@ export function TTSProvider({ children }: { children: ReactNode }) {
    * Stops the current audio playback and starts playing from a specified index
    * 
    * @param {number} index - The index to start playing from
-   * @returns {void}
    */
   const stopAndPlayFromIndex = useCallback((index: number) => {
     abortAudio();
@@ -621,7 +609,6 @@ export function TTSProvider({ children }: { children: ReactNode }) {
    * Sets the speed and restarts the playback
    * 
    * @param {number} newSpeed - The new speed to set
-   * @returns {void}
    */
   const setSpeedAndRestart = useCallback((newSpeed: number) => {
     setSpeed(newSpeed);
@@ -640,7 +627,6 @@ export function TTSProvider({ children }: { children: ReactNode }) {
    * Sets the voice and restarts the playback
    * 
    * @param {string} newVoice - The new voice to set
-   * @returns {void}
    */
   const setVoiceAndRestart = useCallback((newVoice: string) => {
     setVoice(newVoice);
@@ -675,9 +661,9 @@ export function TTSProvider({ children }: { children: ReactNode }) {
     setCurrDocPages,
     setSpeedAndRestart,
     setVoiceAndRestart,
-    skipToPage,
-    setEPUBPageInChapter,  // Add this line
+    skipToLocation,
     registerLocationChangeHandler,
+    setIsEPUB
   }), [
     isPlaying,
     isProcessing,
@@ -696,9 +682,9 @@ export function TTSProvider({ children }: { children: ReactNode }) {
     setCurrDocPages,
     setSpeedAndRestart,
     setVoiceAndRestart,
-    skipToPage,
-    setEPUBPageInChapter,  // Add this line
+    skipToLocation,
     registerLocationChangeHandler,
+    setIsEPUB
   ]);
 
   // Use media session hook
@@ -714,9 +700,8 @@ export function TTSProvider({ children }: { children: ReactNode }) {
       getLastDocumentLocation(id as string).then(lastLocation => {
         if (lastLocation) {
           console.log('Setting last location:', lastLocation);
-          setCurrDocPage(lastLocation);
           if (locationChangeHandlerRef.current) {
-            locationChangeHandlerRef.current(lastLocation, true);
+            locationChangeHandlerRef.current(lastLocation);
           }
         }
       });
@@ -739,6 +724,9 @@ export function TTSProvider({ children }: { children: ReactNode }) {
 /**
  * Custom hook to consume the TTS context
  * Ensures the context is used within a provider
+ * 
+ * @throws {Error} If used outside of TTSProvider
+ * @returns {TTSContextType} The TTS context value
  */
 export function useTTS() {
   const context = useContext(TTSContext);

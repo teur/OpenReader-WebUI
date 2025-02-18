@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useCallback, useState, useMemo } from 'react';
+import { useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { useEPUB } from '@/contexts/EPUBContext';
@@ -24,18 +24,29 @@ interface EPUBViewerProps {
 export function EPUBViewer({ className = '' }: EPUBViewerProps) {
   const { id } = useParams();
   const { currDocData, currDocName, currDocPage, extractPageText } = useEPUB();
-  const { setEPUBPageInChapter, registerLocationChangeHandler } = useTTS();
+  const { skipToLocation, registerLocationChangeHandler, setIsEPUB } = useTTS();
   const { epubTheme } = useConfig();
   const bookRef = useRef<Book | null>(null);
   const rendition = useRef<Rendition | undefined>(undefined);
   const toc = useRef<NavItem[]>([]);
   const locationRef = useRef<string | number>(currDocPage);
-  const [initialPrevLocLoad, setInitialPrevLocLoad] = useState(false);
   const { updateTheme } = useEPUBTheme(epubTheme, rendition.current);
 
-  const handleLocationChanged = useCallback((location: string | number, initial = false) => {
+  const isEPUBSetOnce = useRef(false);
+  const handleLocationChanged = useCallback((location: string | number) => {
+    // Set the EPUB flag once the location changes
+    if (!isEPUBSetOnce.current) {
+      setIsEPUB(true);
+      isEPUBSetOnce.current = true;
+
+      rendition.current?.display(location.toString());
+
+      return;
+    }
+
     if (!bookRef.current?.isOpen || !rendition.current) return;
-    // Handle special 'next' and 'prev' cases, which 
+
+    // Handle special 'next' and 'prev' cases
     if (location === 'next' && rendition.current) {
       rendition.current.next();
       return;
@@ -45,33 +56,18 @@ export function EPUBViewer({ className = '' }: EPUBViewerProps) {
       return;
     }
 
-
-    const { displayed, href } = rendition.current.location.start;
-    const chapter = toc.current.find((item) => item.href === href);
-
-    console.log('Displayed:', displayed, 'Chapter:', chapter);
-
-    if (locationRef.current !== 1) {
-      // Save the location to IndexedDB
-      if (id) {
-        console.log('Saving location:', location);
-        setLastDocumentLocation(id as string, location.toString());
-      }
+    // Save the location to IndexedDB if not initial
+    if (id && locationRef.current !== 1) {
+      console.log('Saving location:', location);
+      setLastDocumentLocation(id as string, location.toString());
     }
 
-    setEPUBPageInChapter(displayed.page, displayed.total, chapter?.label || '');
+    skipToLocation(location);
 
-    // Add a small delay for initial load to ensure rendition is ready
-    if (initial) {
-      rendition.current.display(location.toString()).then(() => {
-        setInitialPrevLocLoad(true);
-      });
-    } else {
-      locationRef.current = location;
-      extractPageText(bookRef.current, rendition.current);
-    }
+    locationRef.current = location;
+    extractPageText(bookRef.current, rendition.current);
 
-  }, [id, setEPUBPageInChapter, extractPageText]);
+  }, [id, skipToLocation, extractPageText, setIsEPUB]);
 
   // Replace the debounced text extraction with a proper implementation using useMemo
   const debouncedExtractText = useMemo(() => {
@@ -86,27 +82,27 @@ export function EPUBViewer({ className = '' }: EPUBViewerProps) {
 
   // Load the initial location and setup resize handler
   useEffect(() => {
-    if (bookRef.current && rendition.current) {
-      extractPageText(bookRef.current, rendition.current);
+    if (!bookRef.current || !rendition.current || isEPUBSetOnce.current) return;
 
-      // Add resize observer
-      const resizeObserver = new ResizeObserver(() => {
-        if (bookRef.current && rendition.current) {
-          debouncedExtractText(bookRef.current, rendition.current);
-        }
-      });
+    extractPageText(bookRef.current, rendition.current);
 
-      // Observe the container element
-      const container = document.querySelector('.epub-container');
-      if (container) {
-        resizeObserver.observe(container);
+    // Add resize observer
+    const resizeObserver = new ResizeObserver(() => {
+      if (bookRef.current && rendition.current) {
+        debouncedExtractText(bookRef.current, rendition.current);
       }
+    });
 
-      return () => {
-        resizeObserver.disconnect();
-      };
+    // Observe the container element
+    const container = document.querySelector('.epub-container');
+    if (container) {
+      resizeObserver.observe(container);
     }
-  }, [extractPageText, debouncedExtractText, initialPrevLocLoad]);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [extractPageText, debouncedExtractText]);
 
   // Register the location change handler
   useEffect(() => {

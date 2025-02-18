@@ -3,22 +3,10 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { getItem, indexedDBService, setItem } from '@/utils/indexedDB';
 
+/** Represents the possible view types for document display */
 export type ViewType = 'single' | 'dual' | 'scroll';
-interface ConfigContextType {
-  apiKey: string;
-  baseUrl: string;
-  viewType: ViewType;
-  voiceSpeed: number;
-  voice: string;
-  skipBlank: boolean;
-  epubTheme: boolean;  // Add this line
-  updateConfig: (newConfig: Partial<{ apiKey: string; baseUrl: string; viewType: ViewType }>) => Promise<void>;
-  updateConfigKey: <K extends keyof ConfigValues>(key: K, value: ConfigValues[K]) => Promise<void>;
-  isLoading: boolean;
-  isDBReady: boolean;
-}
 
-// Add this type to help with type safety
+/** Configuration values for the application */
 type ConfigValues = {
   apiKey: string;
   baseUrl: string;
@@ -26,11 +14,32 @@ type ConfigValues = {
   voiceSpeed: number;
   voice: string;
   skipBlank: boolean;
-  epubTheme: boolean;  // Add this line
+  epubTheme: boolean;
 };
+
+/** Interface defining the configuration context shape and functionality */
+interface ConfigContextType {
+  apiKey: string;
+  baseUrl: string;
+  viewType: ViewType;
+  voiceSpeed: number;
+  voice: string;
+  skipBlank: boolean;
+  epubTheme: boolean;
+  updateConfig: (newConfig: Partial<{ apiKey: string; baseUrl: string; viewType: ViewType }>) => Promise<void>;
+  updateConfigKey: <K extends keyof ConfigValues>(key: K, value: ConfigValues[K]) => Promise<void>;
+  isLoading: boolean;
+  isDBReady: boolean;
+}
 
 const ConfigContext = createContext<ConfigContextType | undefined>(undefined);
 
+/**
+ * Provider component for application configuration
+ * Manages global configuration state and persistence
+ * @param {Object} props - Component props
+ * @param {ReactNode} props.children - Child components to be wrapped by the provider
+ */
 export function ConfigProvider({ children }: { children: ReactNode }) {
   // Config state
   const [apiKey, setApiKey] = useState<string>('');
@@ -108,6 +117,10 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
     initializeDB();
   }, []);
 
+  /**
+   * Updates multiple configuration values simultaneously
+   * @param {Partial<{apiKey: string; baseUrl: string}>} newConfig - Object containing new config values
+   */
   const updateConfig = async (newConfig: Partial<{ apiKey: string; baseUrl: string }>) => {
     try {
       if (newConfig.apiKey !== undefined) {
@@ -124,6 +137,11 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  /**
+   * Updates a single configuration value by key
+   * @param {K} key - The configuration key to update
+   * @param {ConfigValues[K]} value - The new value for the configuration
+   */
   const updateConfigKey = async <K extends keyof ConfigValues>(key: K, value: ConfigValues[K]) => {
     try {
       await setItem(key, value.toString());
@@ -175,6 +193,11 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
   );
 }
 
+/**
+ * Custom hook to consume the configuration context
+ * @returns {ConfigContextType} The configuration context value
+ * @throws {Error} When used outside of ConfigProvider
+ */
 export function useConfig() {
   const context = useContext(ConfigContext);
   if (context === undefined) {

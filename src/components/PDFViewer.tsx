@@ -27,7 +27,7 @@ export function PDFViewer({ zoomLevel }: PDFViewerProps) {
   const {
     currentSentence,
     stopAndPlayFromIndex,
-    isProcessing
+    isProcessing,
   } = useTTS();
 
   // PDF context

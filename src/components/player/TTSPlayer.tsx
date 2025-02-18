@@ -26,7 +26,7 @@ export default function TTSPlayer({ currentPage, numPages }: {
     setSpeedAndRestart,
     setVoiceAndRestart,
     availableVoices,
-    skipToPage,
+    skipToLocation,
   } = useTTS();
 
   return (
@@ -36,8 +36,13 @@ export default function TTSPlayer({ currentPage, numPages }: {
         <SpeedControl setSpeedAndRestart={setSpeedAndRestart} />
 
         {/* Page Navigation */}
-        {currentPage && numPages
-         && <Navigator currentPage={currentPage} numPages={numPages} skipToPage={skipToPage} />}
+        {currentPage && numPages && (
+          <Navigator 
+            currentPage={currentPage} 
+            numPages={numPages} 
+            skipToLocation={skipToLocation}
+          />
+        )}
 
         {/* Playback Controls */}
         <Button

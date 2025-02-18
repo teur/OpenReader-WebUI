@@ -71,6 +71,9 @@ const PDFContext = createContext<PDFContextType | undefined>(undefined);
  * 
  * Main provider component that manages PDF state and functionality.
  * Handles document loading, text processing, and integration with TTS.
+ * 
+ * @param {Object} props - Component props
+ * @param {ReactNode} props.children - Child components to be wrapped by the provider
  */
 export function PDFProvider({ children }: { children: ReactNode }) {
   const { setText: setTTSText, stop, currDocPageNumber: currDocPage, currDocPages, setCurrDocPages } = useTTS();
@@ -82,9 +85,9 @@ export function PDFProvider({ children }: { children: ReactNode }) {
   const [pdfDocument, setPdfDocument] = useState<PDFDocumentProxy>();
 
   /**
-   * Handles successful document load
+   * Handles successful PDF document load
    * 
-   * @param {Object} param0 - Object containing numPages
+   * @param {PDFDocumentProxy} pdf - The loaded PDF document proxy object
    */
   const onDocumentLoadSuccess = useCallback((pdf: PDFDocumentProxy) => {
     console.log('Document loaded:', pdf.numPages);
@@ -94,6 +97,9 @@ export function PDFProvider({ children }: { children: ReactNode }) {
 
   /**
    * Loads and processes text from the current document page
+   * Extracts text from the PDF and updates both document text and TTS text states
+   * 
+   * @returns {Promise<void>}
    */
   const loadCurrDocText = useCallback(async () => {
     try {
@@ -108,7 +114,8 @@ export function PDFProvider({ children }: { children: ReactNode }) {
   }, [pdfDocument, currDocPage, setTTSText]);
 
   /**
-   * Updates the current document text when the page changes
+   * Effect hook to update document text when the page changes
+   * Triggers text extraction and processing when either the document URL or page changes
    */
   useEffect(() => {
     if (currDocURL) {
@@ -118,8 +125,10 @@ export function PDFProvider({ children }: { children: ReactNode }) {
 
   /**
    * Sets the current document based on its ID
+   * Retrieves document from IndexedDB and converts it to a viewable URL
    * 
-   * @param {string} id - The ID of the document to set
+   * @param {string} id - The unique identifier of the document to set
+   * @returns {Promise<void>}
    */
   const setCurrentDocument = useCallback(async (id: string): Promise<void> => {
     try {
@@ -136,6 +145,7 @@ export function PDFProvider({ children }: { children: ReactNode }) {
 
   /**
    * Clears the current document state
+   * Resets all document-related states and stops any ongoing TTS playback
    */
   const clearCurrDoc = useCallback(() => {
     setCurrDocName(undefined);
@@ -187,7 +197,7 @@ export function PDFProvider({ children }: { children: ReactNode }) {
  * Ensures the context is used within a provider
  * 
  * @throws {Error} If used outside of PDFProvider
- * @returns {PDFContextType} The PDF context value
+ * @returns {PDFContextType} The PDF context value containing all PDF-related functionality
  */
 export function usePDF() {
   const context = useContext(PDFContext);

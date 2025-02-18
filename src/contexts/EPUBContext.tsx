@@ -26,6 +26,12 @@ interface EPUBContextType {
 
 const EPUBContext = createContext<EPUBContextType | undefined>(undefined);
 
+/**
+ * Provider component for EPUB functionality
+ * Manages the state and operations for EPUB document handling
+ * @param {Object} props - Component props
+ * @param {ReactNode} props.children - Child components to be wrapped by the provider
+ */
 export function EPUBProvider({ children }: { children: ReactNode }) {
   const { setText: setTTSText, currDocPage, currDocPages, setCurrDocPages, stop } = useTTS();
 
@@ -35,7 +41,7 @@ export function EPUBProvider({ children }: { children: ReactNode }) {
   const [currDocText, setCurrDocText] = useState<string>();
 
   /**
-   * Clears the current document state
+   * Clears all current document state and stops any active TTS
    */
   const clearCurrDoc = useCallback(() => {
     setCurrDocData(undefined);
@@ -46,7 +52,9 @@ export function EPUBProvider({ children }: { children: ReactNode }) {
   }, [setCurrDocPages, stop]);
 
   /**
-   * Sets the current document based on its ID
+   * Sets the current document based on its ID by fetching from IndexedDB
+   * @param {string} id - The unique identifier of the document
+   * @throws {Error} When document data is empty or retrieval fails
    */
   const setCurrentDocument = useCallback(async (id: string): Promise<void> => {
     try {
@@ -73,6 +81,9 @@ export function EPUBProvider({ children }: { children: ReactNode }) {
 
   /**
    * Extracts text content from the current EPUB page/location
+   * @param {Book} book - The EPUB.js Book instance
+   * @param {Rendition} rendition - The EPUB.js Rendition instance
+   * @returns {Promise<string>} The extracted text content
    */
   const extractPageText = useCallback(async (book: Book, rendition: Rendition): Promise<string> => {
     try {      
@@ -127,7 +138,8 @@ export function EPUBProvider({ children }: { children: ReactNode }) {
 
 /**
  * Custom hook to consume the EPUB context
- * Ensures the context is used within a provider
+ * @returns {EPUBContextType} The EPUB context value
+ * @throws {Error} When used outside of EPUBProvider
  */
 export function useEPUB() {
   const context = useContext(EPUBContext);

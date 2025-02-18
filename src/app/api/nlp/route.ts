@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import nlp from 'compromise';
 
-const MAX_BLOCK_LENGTH = 350;
+const MAX_BLOCK_LENGTH = 300;
 
 const preprocessSentenceForAudio = (text: string): string => {
   return text
