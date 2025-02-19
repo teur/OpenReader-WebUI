@@ -144,16 +144,6 @@ export function TTSProvider({ children }: { children: ReactNode }) {
   //console.log('page:', currDocPage, 'pages:', currDocPages);
 
   /**
-   * Changes the current page by a specified amount
-   * 
-   * @param {number} [num=1] - The number of pages to increment by
-   */
-  const incrementPage = useCallback((num = 1) => {
-    setNextPageLoading(true);
-    setCurrDocPage(currDocPageNumber + num);
-  }, [currDocPageNumber]);
-
-  /**
    * Processes text through the NLP API to split it into sentences
    * 
    * @param {string} text - The text to be processed
@@ -340,7 +330,7 @@ export function TTSProvider({ children }: { children: ReactNode }) {
         console.log('PDF: Advancing to next/prev page');
         setCurrentIndex(0);
         setSentences([]);
-        incrementPage(nextIndex >= sentences.length ? 1 : -1);
+        skipToLocation(currDocPageNumber + (nextIndex >= sentences.length ? 1 : -1), true);
         return;
       }
       
@@ -350,18 +340,15 @@ export function TTSProvider({ children }: { children: ReactNode }) {
         setIsPlaying(false);
       }
     }
-  }, [currentIndex, incrementPage, sentences, currDocPageNumber, currDocPages, isEPUB]);
+  }, [currentIndex, sentences, currDocPageNumber, currDocPages, isEPUB, skipToLocation]);
 
   /**
    * Moves forward one sentence in the text
    */
   const skipForward = useCallback(() => {
     setIsProcessing(true);
-
     abortAudio();
-
     advance();
-
     setIsProcessing(false);
   }, [abortAudio, advance]);
 
