@@ -31,11 +31,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   // Initialize theme as early as possible to prevent flash
   useLayoutEffect(() => {
     const stored = localStorage.getItem('theme') as Theme;
-    if (stored && THEMES.includes(stored)) {
-      setTheme(stored);
-      const effectiveTheme = getEffectiveTheme(stored);
-      document.documentElement.classList.add(effectiveTheme);
-      document.documentElement.style.colorScheme = effectiveTheme;
+    const initialTheme = stored && THEMES.includes(stored) ? stored : 'system';
+    setTheme(initialTheme);
+    const effectiveTheme = getEffectiveTheme(initialTheme);
+    document.documentElement.classList.remove(...THEMES);
+    document.documentElement.classList.add(effectiveTheme);
+    document.documentElement.style.colorScheme = effectiveTheme;
+    if (!stored) {
+      localStorage.setItem('theme', initialTheme);
     }
     setMounted(true);
   }, []);
