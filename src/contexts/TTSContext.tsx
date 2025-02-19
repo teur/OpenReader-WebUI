@@ -71,7 +71,7 @@ interface TTSContextType {
   setCurrDocPages: (num: number | undefined) => void;
   setSpeedAndRestart: (speed: number) => void;
   setVoiceAndRestart: (voice: string) => void;
-  skipToLocation: (location: string | number) => void;
+  skipToLocation: (location: string | number, keepPlaying?: boolean) => void;
   registerLocationChangeHandler: (handler: (location: string | number) => void) => void;  // EPUB-only: Handles chapter navigation
   setIsEPUB: (isEPUB: boolean) => void;
 }
@@ -160,6 +160,10 @@ export function TTSProvider({ children }: { children: ReactNode }) {
    * @returns {Promise<string[]>} Array of processed sentences
    */
   const processTextToSentences = useCallback(async (text: string): Promise<string[]> => {
+    if (text.length === 0) {
+      return [];
+    }
+
     const response = await fetch('/api/nlp', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -175,13 +179,44 @@ export function TTSProvider({ children }: { children: ReactNode }) {
   }, []);
 
   /**
+   * Stops the current audio playback and clears the active Howl instance
+   */
+  const abortAudio = useCallback(() => {
+    if (activeHowl) {
+      activeHowl.stop();
+      setActiveHowl(null);
+    }
+  }, [activeHowl]);
+
+  /**
+   * Navigates to a specific location in the document
+   * Works for both PDF pages and EPUB locations
+   * 
+   * @param {string | number} location - The target location to navigate to
+   */
+  const skipToLocation = useCallback((location: string | number, keepPlaying = false) => {
+    setNextPageLoading(true);
+
+    // Reset state for new content
+    abortAudio();
+    if (!keepPlaying) {
+      setIsPlaying(false);
+    }
+    setCurrentIndex(0);
+    setSentences([]);
+
+    // Update current page/location
+    setCurrDocPage(location);
+  }, [abortAudio]);
+
+  /**
    * Handles blank text sections based on document type
    * 
    * @param {string[]} sentences - Array of processed sentences
    * @returns {boolean} - True if blank section was handled
    */
-  const handleBlankSection = useCallback((sentences: string[]): boolean => {
-    if (!isPlaying || !skipBlank || sentences.length > 0) {
+  const handleBlankSection = useCallback((text: string): boolean => {
+    if (!isPlaying || !skipBlank || text.length > 0) {
       return false;
     }
 
@@ -205,7 +240,8 @@ export function TTSProvider({ children }: { children: ReactNode }) {
     } 
     
     if (currDocPageNumber < currDocPages!) {
-      incrementPage();
+      // Pass true to keep playing when skipping blank pages
+      skipToLocation(currDocPageNumber + 1, true);
       
       toast.success(`Skipping blank page ${currDocPageNumber}`, {
         id: `page-${currDocPageNumber}`,
@@ -224,7 +260,7 @@ export function TTSProvider({ children }: { children: ReactNode }) {
     }
 
     return false;
-  }, [isPlaying, skipBlank, isEPUB, currDocPageNumber, currDocPages, incrementPage]);
+  }, [isPlaying, skipBlank, isEPUB, currDocPageNumber, currDocPages, skipToLocation]);
 
   /**
    * Sets the current text and splits it into sentences
@@ -233,18 +269,21 @@ export function TTSProvider({ children }: { children: ReactNode }) {
    */
   const setText = useCallback((text: string) => {
     console.log('Setting page text:', text);
+
+    if (handleBlankSection(text)) return;
     
     processTextToSentences(text)
       .then(newSentences => {
-        if (handleBlankSection(newSentences)) {
+        if (newSentences.length === 0) {
+          console.warn('No sentences found in text');
           return;
         }
-        
+
         setSentences(newSentences);
         setNextPageLoading(false);
       })
       .catch(error => {
-        console.error('Error processing text:', error);
+        console.warn('Error processing text:', error);
         toast.error('Failed to process text', {
           style: {
             background: 'var(--background)',
@@ -254,16 +293,6 @@ export function TTSProvider({ children }: { children: ReactNode }) {
         });
       });
   }, [processTextToSentences, handleBlankSection]);
-
-  /**
-   * Stops the current audio playback and clears the active Howl instance
-   */
-  const abortAudio = useCallback(() => {
-    if (activeHowl) {
-      activeHowl.stop();
-      setActiveHowl(null);
-    }
-  }, [activeHowl]);
 
   /**
    * Toggles the playback state between playing and paused
@@ -277,25 +306,6 @@ export function TTSProvider({ children }: { children: ReactNode }) {
         return false;
       }
     });
-  }, [abortAudio]);
-
-  /**
-   * Navigates to a specific location in the document
-   * Works for both PDF pages and EPUB locations
-   * 
-   * @param {string | number} location - The target location to navigate to
-   */
-  const skipToLocation = useCallback((location: string | number) => {
-    setNextPageLoading(true);
-
-    // Reset state for new content
-    abortAudio();
-    setIsPlaying(false);
-    setCurrentIndex(0);
-    setSentences([]);
-
-    // Update current page/location
-    setCurrDocPage(location);
   }, [abortAudio]);
 
   /**

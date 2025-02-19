@@ -1,5 +1,5 @@
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react'
-import { GithubIcon } from './icons/Icons'
+import { GithubIcon } from '@/components/icons/Icons'
 
 export function Footer() {
   return (

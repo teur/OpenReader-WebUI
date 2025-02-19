@@ -9,16 +9,16 @@ import { useTTS } from '@/contexts/TTSContext';
 import { usePDF } from '@/contexts/PDFContext';
 import TTSPlayer from '@/components/player/TTSPlayer';
 import { useConfig } from '@/contexts/ConfigContext';
-import { debounce } from '@/utils/pdf';
+import { usePDFResize } from '@/hooks/pdf/usePDFResize';
 
 interface PDFViewerProps {
   zoomLevel: number;
 }
 
 export function PDFViewer({ zoomLevel }: PDFViewerProps) {
-  const [containerWidth, setContainerWidth] = useState<number>(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const scaleRef = useRef<number>(1);
+  const { containerWidth } = usePDFResize(containerRef);
 
   // Config context
   const { viewType } = useConfig();
@@ -157,27 +157,6 @@ export function PDFViewer({ zoomLevel }: PDFViewerProps) {
     }
     return scaleRef.current;
   }, [calculateScale]);
-
-  // Modify resize observer effect to use debouncing
-  useEffect(() => {
-    if (!containerRef.current) return;
-
-    const debouncedResize = debounce((width: unknown) => {
-      setContainerWidth(Number(width));
-    }, 150); // 150ms debounce
-
-    const observer = new ResizeObserver(entries => {
-      const width = entries[0]?.contentRect.width;
-      if (width) {
-        debouncedResize(width);
-      }
-    });
-
-    observer.observe(containerRef.current);
-    return () => {
-      observer.disconnect();
-    };
-  }, []);
 
   return (
     <div ref={containerRef} className="flex flex-col items-center overflow-auto max-h-[calc(100vh-100px)] w-full px-6">

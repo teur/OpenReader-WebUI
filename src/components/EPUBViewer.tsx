@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useCallback, useMemo } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { useEPUB } from '@/contexts/EPUBContext';
@@ -10,7 +10,8 @@ import { DocumentSkeleton } from '@/components/DocumentSkeleton';
 import TTSPlayer from '@/components/player/TTSPlayer';
 import { setLastDocumentLocation } from '@/utils/indexedDB';
 import type { Rendition, Book, NavItem } from 'epubjs';
-import { useEPUBTheme, getThemeStyles } from '@/hooks/useEPUBTheme';
+import { useEPUBTheme, getThemeStyles } from '@/hooks/epub/useEPUBTheme';
+import { useEPUBResize } from '@/hooks/epub/useEPUBResize';
 
 const ReactReader = dynamic(() => import('react-reader').then(mod => mod.ReactReader), {
   ssr: false,
@@ -31,8 +32,13 @@ export function EPUBViewer({ className = '' }: EPUBViewerProps) {
   const toc = useRef<NavItem[]>([]);
   const locationRef = useRef<string | number>(currDocPage);
   const { updateTheme } = useEPUBTheme(epubTheme, rendition.current);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const isEPUBSetOnce = useRef(false);
+  const isResizing = useRef(false);
+
+  useEPUBResize(containerRef, isResizing);
+
   const handleLocationChanged = useCallback((location: string | number) => {
     // Set the EPUB flag once the location changes
     if (!isEPUBSetOnce.current) {
@@ -62,47 +68,23 @@ export function EPUBViewer({ className = '' }: EPUBViewerProps) {
       setLastDocumentLocation(id as string, location.toString());
     }
 
-    skipToLocation(location);
+    if (isResizing.current) {
+      skipToLocation(location, false);
+      isResizing.current = false;
+    } else {
+      skipToLocation(location, true);
+    }
 
     locationRef.current = location;
     extractPageText(bookRef.current, rendition.current);
-
   }, [id, skipToLocation, extractPageText, setIsEPUB]);
 
-  // Replace the debounced text extraction with a proper implementation using useMemo
-  const debouncedExtractText = useMemo(() => {
-    let timeout: NodeJS.Timeout;
-    return (book: Book, rendition: Rendition) => {
-      clearTimeout(timeout);
-      timeout = setTimeout(() => {
-        extractPageText(book, rendition);
-      }, 150);
-    };
-  }, [extractPageText]);
-
-  // Load the initial location and setup resize handler
+  // Load the initial location
   useEffect(() => {
     if (!bookRef.current || !rendition.current || isEPUBSetOnce.current) return;
 
     extractPageText(bookRef.current, rendition.current);
-
-    // Add resize observer
-    const resizeObserver = new ResizeObserver(() => {
-      if (bookRef.current && rendition.current) {
-        debouncedExtractText(bookRef.current, rendition.current);
-      }
-    });
-
-    // Observe the container element
-    const container = document.querySelector('.epub-container');
-    if (container) {
-      resizeObserver.observe(container);
-    }
-
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, [extractPageText, debouncedExtractText]);
+  }, [extractPageText]);
 
   // Register the location change handler
   useEffect(() => {
@@ -114,7 +96,7 @@ export function EPUBViewer({ className = '' }: EPUBViewerProps) {
   }
 
   return (
-    <div className={`h-screen flex flex-col ${className}`}>
+    <div className={`h-screen flex flex-col ${className}`} ref={containerRef}>
       <div className="z-10">
         <TTSPlayer />
       </div>

@@ -93,7 +93,7 @@ export function EPUBProvider({ children }: { children: ReactNode }) {
       const rangeCfi = createRangeCfi(start.cfi, end.cfi);
 
       const range = await book.getRange(rangeCfi);
-      const textContent = range.toString();
+      const textContent = range.toString().trim();
       
       setTTSText(textContent);
       setCurrDocText(textContent);

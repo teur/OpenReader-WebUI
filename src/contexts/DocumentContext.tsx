@@ -1,8 +1,8 @@
 'use client';
 
 import { createContext, useContext, ReactNode } from 'react';
-import { usePDFDocuments } from '@/hooks/usePDFDocuments';
-import { useEPUBDocuments } from '@/hooks/useEPUBDocuments';
+import { usePDFDocuments } from '@/hooks/pdf/usePDFDocuments';
+import { useEPUBDocuments } from '@/hooks/epub/useEPUBDocuments';
 import { PDFDocument, EPUBDocument } from '@/types/documents';
 
 interface DocumentContextType {
