@@ -79,17 +79,17 @@ export function EPUBViewer({ className = '' }: EPUBViewerProps) {
   }, [extractPageText]);
 
   const checkResize = useCallback(() => {
-    if (isResizing && bookRef.current?.isOpen && rendition.current && isEPUBSetOnce.current) {
+    if (isResizing && dimensions && bookRef.current?.isOpen && rendition.current && isEPUBSetOnce.current) {
       pause();
       // Only extract text when we have dimensions, ensuring the resize is complete
-      if (dimensions) extractPageText(bookRef.current, rendition.current, true);
+      extractPageText(bookRef.current, rendition.current, true);
       setIsResizing(false);
       
       return true;
     } else {
       return false;
     }
-  }, [isResizing, dimensions, pause, extractPageText]);
+  }, [isResizing, setIsResizing, dimensions, pause, extractPageText]);
 
   // Check for isResizing to pause TTS and re-extract text
   useEffect(() => {

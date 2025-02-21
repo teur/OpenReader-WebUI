@@ -10,12 +10,16 @@ export function useEPUBResize(containerRef: RefObject<HTMLDivElement | null>) {
       const entries = args[0] as ResizeObserverEntry[];
       console.log('Debounced resize', entries[0].contentRect);
       setDimensions(entries[0].contentRect);
+      setIsResizing((prev) => {
+        if (!prev) return true;
+        return prev;
+      });
     }, 150);
 
     const resizeObserver = new ResizeObserver((entries) => {
-      if (!isResizing) {
-        setIsResizing(true);
-      }
+      // if (!isResizing) {
+      //   setIsResizing(true);
+      // }
       debouncedResize(entries);
     });
 
@@ -51,7 +55,7 @@ export function useEPUBResize(containerRef: RefObject<HTMLDivElement | null>) {
       mutationObserver.disconnect();
       resizeObserver.disconnect();
     };
-  }, [containerRef]); 
+  }, [containerRef]);
 
   return { isResizing, setIsResizing, dimensions };
 }

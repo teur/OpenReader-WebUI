@@ -195,7 +195,7 @@ export function TTSProvider({ children }: { children: ReactNode }) {
     setSentences([]);
     setCurrDocPage(location);
     
-  }, [abortAudio, isPlaying]);
+  }, [abortAudio]);
 
   /**
    * Moves to the next or previous sentence
