@@ -24,7 +24,6 @@ import {
   useMemo,
   ReactNode,
 } from 'react';
-import OpenAI from 'openai';
 import { Howl } from 'howler';
 import toast from 'react-hot-toast';
 import { useParams } from 'next/navigation';
@@ -65,13 +64,14 @@ interface TTSContextType {
   togglePlay: () => void;
   skipForward: () => void;
   skipBackward: () => void;
+  pause: () => void;
   stop: () => void;
   stopAndPlayFromIndex: (index: number) => void;
-  setText: (text: string) => void;
+  setText: (text: string, shouldPause?: boolean) => void;
   setCurrDocPages: (num: number | undefined) => void;
   setSpeedAndRestart: (speed: number) => void;
   setVoiceAndRestart: (voice: string) => void;
-  skipToLocation: (location: string | number, keepPlaying?: boolean) => void;
+  skipToLocation: (location: string | number) => void;
   registerLocationChangeHandler: (handler: (location: string | number) => void) => void;  // EPUB-only: Handles chapter navigation
   setIsEPUB: (isEPUB: boolean) => void;
 }
@@ -99,10 +99,7 @@ export function TTSProvider({ children }: { children: ReactNode }) {
     skipBlank,
   } = useConfig();
 
-  // OpenAI client reference
-  const openaiRef = useRef<OpenAI | null>(null);
-
-  // Use custom hooks
+  // Remove OpenAI client reference as it's no longer needed
   const audioContext = useAudioContext();
   const audioCache = useAudioCache(25);
   const { availableVoices, fetchVoices } = useVoiceManagement(openApiKey, openApiBaseUrl);
@@ -139,7 +136,9 @@ export function TTSProvider({ children }: { children: ReactNode }) {
   const [activeHowl, setActiveHowl] = useState<Howl | null>(null);
   const [speed, setSpeed] = useState(voiceSpeed);
   const [voice, setVoice] = useState(configVoice);
-  const [nextPageLoading, setNextPageLoading] = useState(false);
+
+  // Track pending preload requests
+  const preloadRequests = useRef<Map<string, Promise<string>>>(new Map());
 
   //console.log('page:', currDocPage, 'pages:', currDocPages);
 
@@ -170,11 +169,15 @@ export function TTSProvider({ children }: { children: ReactNode }) {
 
   /**
    * Stops the current audio playback and clears the active Howl instance
+   * @param {boolean} [clearPending=false] - Whether to clear pending requests
    */
-  const abortAudio = useCallback(() => {
+  const abortAudio = useCallback((clearPending = false) => {
     if (activeHowl) {
       activeHowl.stop();
       setActiveHowl(null);
+    }
+    if (clearPending) {
+      preloadRequests.current.clear();
     }
   }, [activeHowl]);
 
@@ -183,21 +186,53 @@ export function TTSProvider({ children }: { children: ReactNode }) {
    * Works for both PDF pages and EPUB locations
    * 
    * @param {string | number} location - The target location to navigate to
+   * @param {boolean} keepPlaying - Whether to maintain playback state
    */
-  const skipToLocation = useCallback((location: string | number, keepPlaying = false) => {
-    setNextPageLoading(true);
-
-    // Reset state for new content
+  const skipToLocation = useCallback((location: string | number) => {    
+    // Reset state for new content in correct order
     abortAudio();
-    if (!keepPlaying) {
-      setIsPlaying(false);
-    }
     setCurrentIndex(0);
     setSentences([]);
-
-    // Update current page/location
     setCurrDocPage(location);
-  }, [abortAudio]);
+    
+  }, [abortAudio, isPlaying]);
+
+  /**
+   * Moves to the next or previous sentence
+   * 
+   * @param {boolean} [backwards=false] - Whether to move backwards
+   */
+  const advance = useCallback(async (backwards = false) => {
+    const nextIndex = currentIndex + (backwards ? -1 : 1);
+    
+    // Handle within current page bounds
+    if (nextIndex < sentences.length && nextIndex >= 0) {
+      setCurrentIndex(nextIndex);
+      return;
+    }
+    
+    // For EPUB documents, always try to advance to next/prev section
+    if (isEPUB && locationChangeHandlerRef.current) {
+      locationChangeHandlerRef.current(nextIndex >= sentences.length ? 'next' : 'prev');
+      return;
+    }
+    
+    // For PDFs and other documents, check page bounds
+    if (!isEPUB) {
+      // Handle next/previous page transitions
+      if ((nextIndex >= sentences.length && currDocPageNumber < currDocPages!) || 
+          (nextIndex < 0 && currDocPageNumber > 1)) {
+        // Pass wasPlaying to maintain playback state during page turn
+        skipToLocation(currDocPageNumber + (nextIndex >= sentences.length ? 1 : -1));
+        return;
+      }
+      
+      // Handle end of document (PDF only)
+      if (nextIndex >= sentences.length && currDocPageNumber >= currDocPages!) {
+        setIsPlaying(false);
+      }
+    }
+  }, [currentIndex, sentences, currDocPageNumber, currDocPages, isEPUB, skipToLocation]);
 
   /**
    * Handles blank text sections based on document type
@@ -210,58 +245,39 @@ export function TTSProvider({ children }: { children: ReactNode }) {
       return false;
     }
 
-    if (isEPUB && locationChangeHandlerRef.current) {
-      locationChangeHandlerRef.current('next');
-      
-      toast.success('Skipping blank section', {
-        id: `epub-section-skip`,
-        iconTheme: {
-          primary: 'var(--accent)',
-          secondary: 'var(--background)',
-        },
-        style: {
-          background: 'var(--background)',
-          color: 'var(--accent)',
-        },
-        duration: 1000,
-        position: 'top-center',
-      });
-      return true;
-    } 
+    // Use advance to handle navigation for both EPUB and PDF
+    advance();
     
-    if (currDocPageNumber < currDocPages!) {
-      // Pass true to keep playing when skipping blank pages
-      skipToLocation(currDocPageNumber + 1, true);
-      
-      toast.success(`Skipping blank page ${currDocPageNumber}`, {
-        id: `page-${currDocPageNumber}`,
-        iconTheme: {
-          primary: 'var(--accent)',
-          secondary: 'var(--background)',
-        },
-        style: {
-          background: 'var(--background)',
-          color: 'var(--accent)',
-        },
-        duration: 1000,
-        position: 'top-center',
-      });
-      return true;
-    }
+    toast.success(isEPUB ? 'Skipping blank section' : `Skipping blank page ${currDocPageNumber}`, {
+      id: isEPUB ? `epub-section-skip` : `page-${currDocPageNumber}`,
+      iconTheme: {
+        primary: 'var(--accent)',
+        secondary: 'var(--background)',
+      },
+      style: {
+        background: 'var(--background)',
+        color: 'var(--accent)',
+      },
+      duration: 1000,
+      position: 'top-center',
+    });
 
-    return false;
-  }, [isPlaying, skipBlank, isEPUB, currDocPageNumber, currDocPages, skipToLocation]);
+    return true;
+  }, [isPlaying, skipBlank, advance, isEPUB, currDocPageNumber]);
 
   /**
    * Sets the current text and splits it into sentences
    * 
    * @param {string} text - The text to be processed
    */
-  const setText = useCallback((text: string) => {
-    console.log('Setting page text:', text);
-
+  const setText = useCallback((text: string, shouldPause = false) => {
+    // Check for blank section first
     if (handleBlankSection(text)) return;
     
+    // Keep track of previous state
+    const wasPlaying = isPlaying;
+    
+    console.log('Setting text:', text);
     processTextToSentences(text)
       .then(newSentences => {
         if (newSentences.length === 0) {
@@ -270,7 +286,12 @@ export function TTSProvider({ children }: { children: ReactNode }) {
         }
 
         setSentences(newSentences);
-        setNextPageLoading(false);
+        setCurrentIndex(0);
+
+        // Only restore previous playback state if we shouldn't pause
+        if (shouldPause) setIsPlaying(false);
+        else if (wasPlaying) setIsPlaying(true);
+        
       })
       .catch(error => {
         console.warn('Error processing text:', error);
@@ -282,7 +303,7 @@ export function TTSProvider({ children }: { children: ReactNode }) {
           duration: 3000,
         });
       });
-  }, [processTextToSentences, handleBlankSection]);
+  }, [processTextToSentences, handleBlankSection, isPlaying]);
 
   /**
    * Toggles the playback state between playing and paused
@@ -299,71 +320,38 @@ export function TTSProvider({ children }: { children: ReactNode }) {
   }, [abortAudio]);
 
   /**
-   * Moves to the next or previous sentence
-   * 
-   * @param {boolean} [backwards=false] - Whether to move backwards
+   * Pauses the current audio playback
+   * Used for external control of playback state
    */
-  const advance = useCallback(async (backwards = false) => {
-    const nextIndex = currentIndex + (backwards ? -1 : 1);
-    
-    // Handle within current page bounds
-    if (nextIndex < sentences.length && nextIndex >= 0) {
-      console.log('Advancing to next sentence:', sentences[nextIndex]);
-      setCurrentIndex(nextIndex);
-      return;
-    }
-    
-    // For EPUB documents, always try to advance to next/prev section
-    if (isEPUB && locationChangeHandlerRef.current) {
-      console.log('EPUB: Advancing to next/prev section');
-      setCurrentIndex(0);
-      setSentences([]);
-      locationChangeHandlerRef.current(nextIndex >= sentences.length ? 'next' : 'prev');
-      return;
-    }
-    
-    // For PDFs and other documents, check page bounds
-    if (!isEPUB) {
-      // Handle next/previous page transitions
-      if ((nextIndex >= sentences.length && currDocPageNumber < currDocPages!) || 
-          (nextIndex < 0 && currDocPageNumber > 1)) {
-        console.log('PDF: Advancing to next/prev page');
-        setCurrentIndex(0);
-        setSentences([]);
-        skipToLocation(currDocPageNumber + (nextIndex >= sentences.length ? 1 : -1), true);
-        return;
-      }
-      
-      // Handle end of document (PDF only)
-      if (nextIndex >= sentences.length && currDocPageNumber >= currDocPages!) {
-        console.log('PDF: Reached end of document');
-        setIsPlaying(false);
-      }
-    }
-  }, [currentIndex, sentences, currDocPageNumber, currDocPages, isEPUB, skipToLocation]);
+  const pause = useCallback(() => {
+    abortAudio();
+    setIsPlaying(false);
+  }, [abortAudio]);
+
 
   /**
    * Moves forward one sentence in the text
    */
-  const skipForward = useCallback(() => {
-    setIsProcessing(true);
-    abortAudio();
-    advance();
-    setIsProcessing(false);
-  }, [abortAudio, advance]);
+  const skipForward = useCallback(async () => {
+    // Only show processing state if we're currently playing
+    if (isPlaying) {
+      setIsProcessing(true);
+    }
+    abortAudio(false); // Don't clear pending requests
+    await advance();
+  }, [isPlaying, abortAudio, advance]);
 
   /**
    * Moves backward one sentence in the text
    */
-  const skipBackward = useCallback(() => {
-    setIsProcessing(true);
-
-    abortAudio();
-
-    advance(true); // Pass true to go backwards
-
-    setIsProcessing(false);
-  }, [abortAudio, advance]);
+  const skipBackward = useCallback(async () => {
+    // Only show processing state if we're currently playing
+    if (isPlaying) {
+      setIsProcessing(true);
+    }
+    abortAudio(false); // Don't clear pending requests
+    await advance(true);
+  }, [isPlaying, abortAudio, advance]);
 
   /**
    * Updates the voice and speed settings from the configuration
@@ -374,15 +362,10 @@ export function TTSProvider({ children }: { children: ReactNode }) {
   }, [configVoice, voiceSpeed]);
 
   /**
-   * Initializes OpenAI configuration and fetches available voices
+   * Initializes configuration and fetches available voices
    */
   useEffect(() => {
     if (!configIsLoading && openApiKey && openApiBaseUrl) {
-      openaiRef.current = new OpenAI({
-        apiKey: openApiKey,
-        baseURL: openApiBaseUrl,
-        dangerouslyAllowBrowser: true,
-      });
       fetchVoices();
       updateVoiceAndSpeed();
     }
@@ -394,7 +377,7 @@ export function TTSProvider({ children }: { children: ReactNode }) {
    * @param {string} sentence - The sentence to generate audio for
    * @returns {Promise<AudioBuffer | undefined>} The generated audio buffer
    */
-  const getAudio = useCallback(async (sentence: string): Promise<AudioBuffer | undefined> => {
+  const getAudio = useCallback(async (sentence: string): Promise<ArrayBuffer | undefined> => {
     // Check if the audio is already cached
     const cachedAudio = audioCache.get(sentence);
     if (cachedAudio) {
@@ -402,39 +385,47 @@ export function TTSProvider({ children }: { children: ReactNode }) {
       return cachedAudio;
     }
 
-    // If not cached, fetch the audio from OpenAI API
-    if (openaiRef.current) {
-      try {
-        console.log('Requesting audio for sentence:', sentence);
+    try {
+      console.log('Requesting audio for sentence:', sentence);
 
-        const response = await openaiRef.current.audio.speech.create({
-          model: 'tts-1',
-          voice: voice as "alloy",
-          input: sentence,
+      const response = await fetch('/api/tts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-openai-key': openApiKey || '',
+          'x-openai-base-url': openApiBaseUrl || '',
+        },
+        body: JSON.stringify({
+          text: sentence,
+          voice: voice,
           speed: speed,
-        });
+        }),
+      });
 
-        const arrayBuffer = await response.arrayBuffer();
-        const audioBuffer = await audioContext!.decodeAudioData(arrayBuffer);
-
-        // Cache the audio buffer
-        audioCache.set(sentence, audioBuffer);
-
-        return audioBuffer;
-      } catch (error) {
-        setIsPlaying(false);
-        toast.error('Failed to generate audio. API not responding.', {
-          id: 'tts-api-error',
-          style: {
-            background: 'var(--background)',
-            color: 'var(--accent)',
-          },
-          duration: 7000,
-        });
-        throw error;
+      if (!response.ok) {
+        throw new Error('Failed to generate audio');
       }
+
+      // Get the raw array buffer - no need to decode since it's already MP3
+      const arrayBuffer = await response.arrayBuffer();
+
+      // Cache the array buffer
+      audioCache.set(sentence, arrayBuffer);
+
+      return arrayBuffer;
+    } catch (error) {
+      setIsPlaying(false);
+      toast.error('Failed to generate audio. Server not responding.', {
+        id: 'tts-api-error',
+        style: {
+          background: 'var(--background)',
+          color: 'var(--accent)',
+        },
+        duration: 7000,
+      });
+      throw error;
     }
-  }, [audioContext, voice, speed, audioCache]);
+  }, [voice, speed, audioCache, openApiKey, openApiBaseUrl]);
 
   /**
    * Processes and plays the current sentence
@@ -444,16 +435,45 @@ export function TTSProvider({ children }: { children: ReactNode }) {
    * @returns {Promise<string>} The URL of the processed audio
    */
   const processSentence = useCallback(async (sentence: string, preload = false): Promise<string> => {
-    if (isProcessing && !preload) throw new Error('Audio is already being processed');
-    if (!audioContext || !openaiRef.current) throw new Error('Audio context not initialized');
+    if (!audioContext) throw new Error('Audio context not initialized');
     
+    // Check if there's a pending preload request for this sentence
+    const pendingRequest = preloadRequests.current.get(sentence);
+    if (pendingRequest) {
+      console.log('Using pending preload request for:', sentence.substring(0, 20));
+      setIsProcessing(true); // Show processing state when using pending request
+      // If this is not a preload request, remove it from the pending map
+      if (!preload) {
+        preloadRequests.current.delete(sentence);
+      }
+      return pendingRequest;
+    }
+
     // Only set processing state if not preloading
     if (!preload) setIsProcessing(true);
   
-    // No need to preprocess again since setText already did it
-    const audioBuffer = await getAudio(sentence);
-    return audioBufferToURL(audioBuffer!);
-  }, [isProcessing, audioContext, getAudio]);
+    // Create the audio processing promise
+    const processPromise = (async () => {
+      try {
+        const audioBuffer = await getAudio(sentence);
+        return audioBufferToURL(audioBuffer!);
+      } catch (error) {
+        setIsProcessing(false);
+        throw error;
+      }
+    })();
+
+    // If this is a preload request, store it in the map
+    if (preload) {
+      preloadRequests.current.set(sentence, processPromise);
+      // Clean up the map entry once the promise resolves or rejects
+      processPromise.finally(() => {
+        preloadRequests.current.delete(sentence);
+      });
+    }
+
+    return processPromise;
+  }, [audioContext, getAudio]);
 
   /**
    * Plays the current sentence with Howl
@@ -461,6 +481,12 @@ export function TTSProvider({ children }: { children: ReactNode }) {
    * @param {string} sentence - The sentence to play
    */
   const playSentenceWithHowl = useCallback(async (sentence: string) => {
+    if (!sentence) {
+      console.log('No sentence to play');
+      setIsProcessing(false);
+      return;
+    }
+
     try {
       const audioUrl = await processSentence(sentence);
       if (!audioUrl) {
@@ -469,9 +495,12 @@ export function TTSProvider({ children }: { children: ReactNode }) {
   
       const howl = new Howl({
         src: [audioUrl],
-        format: ['wav'],
+        format: ['mp3'],
         html5: true,
+        preload: true,
+        pool: 1,
         onplay: () => {
+          setIsProcessing(false);
           if ('mediaSession' in navigator) {
             navigator.mediaSession.playbackState = 'playing';
           }
@@ -496,17 +525,19 @@ export function TTSProvider({ children }: { children: ReactNode }) {
           // Don't auto-advance on load error
           setIsPlaying(false);
         },
+        onstop: () => {
+          setIsProcessing(false);
+          URL.revokeObjectURL(audioUrl);
+        }
       });
   
       setActiveHowl(howl);
       howl.play();
-      setIsProcessing(false);
   
     } catch (error) {
       console.error('Error playing TTS:', error);
       setActiveHowl(null);
       setIsProcessing(false);
-      //setIsPlaying(false);
       
       toast.error('Failed to process audio. Skipping problematic sentence.', {
         id: 'tts-processing-error',
@@ -524,13 +555,17 @@ export function TTSProvider({ children }: { children: ReactNode }) {
   /**
    * Preloads the next sentence's audio
    */
-  const preloadNextAudio = useCallback(() => {
+  const preloadNextAudio = useCallback(async () => {
     try {
-      if (sentences[currentIndex + 1] && !audioCache.has(sentences[currentIndex + 1])) {
-        processSentence(sentences[currentIndex + 1], true); // True indicates preloading
+      const nextSentence = sentences[currentIndex + 1];
+      if (nextSentence && !audioCache.has(nextSentence) && !preloadRequests.current.has(nextSentence)) {
+        // Start preloading but don't wait for it to complete
+        processSentence(nextSentence, true).catch(error => {
+          console.error('Error preloading next sentence:', error);
+        });
       }
     } catch (error) {
-      console.error('Error preloading next sentence:', error);
+      console.error('Error initiating preload:', error);
     }
   }, [currentIndex, sentences, audioCache, processSentence]);
 
@@ -549,17 +584,19 @@ export function TTSProvider({ children }: { children: ReactNode }) {
     if (!isPlaying) return; // Don't proceed if stopped
     if (isProcessing) return; // Don't proceed if processing audio
     if (!sentences[currentIndex]) return; // Don't proceed if no sentence to play
-    if (nextPageLoading) return; // Don't proceed if loading next page
     if (activeHowl) return; // Don't proceed if audio is already playing
 
-    // Play the current sentence and preload the next one if available
+    // Start playing current sentence
     playAudio();
-    if (sentences[currentIndex + 1]) {
-      preloadNextAudio();
-    }
+    
+    // Start preloading next sentence in parallel
+    preloadNextAudio();
     
     return () => {
-      abortAudio();
+      // Only abort if we're actually stopping playback
+      if (!isPlaying) {
+        abortAudio();
+      }
     };
   }, [
     isPlaying,
@@ -567,7 +604,6 @@ export function TTSProvider({ children }: { children: ReactNode }) {
     currentIndex,
     sentences,
     activeHowl,
-    nextPageLoading,
     playAudio,
     preloadNextAudio,
     abortAudio
@@ -585,7 +621,6 @@ export function TTSProvider({ children }: { children: ReactNode }) {
     setSentences([]);
     setCurrDocPage(1);
     setCurrDocPages(undefined);
-    setNextPageLoading(false);
     setIsProcessing(false);
     setIsEPUB(false);
   }, [abortAudio]);
@@ -608,17 +643,29 @@ export function TTSProvider({ children }: { children: ReactNode }) {
    * @param {number} newSpeed - The new speed to set
    */
   const setSpeedAndRestart = useCallback((newSpeed: number) => {
+    const wasPlaying = isPlaying;
+    
+    // Set a flag to prevent double audio requests during config update
+    setIsProcessing(true);
+    
+    // First stop any current playback
+    setIsPlaying(false);
+    abortAudio(true); // Clear pending requests since speed changed
+    setActiveHowl(null);
+    
+    // Update speed, clear cache, and config
     setSpeed(newSpeed);
-    updateConfigKey('voiceSpeed', newSpeed);
-    // Clear the audio cache since it contains audio at the old speed
     audioCache.clear();
-
-    if (isPlaying) {
-      setIsPlaying(false);
-      abortAudio();
-      setIsPlaying(true);
-    }
-  }, [isPlaying, abortAudio, updateConfigKey, audioCache]);
+    
+    // Update config after state changes
+    updateConfigKey('voiceSpeed', newSpeed).then(() => {
+      setIsProcessing(false);
+      // Resume playback if it was playing before
+      if (wasPlaying) {
+        setIsPlaying(true);
+      }
+    });
+  }, [abortAudio, updateConfigKey, audioCache, isPlaying]);
 
   /**
    * Sets the voice and restarts the playback
@@ -626,17 +673,29 @@ export function TTSProvider({ children }: { children: ReactNode }) {
    * @param {string} newVoice - The new voice to set
    */
   const setVoiceAndRestart = useCallback((newVoice: string) => {
+    const wasPlaying = isPlaying;
+    
+    // Set a flag to prevent double audio requests during config update
+    setIsProcessing(true);
+    
+    // First stop any current playback
+    setIsPlaying(false);
+    abortAudio(true); // Clear pending requests since voice changed
+    setActiveHowl(null);
+    
+    // Update voice, clear cache, and config
     setVoice(newVoice);
-    updateConfigKey('voice', newVoice);
-    // Clear the audio cache since it contains audio with the old voice
     audioCache.clear();
-
-    if (isPlaying) {
-      setIsPlaying(false);
-      abortAudio();
-      setIsPlaying(true);
-    }
-  }, [isPlaying, abortAudio, updateConfigKey, audioCache]);
+    
+    // Update config after state changes
+    updateConfigKey('voice', newVoice).then(() => {
+      setIsProcessing(false);
+      // Resume playback if it was playing before
+      if (wasPlaying) {
+        setIsPlaying(true);
+      }
+    });
+  }, [abortAudio, updateConfigKey, audioCache, isPlaying]);
 
   /**
    * Provides the TTS context value to child components
@@ -653,6 +712,7 @@ export function TTSProvider({ children }: { children: ReactNode }) {
     skipForward,
     skipBackward,
     stop,
+    pause,
     stopAndPlayFromIndex,
     setText,
     setCurrDocPages,
@@ -674,6 +734,7 @@ export function TTSProvider({ children }: { children: ReactNode }) {
     skipForward,
     skipBackward,
     stop,
+    pause,
     stopAndPlayFromIndex,
     setText,
     setCurrDocPages,

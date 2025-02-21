@@ -17,15 +17,17 @@ export function useVoiceManagement(apiKey: string | undefined, baseUrl: string |
     if (!apiKey || !baseUrl) return;
 
     try {
-      const response = await fetch(`${baseUrl}/audio/voices`, {
+      const response = await fetch('/api/tts/voices', {
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
+          'x-openai-key': apiKey,
+          'x-openai-base-url': baseUrl,
           'Content-Type': 'application/json',
         },
       });
+      
       if (!response.ok) throw new Error('Failed to fetch voices');
       const data = await response.json();
-      setAvailableVoices(data.voices || []);
+      setAvailableVoices(data.voices || DEFAULT_VOICES);
     } catch (error) {
       console.error('Error fetching voices:', error);
       // Set available voices to default openai voices

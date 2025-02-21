@@ -1,18 +1,22 @@
-import { useEffect, RefObject } from 'react';
+import { useEffect, RefObject, useState } from 'react';
+import { debounce } from '@/utils/pdf';
 
-export function useEPUBResize(
-  containerRef: RefObject<HTMLDivElement | null>,
-  isResizing: RefObject<boolean>
-) {
-  useEffect(() => {
-    let resizeTimeout: NodeJS.Timeout;
-    
+export function useEPUBResize(containerRef: RefObject<HTMLDivElement | null>) {
+  const [isResizing, setIsResizing] = useState(false);
+  const [dimensions, setDimensions] = useState<DOMRectReadOnly | null>(null);
+  
+  useEffect(() => {    
+    const debouncedResize = debounce((...args: unknown[]) => {
+      const entries = args[0] as ResizeObserverEntry[];
+      console.log('Debounced resize', entries[0].contentRect);
+      setDimensions(entries[0].contentRect);
+    }, 150);
+
     const resizeObserver = new ResizeObserver((entries) => {
-      clearTimeout(resizeTimeout);
-      resizeTimeout = setTimeout(() => {
-        console.log('Resizing detected (debounced)', entries[0].contentRect);
-        isResizing.current = true;
-      }, 250);
+      if (!isResizing) {
+        setIsResizing(true);
+      }
+      debouncedResize(entries);
     });
 
     const mutationObserver = new MutationObserver((mutations) => {
@@ -44,9 +48,10 @@ export function useEPUBResize(
     }
 
     return () => {
-      clearTimeout(resizeTimeout);
       mutationObserver.disconnect();
       resizeObserver.disconnect();
     };
-  }, [containerRef, isResizing]);
+  }, [containerRef]); 
+
+  return { isResizing, setIsResizing, dimensions };
 }
