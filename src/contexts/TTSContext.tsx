@@ -174,6 +174,7 @@ export function TTSProvider({ children }: { children: ReactNode }) {
   const abortAudio = useCallback((clearPending = false) => {
     if (activeHowl) {
       activeHowl.stop();
+      activeHowl.unload(); // Ensure Howl instance is fully cleaned up
       setActiveHowl(null);
     }
     if (clearPending) {
@@ -274,27 +275,34 @@ export function TTSProvider({ children }: { children: ReactNode }) {
     // Check for blank section first
     if (handleBlankSection(text)) return;
     
-    // Keep track of previous state
+    // Keep track of previous state and pause playback
     const wasPlaying = isPlaying;
+    setIsPlaying(false);
+    abortAudio(true); // Clear pending requests since text is changing
+    setIsProcessing(true); // Set processing state before text processing starts
     
     console.log('Setting text:', text);
     processTextToSentences(text)
       .then(newSentences => {
         if (newSentences.length === 0) {
           console.warn('No sentences found in text');
+          setIsProcessing(false);
           return;
         }
 
+        // Set all state updates in a predictable order
         setSentences(newSentences);
         setCurrentIndex(0);
+        setIsProcessing(false);
 
-        // Only restore previous playback state if we shouldn't pause
-        if (shouldPause) setIsPlaying(false);
-        else if (wasPlaying) setIsPlaying(true);
-        
+        // Restore playback state if needed
+        if (!shouldPause && wasPlaying) {
+          setIsPlaying(true);
+        }
       })
       .catch(error => {
         console.warn('Error processing text:', error);
+        setIsProcessing(false);
         toast.error('Failed to process text', {
           style: {
             background: 'var(--background)',
@@ -303,7 +311,7 @@ export function TTSProvider({ children }: { children: ReactNode }) {
           duration: 3000,
         });
       });
-  }, [processTextToSentences, handleBlankSection, isPlaying]);
+  }, [isPlaying, handleBlankSection, abortAudio, processTextToSentences]);
 
   /**
    * Toggles the playback state between playing and paused
@@ -493,12 +501,17 @@ export function TTSProvider({ children }: { children: ReactNode }) {
         throw new Error('No audio URL generated');
       }
   
+      // Force unload any previous Howl instance to free up resources
+      if (activeHowl) {
+        activeHowl.unload();
+      }
+
       const howl = new Howl({
         src: [audioUrl],
         format: ['mp3'],
         html5: true,
         preload: true,
-        pool: 1,
+        pool: 5, // Reduced pool size for iOS compatibility
         onplay: () => {
           setIsProcessing(false);
           if ('mediaSession' in navigator) {
@@ -512,6 +525,7 @@ export function TTSProvider({ children }: { children: ReactNode }) {
         },
         onend: () => {
           URL.revokeObjectURL(audioUrl);
+          howl.unload(); // Explicitly unload when done
           setActiveHowl(null);
           if (isPlaying) {
             advance();
@@ -522,12 +536,14 @@ export function TTSProvider({ children }: { children: ReactNode }) {
           setIsProcessing(false);
           setActiveHowl(null);
           URL.revokeObjectURL(audioUrl);
+          howl.unload(); // Ensure cleanup on error
           // Don't auto-advance on load error
           setIsPlaying(false);
         },
         onstop: () => {
           setIsProcessing(false);
           URL.revokeObjectURL(audioUrl);
+          howl.unload(); // Ensure cleanup on stop
         }
       });
   
@@ -550,7 +566,7 @@ export function TTSProvider({ children }: { children: ReactNode }) {
       
       advance(); // Skip problematic sentence
     }
-  }, [isPlaying, processSentence, advance]);
+  }, [isPlaying, processSentence, advance, activeHowl]);
 
   /**
    * Preloads the next sentence's audio
