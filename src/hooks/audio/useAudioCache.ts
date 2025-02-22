@@ -9,11 +9,11 @@ import { LRUCache } from 'lru-cache';
  * @returns Object containing cache methods
  */
 export function useAudioCache(maxSize = 50) {
-  const cacheRef = useRef(new LRUCache<string, AudioBuffer>({ max: maxSize }));
+  const cacheRef = useRef(new LRUCache<string, ArrayBuffer>({ max: maxSize }));
 
   return {
     get: (key: string) => cacheRef.current.get(key),
-    set: (key: string, value: AudioBuffer) => cacheRef.current.set(key, value),
+    set: (key: string, value: ArrayBuffer) => cacheRef.current.set(key, value),
     has: (key: string) => cacheRef.current.has(key),
     clear: () => cacheRef.current.clear(),
   };

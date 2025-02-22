@@ -25,7 +25,7 @@ interface EPUBViewerProps {
 export function EPUBViewer({ className = '' }: EPUBViewerProps) {
   const { id } = useParams();
   const { currDocData, currDocName, currDocPage, extractPageText } = useEPUB();
-  const { skipToLocation, registerLocationChangeHandler, setIsEPUB } = useTTS();
+  const { skipToLocation, registerLocationChangeHandler, setIsEPUB, pause } = useTTS();
   const { epubTheme } = useConfig();
   const bookRef = useRef<Book | null>(null);
   const rendition = useRef<Rendition | undefined>(undefined);
@@ -35,9 +35,7 @@ export function EPUBViewer({ className = '' }: EPUBViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const isEPUBSetOnce = useRef(false);
-  const isResizing = useRef(false);
-
-  useEPUBResize(containerRef, isResizing);
+  const { isResizing, setIsResizing, dimensions } = useEPUBResize(containerRef);
 
   const handleLocationChanged = useCallback((location: string | number) => {
     // Set the EPUB flag once the location changes
@@ -68,23 +66,45 @@ export function EPUBViewer({ className = '' }: EPUBViewerProps) {
       setLastDocumentLocation(id as string, location.toString());
     }
 
-    if (isResizing.current) {
-      skipToLocation(location, false);
-      isResizing.current = false;
-    } else {
-      skipToLocation(location, true);
-    }
+    skipToLocation(location);
 
     locationRef.current = location;
     extractPageText(bookRef.current, rendition.current);
+
   }, [id, skipToLocation, extractPageText, setIsEPUB]);
 
-  // Load the initial location
-  useEffect(() => {
-    if (!bookRef.current || !rendition.current || isEPUBSetOnce.current) return;
-
-    extractPageText(bookRef.current, rendition.current);
+  const initialExtract = useCallback(() => {
+    if (!bookRef.current || !rendition.current?.location || isEPUBSetOnce.current) return;
+    extractPageText(bookRef.current, rendition.current, false);
   }, [extractPageText]);
+
+  const checkResize = useCallback(() => {
+    if (isResizing && dimensions && bookRef.current?.isOpen && rendition.current && isEPUBSetOnce.current) {
+      pause();
+      // Only extract text when we have dimensions, ensuring the resize is complete
+      extractPageText(bookRef.current, rendition.current, true);
+      setIsResizing(false);
+      
+      return true;
+    } else {
+      return false;
+    }
+  }, [isResizing, setIsResizing, dimensions, pause, extractPageText]);
+
+  // Check for isResizing to pause TTS and re-extract text
+  useEffect(() => {
+    if (checkResize()) return;
+
+    // Load initial location when not resizing
+    initialExtract();
+  }, [checkResize, initialExtract]);
+
+  // Load the initial location
+  // useEffect(() => {
+  //   if (!bookRef.current || !rendition.current || isEPUBSetOnce.current) return;
+
+  //   extractPageText(bookRef.current, rendition.current, false);
+  // }, [extractPageText]);
 
   // Register the location change handler
   useEffect(() => {

@@ -21,7 +21,7 @@ interface EPUBContextType {
   currDocText: string | undefined;
   setCurrentDocument: (id: string) => Promise<void>;
   clearCurrDoc: () => void;
-  extractPageText: (book: Book, rendition: Rendition) => Promise<string>;
+  extractPageText: (book: Book, rendition: Rendition, shouldPause?: boolean) => Promise<string>;
 }
 
 const EPUBContext = createContext<EPUBContextType | undefined>(undefined);
@@ -83,9 +83,10 @@ export function EPUBProvider({ children }: { children: ReactNode }) {
    * Extracts text content from the current EPUB page/location
    * @param {Book} book - The EPUB.js Book instance
    * @param {Rendition} rendition - The EPUB.js Rendition instance
+   * @param {boolean} shouldPause - Whether to pause TTS
    * @returns {Promise<string>} The extracted text content
    */
-  const extractPageText = useCallback(async (book: Book, rendition: Rendition): Promise<string> => {
+  const extractPageText = useCallback(async (book: Book, rendition: Rendition, shouldPause = false): Promise<string> => {
     try {      
       const { start, end } = rendition?.location;
       if (!start?.cfi || !end?.cfi || !book || !book.isOpen || !rendition) return '';
@@ -95,7 +96,7 @@ export function EPUBProvider({ children }: { children: ReactNode }) {
       const range = await book.getRange(rangeCfi);
       const textContent = range.toString().trim();
       
-      setTTSText(textContent);
+      setTTSText(textContent, shouldPause);
       setCurrDocText(textContent);
       
       return textContent;

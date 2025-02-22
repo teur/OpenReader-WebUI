@@ -105,13 +105,16 @@ export function PDFProvider({ children }: { children: ReactNode }) {
     try {
       if (!pdfDocument) return;
       const text = await extractTextFromPDF(pdfDocument, currDocPage);
-      setCurrDocText(text);
-      setTTSText(text);
-
+      // Only update TTS text if the content has actually changed
+      // This prevents unnecessary resets of the sentence index
+      if (text !== currDocText || text === '') {
+        setCurrDocText(text);
+        setTTSText(text);
+      }
     } catch (error) {
       console.error('Error loading PDF text:', error);
     }
-  }, [pdfDocument, currDocPage, setTTSText]);
+  }, [pdfDocument, currDocPage, setTTSText, currDocText]);
 
   /**
    * Effect hook to update document text when the page changes
