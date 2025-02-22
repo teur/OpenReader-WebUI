@@ -31,7 +31,7 @@ OpenReader WebUI is a document reader with Text-to-Speech capabilities, offering
 ## [**Demo**](https://openreader.richardr.dev/)
 
 
-https://github.com/user-attachments/assets/1bfc5fc4-8d66-4c71-a3c1-f3ec5b4f4b56
+https://github.com/user-attachments/assets/262b9a01-c608-4fee-893c-9461dd48c99b
 
 
 ## 🐳 Docker Quick Start
