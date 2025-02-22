@@ -20,13 +20,13 @@ OpenReader WebUI is a document reader with Text-to-Speech capabilities, offering
 - 🔍 **Smart Text Processing**: Splits content into sentence blocks (ePub tries to split at paragraphs)
 - 📚 **EPUB Support**: Read EPUB files with table of contents and synchronized text
 - 📄 **PDF Support**: Read PDF files with text extraction and page navigation
-- ⚡ **Modern Tech Stack**: Built with Next.js, React, Tailwind CSS, and some Headless UI React
+  - 💬 Follow along with highlighted text as the TTS narrates
+- 📲 **Mobile Support**: Works on mobile devices, and can be added as a PWA web app
 - 🎨 **Customizable Experience**: 
-  - Set TTS API base URL (with optional API key)
-  - Adjustable playback speed
-  - Multiple voice options (checks `/v1/audio/voices` endpoint)
-  - Multiple app layout theme options
-  - Persistent settings
+  - 🔑 Set TTS API base URL (with optional API key)
+  - 🏎️ Adjustable playback speed
+  - 🗣️ Multiple voice options (checks `/v1/audio/voices` endpoint)
+  - 🎨 Multiple app theme options
 
 ## [**Demo**](https://openreader.richardr.dev/)
 
@@ -42,11 +42,11 @@ docker run --name openreader-webui \
   -v openreader_docstore:/app/docstore \
   richardr1126/openreader-webui:latest
 ```
-> Note: The `openreader_docstore` volume is used to store server-side documents. You can mount a local directory instead. Or remove it if you don't need server-side documents.
+> **Note:** The `openreader_docstore` volume is used to store server-side documents. You can mount a local directory instead. Or remove it if you don't need server-side documents.
 
-> Note: Requesting audio from the TTS API happens on the client not the Next.js server. So the API base URL needs to be accessible on the device that you are loading/hydrating the website on, not the device running the localhost:3003 Next.js server.
+Visit [http://localhost:3003](http://localhost:3003) to run the app and set your settings.
 
-Visit [http://localhost:3003](http://localhost:3003) to run the app.
+> Requesting audio from the TTS API happens on the Next.js server not the client. So the base URL for the TTS API should be accessible and relative to the Next.js server.
 
 ### ⬆️ Update Docker Image
 ```bash
@@ -54,7 +54,7 @@ docker stop openreader-webui && docker rm openreader-webui
 docker pull richardr1126/openreader-webui:latest
 ```
 
-### Using Docker Compose
+### Adding to a Docker Compose (i.e. with open-webui or Kokoro-FastAPI)
 Create or add to a `docker-compose.yml`:
 ```yaml
 volumes:
@@ -94,7 +94,7 @@ services:
    cp .env.template .env
    # Edit .env with your configuration settings
    ```
-   > Note: Requesting audio from the TTS API happens on the client not the Next.js server. So the API base URL needs to be accessible on the device that you are loading/hydrating the website on, not the device running the localhost:3003 Next.js server.
+   > Note: The base URL for the TTS API should be accessible and relative to the Next.js server
 
 4. Start the development server:
    ```bash
@@ -141,19 +141,19 @@ Contributions are welcome! Fork the repository and submit a pull request with yo
 - **Framework:** Next.js (React)
 - **Containerization:** Docker
 - **Storage:** IndexedDB (in browser db store)
-- **PDF Processing:** 
+- **PDF:** 
   - [react-pdf](https://github.com/wojtekmaj/react-pdf)
   - [pdf.js](https://mozilla.github.io/pdf.js/)
-  - [compromise](https://github.com/spencermountain/compromise): NLP library for sentence splitting
-- **EPUB Processing:**
+- **EPUB:**
   - [react-reader](https://github.com/happyr/react-reader)
   - [epubjs](https://github.com/futurepress/epub.js/)
-- **UI Components:** 
-  - [Headless UI](https://headlessui.com)
+- **UI:** 
   - [Tailwind CSS](https://tailwindcss.com)
-- **TTS Integration:** (tested on)
+  - [Headless UI](https://headlessui.com)
+- **TTS:** (tested on)
   - [OpenAI API](https://platform.openai.com/docs/api-reference/text-to-speech)
   - [Kokoro FastAPI TTS](https://github.com/remsky/Kokoro-FastAPI/tree/v0.0.5post1-stable)
+- **NLP:** [compromise](https://github.com/spencermountain/compromise) NLP library for sentence splitting
 
 ## License
 
