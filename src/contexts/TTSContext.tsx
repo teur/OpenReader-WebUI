@@ -383,7 +383,7 @@ export function TTSProvider({ children }: { children: ReactNode }) {
    * Initializes configuration and fetches available voices
    */
   useEffect(() => {
-    if (!configIsLoading && openApiKey && openApiBaseUrl) {
+    if (!configIsLoading) {
       fetchVoices();
       updateVoiceAndSpeed();
     }

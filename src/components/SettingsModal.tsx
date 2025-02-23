@@ -91,6 +91,14 @@ export function SettingsModal() {
     setShowClearServerConfirm(false);
   };
 
+  const handleInputChange = (type: 'apiKey' | 'baseUrl', value: string) => {
+    if (type === 'apiKey') {
+      setLocalApiKey(value === '' ? '' : value);
+    } else {
+      setLocalBaseUrl(value === '' ? '' : value);
+    }
+  };
+
   return (
     <Button
       onClick={() => setIsOpen(true)}
@@ -183,23 +191,35 @@ export function SettingsModal() {
                       </div>
 
                       <div className="space-y-2">
-                        <label className="block text-sm font-medium text-foreground">OpenAI API Key</label>
-                        <Input
-                          type="password"
-                          value={localApiKey}
-                          onChange={(e) => setLocalApiKey(e.target.value)}
-                          className="w-full rounded-lg bg-background py-2 px-3 text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-accent"
-                        />
+                        <label className="block text-sm font-medium text-foreground">
+                          OpenAI API Key
+                          {localApiKey && <span className="ml-2 text-xs text-accent">(Overriding env)</span>}
+                        </label>
+                        <div className="flex gap-2">
+                          <Input
+                            type="password"
+                            value={localApiKey}
+                            onChange={(e) => handleInputChange('apiKey', e.target.value)}
+                            placeholder="Using environment variable"
+                            className="w-full rounded-lg bg-background py-2 px-3 text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                          />
+                        </div>
                       </div>
 
                       <div className="space-y-2">
-                        <label className="block text-sm font-medium text-foreground">OpenAI API Base URL</label>
-                        <Input
-                          type="text"
-                          value={localBaseUrl}
-                          onChange={(e) => setLocalBaseUrl(e.target.value)}
-                          className="w-full rounded-lg bg-background py-2 px-3 text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-accent"
-                        />
+                        <label className="block text-sm font-medium text-foreground">
+                          OpenAI API Base URL
+                          {localBaseUrl && <span className="ml-2 text-xs text-accent">(Overriding env)</span>}
+                        </label>
+                        <div className="flex gap-2">
+                          <Input
+                            type="text"
+                            value={localBaseUrl}
+                            onChange={(e) => handleInputChange('baseUrl', e.target.value)}
+                            placeholder="Using environment variable"
+                            className="w-full rounded-lg bg-background py-2 px-3 text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                          />
+                        </div>
                       </div>
 
                       {isDev && <div className="space-y-2">
@@ -256,7 +276,20 @@ export function SettingsModal() {
                     </div>
                   </div>
 
-                  <div className="mt-6 flex justify-end">
+                  <div className="mt-6 flex justify-end gap-2">
+                    <Button
+                      type="button"
+                      className="inline-flex justify-center rounded-lg bg-background px-3 py-1.5 text-sm 
+                               font-medium text-foreground hover:bg-background/90 focus:outline-none 
+                               focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2
+                               transform transition-transform duration-200 ease-in-out hover:scale-[1.04] hover:text-accent"
+                      onClick={async () => {
+                        setLocalApiKey('');
+                        setLocalBaseUrl('');
+                      }}
+                    >
+                      Reset
+                    </Button>
                     <Button
                       type="button"
                       className="inline-flex justify-center rounded-lg bg-accent px-3 py-1.5 text-sm 
@@ -265,8 +298,8 @@ export function SettingsModal() {
                                transform transition-transform duration-200 ease-in-out hover:scale-[1.04] hover:text-background"
                       onClick={async () => {
                         await updateConfig({
-                          apiKey: localApiKey,
-                          baseUrl: localBaseUrl
+                          apiKey: localApiKey || '',
+                          baseUrl: localBaseUrl || '',
                         });
                         setIsOpen(false);
                       }}

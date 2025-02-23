@@ -42,11 +42,21 @@ docker run --name openreader-webui \
   -v openreader_docstore:/app/docstore \
   richardr1126/openreader-webui:latest
 ```
-> **Note:** The `openreader_docstore` volume is used to store server-side documents. You can mount a local directory instead. Or remove it if you don't need server-side documents.
+
+(Optionally): Set the TTS `API_BASE` URL and/or `API_KEY` to be default for all devices
+```bash
+docker run --name openreader-webui \
+  -e API_BASE=http://host.docker.internal:8880/v1 \
+  -p 3003:3003 \
+  -v openreader_docstore:/app/docstore \
+  richardr1126/openreader-webui:latest
+```
+
+> Requesting audio from the TTS API happens on the Next.js server not the client. So the base URL for the TTS API should be accessible and relative to the Next.js server. If it is in a Docker you may need to use `host.docker.internal` to access the host machine, instead of `localhost`.
 
 Visit [http://localhost:3003](http://localhost:3003) to run the app and set your settings.
 
-> Requesting audio from the TTS API happens on the Next.js server not the client. So the base URL for the TTS API should be accessible and relative to the Next.js server.
+> **Note:** The `openreader_docstore` volume is used to store server-side documents. You can mount a local directory instead. Or remove it if you don't need server-side documents.
 
 ### ⬆️ Update Docker Image
 ```bash
@@ -64,6 +74,8 @@ services:
   openreader-webui:
     container_name: openreader-webui
     image: richardr1126/openreader-webui:latest
+    environment:
+      - API_BASE=http://host.docker.internal:8880/v1
     ports:
       - "3003:3003"
     volumes:

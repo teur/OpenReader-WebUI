@@ -638,6 +638,10 @@ export async function setItem(key: string, value: string): Promise<void> {
   return indexedDBService.setConfigItem(key, value);
 }
 
+export async function removeItem(key: string): Promise<void> {
+  return indexedDBService.removeConfigItem(key);
+}
+
 // Add these helper functions before the final export
 export async function getLastDocumentLocation(docId: string): Promise<string | null> {
   const key = `lastLocation_${docId}`;

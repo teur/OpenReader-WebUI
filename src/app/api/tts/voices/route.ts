@@ -4,16 +4,12 @@ const DEFAULT_VOICES = ['alloy', 'ash', 'coral', 'echo', 'fable', 'onyx', 'nova'
 
 export async function GET(req: NextRequest) {
   try {
-    // Get API credentials from headers
-    const openApiKey = req.headers.get('x-openai-key');
-    const openApiBaseUrl = req.headers.get('x-openai-base-url');
-
-    if (!openApiKey || !openApiBaseUrl) {
-      return NextResponse.json({ error: 'Missing API credentials' }, { status: 401 });
-    }
+    // Get API credentials from headers or fall back to environment variables
+    const openApiKey = req.headers.get('x-openai-key') || process.env.API_KEY || 'none';
+    const openApiBaseUrl = req.headers.get('x-openai-base-url') || process.env.API_BASE;
 
     // Request voices from OpenAI
-    const response = await fetch(`${openApiBaseUrl}/audio/voices`, {
+    const response = await fetch(`${openApiBaseUrl || 'https://api.openai.com/v1'}/audio/voices`, {
       headers: {
         'Authorization': `Bearer ${openApiKey}`,
         'Content-Type': 'application/json',

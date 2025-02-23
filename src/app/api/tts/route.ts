@@ -3,14 +3,14 @@ import OpenAI from 'openai';
 
 export async function POST(req: NextRequest) {
   try {
-    // Get API credentials from headers
-    const openApiKey = req.headers.get('x-openai-key');
-    const openApiBaseUrl = req.headers.get('x-openai-base-url');
+    // Get API credentials from headers or fall back to environment variables
+    const openApiKey = req.headers.get('x-openai-key') || process.env.API_KEY || 'none';
+    const openApiBaseUrl = req.headers.get('x-openai-base-url') || process.env.API_BASE;
     const { text, voice, speed } = await req.json();
     console.log('Received TTS request:', text, voice, speed);
 
-    if (!openApiKey || !openApiBaseUrl) {
-      return NextResponse.json({ error: 'Missing API credentials' }, { status: 401 });
+    if (!openApiKey) {
+      return NextResponse.json({ error: 'Missing OpenAI API key' }, { status: 401 });
     }
 
     if (!text || !voice || !speed) {
@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
     // Initialize OpenAI client with abort signal
     const openai = new OpenAI({
       apiKey: openApiKey,
-      baseURL: openApiBaseUrl,
+      baseURL: openApiBaseUrl || 'https://api.openai.com/v1',
     });
 
     // Request audio from OpenAI and pass along the abort signal

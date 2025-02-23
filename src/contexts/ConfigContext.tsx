@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { getItem, indexedDBService, setItem } from '@/utils/indexedDB';
+import { getItem, indexedDBService, setItem, removeItem } from '@/utils/indexedDB';
 
 /** Represents the possible view types for document display */
 export type ViewType = 'single' | 'dual' | 'scroll';
@@ -60,7 +60,7 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
         await indexedDBService.init();
         setIsDBReady(true);
         
-        // Now load config
+        // Load config from IndexedDB
         const cachedApiKey = await getItem('apiKey');
         const cachedBaseUrl = await getItem('baseUrl');
         const cachedViewType = await getItem('viewType');
@@ -69,34 +69,24 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
         const cachedSkipBlank = await getItem('skipBlank');
         const cachedEpubTheme = await getItem('epubTheme');
 
-        if (cachedApiKey) console.log('Cached API key found:', cachedApiKey);
-        if (cachedBaseUrl) console.log('Cached base URL found:', cachedBaseUrl);
-        if (cachedViewType) console.log('Cached view type found:', cachedViewType);
-        if (cachedVoiceSpeed) console.log('Cached voice speed found:', cachedVoiceSpeed);
-        if (cachedVoice) console.log('Cached voice found:', cachedVoice);
-        if (cachedSkipBlank) console.log('Cached skip blank found:', cachedSkipBlank);
-        if (cachedEpubTheme) console.log('Cached EPUB theme found:', cachedEpubTheme);
+        // Only set API key and base URL if they were explicitly saved by the user
+        if (cachedApiKey) {
+          console.log('Using cached API key');
+          setApiKey(cachedApiKey);
+        }
+        if (cachedBaseUrl) {
+          console.log('Using cached base URL');
+          setBaseUrl(cachedBaseUrl);
+        }
 
-        // If not in cache, use env variables
-        const defaultApiKey = process.env.NEXT_PUBLIC_OPENAI_API_KEY || '1234567890';
-        const defaultBaseUrl = process.env.NEXT_PUBLIC_OPENAI_API_BASE || 'https://api.openai.com/v1';
-
-        // Set the values
-        setApiKey(cachedApiKey || defaultApiKey);
-        setBaseUrl(cachedBaseUrl || defaultBaseUrl);
+        // Set the other values with defaults
         setViewType((cachedViewType || 'single') as ViewType);
         setVoiceSpeed(parseFloat(cachedVoiceSpeed || '1'));
         setVoice(cachedVoice || 'af_sarah');
         setSkipBlank(cachedSkipBlank === 'false' ? false : true);
         setEpubTheme(cachedEpubTheme === 'true');
 
-        // If not in cache, save to cache
-        if (!cachedApiKey) {
-          await setItem('apiKey', defaultApiKey);
-        }
-        if (!cachedBaseUrl) {
-          await setItem('baseUrl', defaultBaseUrl);
-        }
+        // Only save non-sensitive settings by default
         if (!cachedViewType) {
           await setItem('viewType', 'single');
         }
@@ -119,18 +109,31 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
 
   /**
    * Updates multiple configuration values simultaneously
-   * @param {Partial<{apiKey: string; baseUrl: string}>} newConfig - Object containing new config values
+   * Only saves API credentials if they are explicitly set
    */
   const updateConfig = async (newConfig: Partial<{ apiKey: string; baseUrl: string }>) => {
     try {
-      if (newConfig.apiKey !== undefined) {
-        await setItem('apiKey', newConfig.apiKey);
-        setApiKey(newConfig.apiKey);
+      if (newConfig.apiKey !== undefined || newConfig.apiKey !== '') {
+        // Only save API key to IndexedDB if it's different from env default
+        await setItem('apiKey', newConfig.apiKey!);
+        setApiKey(newConfig.apiKey!);
       }
-      if (newConfig.baseUrl !== undefined) {
-        await setItem('baseUrl', newConfig.baseUrl);
-        setBaseUrl(newConfig.baseUrl);
+      if (newConfig.baseUrl !== undefined || newConfig.baseUrl !== '') {
+        // Only save base URL to IndexedDB if it's different from env default
+        await setItem('baseUrl', newConfig.baseUrl!);
+        setBaseUrl(newConfig.baseUrl!);
       }
+
+      // Delete completely if '' is passed
+      if (newConfig.apiKey === '') {
+        await removeItem('apiKey');
+        setApiKey('');
+      }
+      if (newConfig.baseUrl === '') {
+        await removeItem('baseUrl');
+        setBaseUrl('');
+      }
+      
     } catch (error) {
       console.error('Error updating config:', error);
       throw error;

@@ -14,13 +14,12 @@ export function useVoiceManagement(apiKey: string | undefined, baseUrl: string |
   const [availableVoices, setAvailableVoices] = useState<string[]>([]);
 
   const fetchVoices = useCallback(async () => {
-    if (!apiKey || !baseUrl) return;
-
     try {
+      console.log('Fetching voices...');
       const response = await fetch('/api/tts/voices', {
         headers: {
-          'x-openai-key': apiKey,
-          'x-openai-base-url': baseUrl,
+          'x-openai-key': apiKey || '',
+          'x-openai-base-url': baseUrl || '',
           'Content-Type': 'application/json',
         },
       });
