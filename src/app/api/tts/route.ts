@@ -17,26 +17,33 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 });
     }
 
-    // Initialize OpenAI client
+    // Initialize OpenAI client with abort signal
     const openai = new OpenAI({
       apiKey: openApiKey,
       baseURL: openApiBaseUrl,
     });
 
-    // Request audio from OpenAI
+    // Request audio from OpenAI and pass along the abort signal
     const response = await openai.audio.speech.create({
       model: 'tts-1',
       voice: voice as "alloy",
       input: text,
       speed: speed,
-    });
+    }, { signal: req.signal }); // Pass the abort signal to OpenAI client
 
     // Get the audio data as array buffer
+    // This will also be aborted if the client cancels
     const arrayBuffer = await response.arrayBuffer();
 
     // Return audio data with appropriate headers
     return new NextResponse(arrayBuffer);
   } catch (error) {
+    // Check if this was an abort error
+    if (error instanceof Error && error.name === 'AbortError') {
+      console.log('TTS request aborted by client');
+      return new Response(null, { status: 499 }); // Use 499 status for client closed request
+    }
+
     console.error('Error generating TTS:', error);
     return NextResponse.json(
       { error: 'Failed to generate audio' },
