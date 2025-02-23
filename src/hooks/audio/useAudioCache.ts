@@ -14,6 +14,7 @@ export function useAudioCache(maxSize = 50) {
   return {
     get: (key: string) => cacheRef.current.get(key),
     set: (key: string, value: ArrayBuffer) => cacheRef.current.set(key, value),
+    delete: (key: string) => cacheRef.current.delete(key),
     has: (key: string) => cacheRef.current.has(key),
     clear: () => cacheRef.current.clear(),
   };

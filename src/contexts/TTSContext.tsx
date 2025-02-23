@@ -35,6 +35,7 @@ import { useVoiceManagement } from '@/hooks/audio/useVoiceManagement';
 import { useMediaSession } from '@/hooks/audio/useMediaSession';
 import { useAudioContext } from '@/hooks/audio/useAudioContext';
 import { getLastDocumentLocation } from '@/utils/indexedDB';
+import { useBackgroundState } from '@/hooks/audio/useBackgroundState';
 
 // Media globals
 declare global {
@@ -51,6 +52,7 @@ interface TTSContextType {
   isPlaying: boolean;
   isProcessing: boolean;
   currentSentence: string;
+  isBackgrounded: boolean;  // Add this new property
 
   // Navigation
   currDocPage: string | number;  // Change this to allow both types
@@ -141,8 +143,6 @@ export function TTSProvider({ children }: { children: ReactNode }) {
   const preloadRequests = useRef<Map<string, Promise<string>>>(new Map());
   // Track active abort controllers for TTS requests
   const activeAbortControllers = useRef<Set<AbortController>>(new Set());
-
-  //console.log('page:', currDocPage, 'pages:', currDocPages);
 
   /**
    * Processes text through the NLP API to split it into sentences
@@ -535,7 +535,7 @@ export function TTSProvider({ children }: { children: ReactNode }) {
         format: ['mp3'],
         html5: true,
         preload: true,
-        pool: 5, // Reduced pool size for iOS compatibility
+        pool: 5,
         onplay: () => {
           setIsProcessing(false);
           if ('mediaSession' in navigator) {
@@ -549,7 +549,7 @@ export function TTSProvider({ children }: { children: ReactNode }) {
         },
         onend: () => {
           URL.revokeObjectURL(audioUrl);
-          howl.unload(); // Explicitly unload when done
+          howl.unload();
           setActiveHowl(null);
           if (isPlaying) {
             advance();
@@ -560,19 +560,18 @@ export function TTSProvider({ children }: { children: ReactNode }) {
           setIsProcessing(false);
           setActiveHowl(null);
           URL.revokeObjectURL(audioUrl);
-          howl.unload(); // Ensure cleanup on error
-          // Don't auto-advance on load error
+          howl.unload();
           setIsPlaying(false);
         },
         onstop: () => {
           setIsProcessing(false);
           URL.revokeObjectURL(audioUrl);
-          howl.unload(); // Ensure cleanup on stop
+          howl.unload();
         }
       });
 
       setActiveHowl(howl);
-      howl.play();
+      return howl;
 
     } catch (error) {
       console.error('Error playing TTS:', error);
@@ -588,9 +587,24 @@ export function TTSProvider({ children }: { children: ReactNode }) {
         duration: 3000,
       });
 
-      advance(); // Skip problematic sentence
+      advance();
+      return null;
     }
   }, [isPlaying, processSentence, advance, activeHowl]);
+
+  const playAudio = useCallback(async () => {
+    const howl = await playSentenceWithHowl(sentences[currentIndex]);
+    if (howl) {
+      howl.play();
+    }
+  }, [sentences, currentIndex, playSentenceWithHowl]);
+
+  // Place useBackgroundState after playAudio is defined
+  const isBackgrounded = useBackgroundState({
+    activeHowl,
+    isPlaying,
+    playAudio,
+  });
 
   /**
    * Preloads the next sentence's audio
@@ -610,13 +624,6 @@ export function TTSProvider({ children }: { children: ReactNode }) {
   }, [currentIndex, sentences, audioCache, processSentence]);
 
   /**
-   * Plays the current sentence's audio
-   */
-  const playAudio = useCallback(async () => {
-    await playSentenceWithHowl(sentences[currentIndex]);
-  }, [sentences, currentIndex, playSentenceWithHowl]);
-
-  /**
    * Main Playback Driver
    * Controls the flow of audio playback and sentence processing
    */
@@ -625,6 +632,7 @@ export function TTSProvider({ children }: { children: ReactNode }) {
     if (isProcessing) return; // Don't proceed if processing audio
     if (!sentences[currentIndex]) return; // Don't proceed if no sentence to play
     if (activeHowl) return; // Don't proceed if audio is already playing
+    if (isBackgrounded) return; // Don't proceed if backgrounded
 
     // Start playing current sentence
     playAudio();
@@ -644,6 +652,7 @@ export function TTSProvider({ children }: { children: ReactNode }) {
     currentIndex,
     sentences,
     activeHowl,
+    isBackgrounded,
     playAudio,
     preloadNextAudio,
     abortAudio
@@ -743,6 +752,7 @@ export function TTSProvider({ children }: { children: ReactNode }) {
   const value = useMemo(() => ({
     isPlaying,
     isProcessing,
+    isBackgrounded,
     currentSentence: sentences[currentIndex] || '',
     currDocPage,
     currDocPageNumber,
@@ -764,6 +774,7 @@ export function TTSProvider({ children }: { children: ReactNode }) {
   }), [
     isPlaying,
     isProcessing,
+    isBackgrounded,
     sentences,
     currentIndex,
     currDocPage,
