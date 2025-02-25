@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useState, useRef } from 'react';
+import { Fragment, useState, useRef, useCallback, useEffect } from 'react';
 import { Dialog, DialogPanel, Transition, TransitionChild, Listbox, ListboxButton, ListboxOptions, ListboxOption, Button } from '@headlessui/react';
 import { useConfig, ViewType } from '@/contexts/ConfigContext';
 import { ChevronUpDownIcon, CheckIcon } from '@/components/icons/Icons';
@@ -21,12 +21,32 @@ const viewTypes = [
 ];
 
 export function DocumentSettings({ isOpen, setIsOpen, epub }: DocViewSettingsProps) {
-  const { viewType, skipBlank, epubTheme, updateConfigKey } = useConfig();
+  const { viewType, skipBlank, epubTheme, textExtractionMargin, updateConfigKey } = useConfig();
   const { createFullAudioBook } = useEPUB();
   const [progress, setProgress] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [localMargin, setLocalMargin] = useState(textExtractionMargin);
   const abortControllerRef = useRef<AbortController | null>(null);
   const selectedView = viewTypes.find(v => v.id === viewType) || viewTypes[0];
+
+  //console.log(localMargin, textExtractionMargin);
+
+  // Sync local margin with global state
+  useEffect(() => {
+    setLocalMargin(textExtractionMargin);
+  }, [textExtractionMargin]);
+
+  // Handler for slider change (updates local state only)
+  const handleMarginChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setLocalMargin(Number(event.target.value));
+  }, []);
+
+  // Handler for slider release
+  const handleMarginChangeComplete = useCallback(() => {
+    if (localMargin !== textExtractionMargin) {
+      updateConfigKey('textExtractionMargin', localMargin);
+    }
+  }, [localMargin, textExtractionMargin, updateConfigKey]);
 
   const handleStartGeneration = async () => {
     setIsGenerating(true);
@@ -132,13 +152,38 @@ export function DocumentSettings({ isOpen, setIsOpen, epub }: DocViewSettingsPro
                       </div>
                     )}
                   </div>}
-                  {!epub && <div className="space-y-2">
-                    <label className="block text-sm font-medium text-foreground">Mode</label>
+                  {!epub && <div className="space-y-6">
+                    <div className="mt-4 space-y-2">
+                      <label className="block text-sm font-medium text-foreground">
+                        Text Extraction Margin
+                      </label>
+                      <div className="flex justify-between">
+                        <span className="text-xs">0%</span>
+                        <span className="text-xs font-bold">{Math.round(localMargin * 100)}%</span>
+                        <span className="text-xs">20%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="0.2"
+                        step="0.01"
+                        value={localMargin}
+                        onChange={handleMarginChange}
+                        onMouseUp={handleMarginChangeComplete}
+                        onKeyUp={handleMarginChangeComplete}
+                        onTouchEnd={handleMarginChangeComplete}
+                        className="w-full bg-offbase rounded-lg appearance-none cursor-pointer accent-accent [&::-webkit-slider-runnable-track]:bg-offbase [&::-webkit-slider-runnable-track]:rounded-lg [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-accent [&::-moz-range-track]:bg-offbase [&::-moz-range-track]:rounded-lg [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-accent"
+                      />
+                      <p className="text-xs text-muted">
+                        {"Don't"} include content from outer rim of the page during text extraction (experimental)
+                      </p>
+                    </div>
                     <Listbox
                       value={selectedView}
                       onChange={(newView) => updateConfigKey('viewType', newView.id as ViewType)}
                     >
-                      <div className="relative z-10">
+                      <div className="relative z-10 space-y-2">
+                        <label className="block text-sm font-medium text-foreground">Mode</label>
                         <ListboxButton className="relative w-full cursor-pointer rounded-lg bg-background py-2 pl-3 pr-10 text-left text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-accent transform transition-transform duration-200 ease-in-out hover:scale-[1.01] hover:text-accent">
                           <span className="block truncate">{selectedView.name}</span>
                           <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
@@ -177,14 +222,16 @@ export function DocumentSettings({ isOpen, setIsOpen, epub }: DocViewSettingsPro
                             ))}
                           </ListboxOptions>
                         </Transition>
+                        {selectedView.id === 'scroll' && (
+                          <p className="text-sm text-warning pt-2">
+                            Note: Continuous scroll may perform poorly for larger documents.
+                          </p>
+                        )}
                       </div>
                     </Listbox>
-                    {selectedView.id === 'scroll' && (
-                      <p className="text-sm text-warning pt-2">
-                        Note: Continuous scroll may perform poorly for larger documents.
-                      </p>
-                    )}
+
                   </div>}
+
                   <div className="space-y-2">
                     <label className="flex items-center space-x-2">
                       <input

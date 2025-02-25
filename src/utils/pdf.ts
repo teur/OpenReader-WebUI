@@ -26,14 +26,51 @@ export function convertPDFDataToURL(pdfData: Blob): Promise<string> {
 }
 
 // Text Processing functions
-export async function extractTextFromPDF(pdf: PDFDocumentProxy, pageNumber: number): Promise<string> {
+export async function extractTextFromPDF(pdf: PDFDocumentProxy, pageNumber: number, margin = 0.07): Promise<string> {
   try {
     const page = await pdf.getPage(pageNumber);
     const textContent = await page.getTextContent();
+    
+    // Get page viewport to help with positioning
+    const viewport = page.getViewport({ scale: 1.0 });
+    const pageHeight = viewport.height;
+    const pageWidth = viewport.width;
 
-    const textItems = textContent.items.filter((item): item is TextItem =>
-      'str' in item && 'transform' in item
-    );
+    const textItems = textContent.items.filter((item): item is TextItem => {
+      if (!('str' in item && 'transform' in item)) return false;
+      
+      // Get all transform matrix values
+      const [scaleX, skewX, skewY, scaleY, x, y] = item.transform;
+      
+      // Check for reasonable scale values (not too small or too large)
+      if (Math.abs(scaleX) < 1 || Math.abs(scaleX) > 20) return false;
+      if (Math.abs(scaleY) < 1 || Math.abs(scaleY) > 20) return false;
+      
+      // Check for reasonable skew values (should be close to 0 for normal text)
+      if (Math.abs(skewX) > 0.5 || Math.abs(skewY) > 0.5) return false;
+      
+      // Filter out positions in header/footer areas using configurable margin
+      const topMargin = pageHeight * margin;
+      const bottomMargin = pageHeight * (1 - margin);
+      if (y < topMargin || y > bottomMargin) {
+        return false;
+      }
+
+      // Filter out positions in left/right margin areas
+      const leftMargin = pageWidth * margin;
+      const rightMargin = pageWidth * (1 - margin);
+      if (x < leftMargin || x > rightMargin) {
+        return false;
+      }
+      
+      // Check for reasonable x position values
+      if (x < 0 || x > pageWidth) return false;
+      
+      // Filter out empty strings or strings with only whitespace
+      return item.str.trim().length > 0;
+    });
+
+    console.log('Filtered text items:', textItems);
 
     const tolerance = 2;
     const lines: TextItem[][] = [];

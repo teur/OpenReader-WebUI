@@ -26,6 +26,7 @@ import {
 
 import { indexedDBService } from '@/utils/indexedDB';
 import { useTTS } from '@/contexts/TTSContext';
+import { useConfig } from '@/contexts/ConfigContext';
 import {
   extractTextFromPDF,
   convertPDFDataToURL,
@@ -77,6 +78,7 @@ const PDFContext = createContext<PDFContextType | undefined>(undefined);
  */
 export function PDFProvider({ children }: { children: ReactNode }) {
   const { setText: setTTSText, stop, currDocPageNumber: currDocPage, currDocPages, setCurrDocPages } = useTTS();
+  const { textExtractionMargin } = useConfig();
 
   // Current document state
   const [currDocURL, setCurrDocURL] = useState<string>();
@@ -104,7 +106,7 @@ export function PDFProvider({ children }: { children: ReactNode }) {
   const loadCurrDocText = useCallback(async () => {
     try {
       if (!pdfDocument) return;
-      const text = await extractTextFromPDF(pdfDocument, currDocPage);
+      const text = await extractTextFromPDF(pdfDocument, currDocPage, textExtractionMargin);
       // Only update TTS text if the content has actually changed
       // This prevents unnecessary resets of the sentence index
       if (text !== currDocText || text === '') {
@@ -114,7 +116,7 @@ export function PDFProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Error loading PDF text:', error);
     }
-  }, [pdfDocument, currDocPage, setTTSText, currDocText]);
+  }, [pdfDocument, currDocPage, setTTSText, currDocText, textExtractionMargin]);
 
   /**
    * Effect hook to update document text when the page changes

@@ -15,6 +15,7 @@ type ConfigValues = {
   voice: string;
   skipBlank: boolean;
   epubTheme: boolean;
+  textExtractionMargin: number;
 };
 
 /** Interface defining the configuration context shape and functionality */
@@ -26,6 +27,7 @@ interface ConfigContextType {
   voice: string;
   skipBlank: boolean;
   epubTheme: boolean;
+  textExtractionMargin: number;
   updateConfig: (newConfig: Partial<{ apiKey: string; baseUrl: string; viewType: ViewType }>) => Promise<void>;
   updateConfigKey: <K extends keyof ConfigValues>(key: K, value: ConfigValues[K]) => Promise<void>;
   isLoading: boolean;
@@ -49,6 +51,7 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
   const [voice, setVoice] = useState<string>('af_sarah');
   const [skipBlank, setSkipBlank] = useState<boolean>(true);
   const [epubTheme, setEpubTheme] = useState<boolean>(false);
+  const [textExtractionMargin, setTextExtractionMargin] = useState<number>(0.07);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isDBReady, setIsDBReady] = useState(false);
@@ -68,6 +71,7 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
         const cachedVoice = await getItem('voice');
         const cachedSkipBlank = await getItem('skipBlank');
         const cachedEpubTheme = await getItem('epubTheme');
+        const cachedMargin = await getItem('textExtractionMargin');
 
         // Only set API key and base URL if they were explicitly saved by the user
         if (cachedApiKey) {
@@ -85,6 +89,7 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
         setVoice(cachedVoice || 'af_sarah');
         setSkipBlank(cachedSkipBlank === 'false' ? false : true);
         setEpubTheme(cachedEpubTheme === 'true');
+        setTextExtractionMargin(parseFloat(cachedMargin || '0.07'));
 
         // Only save non-sensitive settings by default
         if (!cachedViewType) {
@@ -95,6 +100,9 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
         }
         if (cachedEpubTheme === null) {
           await setItem('epubTheme', 'false');
+        }
+        if (cachedMargin === null) {
+          await setItem('textExtractionMargin', '0.07');
         }
         
       } catch (error) {
@@ -170,6 +178,9 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
         case 'epubTheme':
           setEpubTheme(value as boolean);
           break;
+        case 'textExtractionMargin':
+          setTextExtractionMargin(value as number);
+          break;
       }
     } catch (error) {
       console.error(`Error updating config key ${key}:`, error);
@@ -186,6 +197,7 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
       voice,
       skipBlank,
       epubTheme,
+      textExtractionMargin,
       updateConfig, 
       updateConfigKey,
       isLoading, 
