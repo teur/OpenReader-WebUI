@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useState, useRef, useCallback, useEffect } from 'react';
+import { Fragment, useState, useRef, useEffect } from 'react';
 import { Dialog, DialogPanel, Transition, TransitionChild, Listbox, ListboxButton, ListboxOptions, ListboxOption, Button } from '@headlessui/react';
 import { useConfig, ViewType } from '@/contexts/ConfigContext';
 import { ChevronUpDownIcon, CheckIcon } from '@/components/icons/Icons';
@@ -21,32 +21,54 @@ const viewTypes = [
 ];
 
 export function DocumentSettings({ isOpen, setIsOpen, epub }: DocViewSettingsProps) {
-  const { viewType, skipBlank, epubTheme, textExtractionMargin, updateConfigKey } = useConfig();
+  const { 
+    viewType, 
+    skipBlank, 
+    epubTheme, 
+    headerMargin,
+    footerMargin,
+    leftMargin,
+    rightMargin,
+    updateConfigKey 
+  } = useConfig();
   const { createFullAudioBook } = useEPUB();
   const [progress, setProgress] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [localMargin, setLocalMargin] = useState(textExtractionMargin);
+  const [localMargins, setLocalMargins] = useState({
+    header: headerMargin,
+    footer: footerMargin,
+    left: leftMargin,
+    right: rightMargin
+  });
   const abortControllerRef = useRef<AbortController | null>(null);
   const selectedView = viewTypes.find(v => v.id === viewType) || viewTypes[0];
 
-  //console.log(localMargin, textExtractionMargin);
-
-  // Sync local margin with global state
+  // Sync local margins with global state
   useEffect(() => {
-    setLocalMargin(textExtractionMargin);
-  }, [textExtractionMargin]);
+    setLocalMargins({
+      header: headerMargin,
+      footer: footerMargin,
+      left: leftMargin,
+      right: rightMargin
+    });
+  }, [headerMargin, footerMargin, leftMargin, rightMargin]);
 
   // Handler for slider change (updates local state only)
-  const handleMarginChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    setLocalMargin(Number(event.target.value));
-  }, []);
+  const handleMarginChange = (margin: keyof typeof localMargins) => (event: React.ChangeEvent<HTMLInputElement>) => {
+    setLocalMargins(prev => ({
+      ...prev,
+      [margin]: Number(event.target.value)
+    }));
+  };
 
   // Handler for slider release
-  const handleMarginChangeComplete = useCallback(() => {
-    if (localMargin !== textExtractionMargin) {
-      updateConfigKey('textExtractionMargin', localMargin);
+  const handleMarginChangeComplete = (margin: keyof typeof localMargins) => () => {
+    const value = localMargins[margin];
+    const configKey = `${margin}Margin`;
+    if (value !== (useConfig)[configKey as keyof typeof useConfig]) {
+      updateConfigKey(configKey as 'headerMargin' | 'footerMargin' | 'leftMargin' | 'rightMargin', value);
     }
-  }, [localMargin, textExtractionMargin, updateConfigKey]);
+  };
 
   const handleStartGeneration = async () => {
     setIsGenerating(true);
@@ -154,28 +176,92 @@ export function DocumentSettings({ isOpen, setIsOpen, epub }: DocViewSettingsPro
                   </div>}
                   {!epub && <div className="space-y-6">
                     <div className="mt-4 space-y-2">
-                      <label className="block text-sm font-medium text-foreground">
-                        Text Extraction Margin
+                      <label className="block text-sm font-medium text-foreground mb-4">
+                        Adjust extraction margins (experimental)
                       </label>
-                      <div className="flex justify-between">
-                        <span className="text-xs">0%</span>
-                        <span className="text-xs font-bold">{Math.round(localMargin * 100)}%</span>
-                        <span className="text-xs">20%</span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {/* Header Margin */}
+                        <div className="space-y-1">
+                          <div className="flex justify-between">
+                            <span className="text-xs">Header</span>
+                            <span className="text-xs font-bold">{Math.round(localMargins.header * 100)}%</span>
+                          </div>
+                          <input
+                            type="range"
+                            min="0"
+                            max="0.2"
+                            step="0.01"
+                            value={localMargins.header}
+                            onChange={handleMarginChange('header')}
+                            onMouseUp={handleMarginChangeComplete('header')}
+                            onKeyUp={handleMarginChangeComplete('header')}
+                            onTouchEnd={handleMarginChangeComplete('header')}
+                            className="w-full bg-offbase rounded-lg appearance-none cursor-pointer accent-accent [&::-webkit-slider-runnable-track]:bg-offbase [&::-webkit-slider-runnable-track]:rounded-lg [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-accent [&::-moz-range-track]:bg-offbase [&::-moz-range-track]:rounded-lg [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-accent"
+                          />
+                        </div>
+                        
+                        {/* Footer Margin */}
+                        <div className="space-y-1">
+                          <div className="flex justify-between">
+                            <span className="text-xs">Footer</span>
+                            <span className="text-xs font-bold">{Math.round(localMargins.footer * 100)}%</span>
+                          </div>
+                          <input
+                            type="range"
+                            min="0"
+                            max="0.2"
+                            step="0.01"
+                            value={localMargins.footer}
+                            onChange={handleMarginChange('footer')}
+                            onMouseUp={handleMarginChangeComplete('footer')}
+                            onKeyUp={handleMarginChangeComplete('footer')}
+                            onTouchEnd={handleMarginChangeComplete('footer')}
+                            className="w-full bg-offbase rounded-lg appearance-none cursor-pointer accent-accent [&::-webkit-slider-runnable-track]:bg-offbase [&::-webkit-slider-runnable-track]:rounded-lg [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-accent [&::-moz-range-track]:bg-offbase [&::-moz-range-track]:rounded-lg [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-accent"
+                          />
+                        </div>
+
+                        {/* Left Margin */}
+                        <div className="space-y-1">
+                          <div className="flex justify-between">
+                            <span className="text-xs">Left</span>
+                            <span className="text-xs font-bold">{Math.round(localMargins.left * 100)}%</span>
+                          </div>
+                          <input
+                            type="range"
+                            min="0"
+                            max="0.2"
+                            step="0.01"
+                            value={localMargins.left}
+                            onChange={handleMarginChange('left')}
+                            onMouseUp={handleMarginChangeComplete('left')}
+                            onKeyUp={handleMarginChangeComplete('left')}
+                            onTouchEnd={handleMarginChangeComplete('left')}
+                            className="w-full bg-offbase rounded-lg appearance-none cursor-pointer accent-accent [&::-webkit-slider-runnable-track]:bg-offbase [&::-webkit-slider-runnable-track]:rounded-lg [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-accent [&::-moz-range-track]:bg-offbase [&::-moz-range-track]:rounded-lg [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-accent"
+                          />
+                        </div>
+
+                        {/* Right Margin */}
+                        <div className="space-y-1">
+                          <div className="flex justify-between">
+                            <span className="text-xs">Right</span>
+                            <span className="text-xs font-bold">{Math.round(localMargins.right * 100)}%</span>
+                          </div>
+                          <input
+                            type="range"
+                            min="0"
+                            max="0.2"
+                            step="0.01"
+                            value={localMargins.right}
+                            onChange={handleMarginChange('right')}
+                            onMouseUp={handleMarginChangeComplete('right')}
+                            onKeyUp={handleMarginChangeComplete('right')}
+                            onTouchEnd={handleMarginChangeComplete('right')}
+                            className="w-full bg-offbase rounded-lg appearance-none cursor-pointer accent-accent [&::-webkit-slider-runnable-track]:bg-offbase [&::-webkit-slider-runnable-track]:rounded-lg [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-accent [&::-moz-range-track]:bg-offbase [&::-moz-range-track]:rounded-lg [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-accent"
+                          />
+                        </div>
                       </div>
-                      <input
-                        type="range"
-                        min="0"
-                        max="0.2"
-                        step="0.01"
-                        value={localMargin}
-                        onChange={handleMarginChange}
-                        onMouseUp={handleMarginChangeComplete}
-                        onKeyUp={handleMarginChangeComplete}
-                        onTouchEnd={handleMarginChangeComplete}
-                        className="w-full bg-offbase rounded-lg appearance-none cursor-pointer accent-accent [&::-webkit-slider-runnable-track]:bg-offbase [&::-webkit-slider-runnable-track]:rounded-lg [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-accent [&::-moz-range-track]:bg-offbase [&::-moz-range-track]:rounded-lg [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-accent"
-                      />
-                      <p className="text-xs text-muted">
-                        {"Don't"} include content from outer rim of the page during text extraction (experimental)
+                      <p className="text-xs text-muted mt-2">
+                        Adjust margins to exclude content from edges of the page during text extraction
                       </p>
                     </div>
                     <Listbox

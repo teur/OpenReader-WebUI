@@ -233,8 +233,8 @@ export function EPUBProvider({ children }: { children: ReactNode }) {
 
           audioChunks.push(audioBuffer);
 
-          // Add a small pause between sections (500ms of silence)
-          const silenceBuffer = new ArrayBuffer(24000);
+          // Add a small pause between sections (1s of silence)
+          const silenceBuffer = new ArrayBuffer(48000);
           audioChunks.push(silenceBuffer);
 
         } catch (error) {
