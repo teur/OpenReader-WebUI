@@ -1,9 +1,10 @@
 'use client';
 
-import { Fragment } from 'react';
+import { Fragment, useState, useRef } from 'react';
 import { Dialog, DialogPanel, DialogTitle, Transition, TransitionChild, Listbox, ListboxButton, ListboxOptions, ListboxOption, Button } from '@headlessui/react';
 import { useConfig, ViewType } from '@/contexts/ConfigContext';
 import { ChevronUpDownIcon, CheckIcon } from '@/components/icons/Icons';
+import { useEPUB } from '@/contexts/EPUBContext';
 
 interface DocViewSettingsProps {
   isOpen: boolean;
@@ -19,7 +20,51 @@ const viewTypes = [
 
 export function DocumentSettings({ isOpen, setIsOpen, epub }: DocViewSettingsProps) {
   const { viewType, skipBlank, epubTheme, updateConfigKey } = useConfig();
+  const { createFullAudioBook } = useEPUB();
+  const [progress, setProgress] = useState(0);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const selectedView = viewTypes.find(v => v.id === viewType) || viewTypes[0];
+
+  const handleStartGeneration = async () => {
+    setIsGenerating(true);
+    setProgress(0);
+    abortControllerRef.current = new AbortController();
+
+    try {
+      const audioBuffer = await createFullAudioBook(
+        (progress) => setProgress(progress),
+        abortControllerRef.current.signal
+      );
+
+      // Create and trigger download
+      const blob = new Blob([audioBuffer], { type: 'audio/mp3' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'audiobook.mp3';
+      document.body.appendChild(a);
+      a.click();
+
+      // Clean up
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 100);
+    } catch (error) {
+      console.error('Error generating audiobook:', error);
+    } finally {
+      setIsGenerating(false);
+      setProgress(0);
+      abortControllerRef.current = null;
+    }
+  };
+
+  const handleCancel = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+  };
 
   return (
     <Transition appear show={isOpen} as={Fragment}>
@@ -58,8 +103,8 @@ export function DocumentSettings({ isOpen, setIsOpen, epub }: DocViewSettingsPro
                   <div className="space-y-4">
                     {!epub && <div className="space-y-2">
                       <label className="block text-sm font-medium text-foreground">Mode</label>
-                      <Listbox 
-                        value={selectedView} 
+                      <Listbox
+                        value={selectedView}
                         onChange={(newView) => updateConfigKey('viewType', newView.id as ViewType)}
                       >
                         <div className="relative z-10">
@@ -80,8 +125,7 @@ export function DocumentSettings({ isOpen, setIsOpen, epub }: DocViewSettingsPro
                                 <ListboxOption
                                   key={view.id}
                                   className={({ active }) =>
-                                    `relative cursor-pointer select-none py-2 pl-10 pr-4 ${
-                                      active ? 'bg-accent/10 text-accent' : 'text-foreground'
+                                    `relative cursor-pointer select-none py-2 pl-10 pr-4 ${active ? 'bg-accent/10 text-accent' : 'text-foreground'
                                     }`
                                   }
                                   value={view}
@@ -125,20 +169,58 @@ export function DocumentSettings({ isOpen, setIsOpen, epub }: DocViewSettingsPro
                       </p>
                     </div>
                     {epub && (
-                      <div className="space-y-2">
-                        <label className="flex items-center space-x-2">
-                          <input
-                            type="checkbox"
-                            checked={epubTheme}
-                            onChange={(e) => updateConfigKey('epubTheme', e.target.checked)}
-                            className="form-checkbox h-4 w-4 text-accent rounded border-muted"
-                          />
-                          <span className="text-sm font-medium text-foreground">Use theme (experimental)</span>
-                        </label>
-                        <p className="text-sm text-muted pl-6">
-                          Apply the current app theme to the EPUB viewer
-                        </p>
-                      </div>
+                      <>
+                        <div className="space-y-2">
+                          <label className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              checked={epubTheme}
+                              onChange={(e) => updateConfigKey('epubTheme', e.target.checked)}
+                              className="form-checkbox h-4 w-4 text-accent rounded border-muted"
+                            />
+                            <span className="text-sm font-medium text-foreground">Use theme (experimental)</span>
+                          </label>
+                          <p className="text-sm text-muted pl-6">
+                            Apply the current app theme to the EPUB viewer
+                          </p>
+                        </div>
+                        <div className="mt-4 space-y-2">
+                          {!isGenerating ? (
+                            <Button
+                              type="button"
+                              className="w-full inline-flex justify-center rounded-lg bg-accent px-4 py-2 text-sm 
+                                       font-medium text-background hover:opacity-95 focus:outline-none 
+                                       focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2
+                                       transform transition-transform duration-200 ease-in-out hover:scale-[1.04]"
+                              onClick={handleStartGeneration}
+                            >
+                              Export to Audiobook (.mp3)
+                            </Button>
+                          ) : (
+                            <div className="space-y-2">
+                              <div className="w-full bg-background rounded-lg overflow-hidden">
+                                <div
+                                  className="h-2 bg-accent transition-all duration-300 ease-in-out"
+                                  style={{ width: `${progress}%` }}
+                                />
+                              </div>
+                              <div className="flex justify-between items-center text-sm text-muted">
+                                <span>{Math.round(progress)}% complete</span>
+                                <Button
+                                  type="button"
+                                  className="inline-flex justify-center rounded-lg px-2.5 py-1 text-sm 
+                                    font-medium text-foreground hover:text-accent focus:outline-none 
+                                    focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2
+                                    transform transition-transform duration-200 ease-in-out hover:scale-[1.02]"
+                                  onClick={handleCancel}
+                                >
+                                  Cancel and download
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </>
                     )}
                   </div>
                 </div>
