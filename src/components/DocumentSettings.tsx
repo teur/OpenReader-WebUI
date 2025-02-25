@@ -1,10 +1,11 @@
 'use client';
 
-import { Fragment, useState, useRef, useEffect } from 'react';
+import { Fragment, useState, useRef, useCallback, useEffect } from 'react';
 import { Dialog, DialogPanel, Transition, TransitionChild, Listbox, ListboxButton, ListboxOptions, ListboxOption, Button } from '@headlessui/react';
 import { useConfig, ViewType } from '@/contexts/ConfigContext';
 import { ChevronUpDownIcon, CheckIcon } from '@/components/icons/Icons';
 import { useEPUB } from '@/contexts/EPUBContext';
+import { usePDF } from '@/contexts/PDFContext';
 
 const isDev = process.env.NEXT_PUBLIC_NODE_ENV !== 'production' || process.env.NODE_ENV == null;
 
@@ -32,6 +33,7 @@ export function DocumentSettings({ isOpen, setIsOpen, epub }: DocViewSettingsPro
     updateConfigKey 
   } = useConfig();
   const { createFullAudioBook } = useEPUB();
+  const { createFullAudioBook: createPDFAudioBook } = usePDF();
   const [progress, setProgress] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
   const [localMargins, setLocalMargins] = useState({
@@ -70,13 +72,16 @@ export function DocumentSettings({ isOpen, setIsOpen, epub }: DocViewSettingsPro
     }
   };
 
-  const handleStartGeneration = async () => {
+  const handleStartGeneration = useCallback(async () => {
     setIsGenerating(true);
     setProgress(0);
     abortControllerRef.current = new AbortController();
 
     try {
-      const audioBuffer = await createFullAudioBook(
+      const audioBuffer = epub ? await createFullAudioBook(
+        (progress) => setProgress(progress),
+        abortControllerRef.current.signal
+      ) : await createPDFAudioBook(
         (progress) => setProgress(progress),
         abortControllerRef.current.signal
       );
@@ -102,7 +107,7 @@ export function DocumentSettings({ isOpen, setIsOpen, epub }: DocViewSettingsPro
       setProgress(0);
       abortControllerRef.current = null;
     }
-  };
+  }, [createFullAudioBook, createPDFAudioBook, epub]);
 
   const handleCancel = () => {
     if (abortControllerRef.current) {
@@ -148,7 +153,7 @@ export function DocumentSettings({ isOpen, setIsOpen, epub }: DocViewSettingsPro
                                        transform transition-transform duration-200 ease-in-out hover:scale-[1.04]"
                         onClick={handleStartGeneration}
                       >
-                        Export to Audiobook (experimental)
+                        Export to audiobook.mp3 (experimental)
                       </Button>
                     ) : (
                       <div className="space-y-2">
@@ -177,7 +182,7 @@ export function DocumentSettings({ isOpen, setIsOpen, epub }: DocViewSettingsPro
                   {!epub && <div className="space-y-6">
                     <div className="mt-4 space-y-2">
                       <label className="block text-sm font-medium text-foreground mb-4">
-                        Adjust extraction margins (experimental)
+                        Text extraction margins
                       </label>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {/* Header Margin */}
@@ -261,7 +266,7 @@ export function DocumentSettings({ isOpen, setIsOpen, epub }: DocViewSettingsPro
                         </div>
                       </div>
                       <p className="text-xs text-muted mt-2">
-                        Adjust margins to exclude content from edges of the page during text extraction
+                        Adjust margins to exclude content from edges of the page during text extraction (experimental)
                       </p>
                     </div>
                     <Listbox

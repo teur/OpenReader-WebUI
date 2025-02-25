@@ -36,6 +36,7 @@ import {
 } from '@/utils/pdf';
 
 import type { PDFDocumentProxy } from 'pdfjs-dist';
+import { useParams } from 'next/navigation';
 
 /**
  * Interface defining all available methods and properties in the PDF context
@@ -62,6 +63,7 @@ interface PDFContextType {
     stopAndPlayFromIndex: (index: number) => void,
     isProcessing: boolean
   ) => void;
+  createFullAudioBook: (onProgress: (progress: number) => void, signal?: AbortSignal) => Promise<ArrayBuffer>;
 }
 
 // Create the context
@@ -88,7 +90,11 @@ export function PDFProvider({ children }: { children: ReactNode }) {
     headerMargin,
     footerMargin,
     leftMargin,
-    rightMargin
+    rightMargin,
+    apiKey,
+    baseUrl,
+    voiceSpeed,
+    voice,
   } = useConfig();
 
   // Current document state
@@ -177,6 +183,115 @@ export function PDFProvider({ children }: { children: ReactNode }) {
     stop();
   }, [setCurrDocPages, stop]);
 
+  /**
+   * Creates a complete audiobook by processing all PDF pages through NLP and TTS
+   * @param {Function} onProgress - Callback for progress updates
+   * @param {AbortSignal} signal - Optional signal for cancellation
+   * @returns {Promise<ArrayBuffer>} The complete audiobook as an ArrayBuffer
+   */
+  const createFullAudioBook = useCallback(async (
+    onProgress: (progress: number) => void,
+    signal?: AbortSignal
+  ): Promise<ArrayBuffer> => {
+    try {
+      if (!pdfDocument) {
+        throw new Error('No PDF document loaded');
+      }
+
+      // Create an array to store all audio chunks
+      const audioChunks: ArrayBuffer[] = [];
+      const totalPages = pdfDocument.numPages;
+      let processedPages = 0;
+
+      // Process each page of the PDF
+      for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+        // Check for cancellation
+        if (signal?.aborted) {
+          const partialBuffer = combineAudioChunks(audioChunks);
+          return partialBuffer;
+        }
+
+        // Extract text from the current page
+        const text = await extractTextFromPDF(pdfDocument, pageNum, {
+          header: headerMargin,
+          footer: footerMargin,
+          left: leftMargin,
+          right: rightMargin
+        });
+
+        if (!text.trim()) {
+          processedPages++;
+          continue;
+        }
+
+        try {
+          const ttsResponse = await fetch('/api/tts', {
+            method: 'POST',
+            headers: {
+              'x-openai-key': apiKey,
+              'x-openai-base-url': baseUrl,
+            },
+            body: JSON.stringify({
+              text: text.trim(),
+              voice: voice,
+              speed: voiceSpeed,
+            }),
+            signal
+          });
+
+          if (!ttsResponse.ok) {
+            throw new Error(`TTS processing failed with status ${ttsResponse.status}`);
+          }
+
+          const audioBuffer = await ttsResponse.arrayBuffer();
+          if (audioBuffer.byteLength === 0) {
+            throw new Error('Received empty audio buffer from TTS');
+          }
+
+          audioChunks.push(audioBuffer);
+
+          // Add a small pause between pages (1s of silence)
+          const silenceBuffer = new ArrayBuffer(48000);
+          audioChunks.push(silenceBuffer);
+
+        } catch (error) {
+          if (error instanceof Error && error.name === 'AbortError') {
+            console.log('TTS request aborted');
+            const partialBuffer = combineAudioChunks(audioChunks);
+            return partialBuffer;
+          }
+          console.error('Error processing page:', error);
+        }
+
+        processedPages++;
+        onProgress((processedPages / totalPages) * 100);
+      }
+
+      if (audioChunks.length === 0) {
+        throw new Error('No audio was generated from the PDF content');
+      }
+
+      return combineAudioChunks(audioChunks);
+    } catch (error) {
+      console.error('Error creating audiobook:', error);
+      throw error;
+    }
+  }, [pdfDocument, headerMargin, footerMargin, leftMargin, rightMargin, apiKey, baseUrl, voice, voiceSpeed]);
+
+  // Helper function to combine audio chunks
+  const combineAudioChunks = (audioChunks: ArrayBuffer[]): ArrayBuffer => {
+    const totalLength = audioChunks.reduce((acc, chunk) => acc + chunk.byteLength, 0);
+    const combinedBuffer = new Uint8Array(totalLength);
+
+    let offset = 0;
+    for (const chunk of audioChunks) {
+      combinedBuffer.set(new Uint8Array(chunk), offset);
+      offset += chunk.byteLength;
+    }
+
+    return combinedBuffer.buffer;
+  };
+
   // Context value memoization
   const contextValue = useMemo(
     () => ({
@@ -192,6 +307,7 @@ export function PDFProvider({ children }: { children: ReactNode }) {
       clearHighlights,
       handleTextClick,
       pdfDocument,
+      createFullAudioBook,
     }),
     [
       onDocumentLoadSuccess,
@@ -203,6 +319,7 @@ export function PDFProvider({ children }: { children: ReactNode }) {
       currDocText,
       clearCurrDoc,
       pdfDocument,
+      createFullAudioBook,
     ]
   );
 
