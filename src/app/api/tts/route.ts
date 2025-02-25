@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
     // Initialize OpenAI client with abort signal
     const openai = new OpenAI({
       apiKey: openApiKey,
-      baseURL: openApiBaseUrl || 'https://api.openai.com/v1',
+      baseURL: openApiBaseUrl,
     });
 
     // Request audio from OpenAI and pass along the abort signal
@@ -33,15 +33,15 @@ export async function POST(req: NextRequest) {
 
     // Get the audio data as array buffer
     // This will also be aborted if the client cancels
-    const arrayBuffer = await response.arrayBuffer();
+    const stream = response.body;
 
     // Return audio data with appropriate headers
-    return new NextResponse(arrayBuffer);
+    return new NextResponse(stream);
   } catch (error) {
     // Check if this was an abort error
     if (error instanceof Error && error.name === 'AbortError') {
       console.log('TTS request aborted by client');
-      return new Response(null, { status: 499 }); // Use 499 status for client closed request
+      return new NextResponse(null, { status: 499 }); // Use 499 status for client closed request
     }
 
     console.error('Error generating TTS:', error);

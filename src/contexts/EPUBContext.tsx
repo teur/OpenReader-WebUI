@@ -191,123 +191,63 @@ export function EPUBProvider({ children }: { children: ReactNode }) {
 
       // Create an array to store all audio chunks
       const audioChunks: ArrayBuffer[] = [];
-      let processedSentences = 0;
-      let totalSentences = 0;
-
-      // First, count total sentences
-      for (const text of textArray) {
-        if (!text.trim()) continue;
-
-        const nlpResponse = await fetch('/api/nlp', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text }),
-        });
-
-        if (!nlpResponse.ok) {
-          throw new Error(`NLP processing failed with status ${nlpResponse.status}`);
-        }
-
-        const nlpData = await nlpResponse.json();
-        const sentences = nlpData?.sentences;
-        if (sentences && Array.isArray(sentences)) {
-          totalSentences += sentences.length;
-        }
-      }
+      let processedSections = 0;
+      const totalSections = textArray.length;
 
       // Process each section of text
       for (const text of textArray) {
-        if (!text.trim()) continue;
-
         // Check for cancellation
         if (signal?.aborted) {
-          // If cancelled, return what we have so far
           const partialBuffer = combineAudioChunks(audioChunks);
           return partialBuffer;
         }
 
-        const nlpResponse = await fetch('/api/nlp', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text }),
-        });
-
-        if (!nlpResponse.ok) {
-          throw new Error(`NLP processing failed with status ${nlpResponse.status}`);
-        }
-
-        const nlpData = await nlpResponse.json();
-        const sentences = nlpData?.sentences;
-
-        if (!sentences || !Array.isArray(sentences) || sentences.length === 0) {
-          console.warn('No valid sentences returned from NLP, processing text block as single sentence');
+        if (!text.trim()) {
+          processedSections++;
           continue;
         }
 
-        // Process each sentence through TTS with retries
-        for (const sentence of sentences) {
-          // Check for cancellation
-          if (signal?.aborted) {
+        try {
+          const ttsResponse = await fetch('/api/tts', {
+            method: 'POST',
+            headers: {
+              'x-openai-key': apiKey,
+              'x-openai-base-url': baseUrl,
+            },
+            body: JSON.stringify({
+              text: text.trim(),
+              voice: voice,
+              speed: voiceSpeed,
+            }),
+            signal // Pass the AbortSignal to the fetch request
+          });
+
+          if (!ttsResponse.ok) {
+            throw new Error(`TTS processing failed with status ${ttsResponse.status}`);
+          }
+
+          const audioBuffer = await ttsResponse.arrayBuffer();
+          if (audioBuffer.byteLength === 0) {
+            throw new Error('Received empty audio buffer from TTS');
+          }
+
+          audioChunks.push(audioBuffer);
+
+          // Add a small pause between sections (500ms of silence)
+          const silenceBuffer = new ArrayBuffer(24000);
+          audioChunks.push(silenceBuffer);
+
+        } catch (error) {
+          if (error instanceof Error && error.name === 'AbortError') {
+            console.log('TTS request aborted');
             const partialBuffer = combineAudioChunks(audioChunks);
             return partialBuffer;
           }
-
-          if (!sentence || typeof sentence !== 'string' || !sentence.trim()) {
-            processedSentences++;
-            continue;
-          }
-
-          let retryCount = 0;
-          const maxRetries = 2;
-          let success = false;
-
-          while (retryCount <= maxRetries && !success) {
-            try {
-              const ttsResponse = await fetch('/api/tts', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'x-openai-key': apiKey || '',
-                  'x-openai-base-url': baseUrl || 'https://api.openai.com/v1',
-                },
-                body: JSON.stringify({
-                  text: sentence.trim(),
-                  voice: voice,
-                  speed: voiceSpeed,
-                }),
-              });
-
-              if (!ttsResponse.ok) {
-                throw new Error(`TTS processing failed with status ${ttsResponse.status}`);
-              }
-
-              const audioBuffer = await ttsResponse.arrayBuffer();
-              if (audioBuffer.byteLength === 0) {
-                throw new Error('Received empty audio buffer from TTS');
-              }
-
-              audioChunks.push(audioBuffer);
-              success = true;
-            } catch (error) {
-              retryCount++;
-              if (retryCount <= maxRetries) {
-                console.warn(`TTS generation failed, attempt ${retryCount} of ${maxRetries}:`, error);
-                await new Promise(resolve => setTimeout(resolve, 1000));
-              } else {
-                console.error(`Failed to generate audio after ${maxRetries} retries, skipping sentence:`, sentence);
-              }
-            }
-          }
-
-          if (success) {
-            // Add a small pause between sentences (500ms of silence)
-            const silenceBuffer = new ArrayBuffer(24000);
-            audioChunks.push(silenceBuffer);
-          }
-
-          processedSentences++;
-          onProgress((processedSentences / totalSentences) * 100);
+          console.error('Error processing section:', error);
         }
+
+        processedSections++;
+        onProgress((processedSections / totalSections) * 100);
       }
 
       if (audioChunks.length === 0) {

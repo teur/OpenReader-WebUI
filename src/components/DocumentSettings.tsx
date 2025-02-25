@@ -1,10 +1,12 @@
 'use client';
 
 import { Fragment, useState, useRef } from 'react';
-import { Dialog, DialogPanel, DialogTitle, Transition, TransitionChild, Listbox, ListboxButton, ListboxOptions, ListboxOption, Button } from '@headlessui/react';
+import { Dialog, DialogPanel, Transition, TransitionChild, Listbox, ListboxButton, ListboxOptions, ListboxOption, Button } from '@headlessui/react';
 import { useConfig, ViewType } from '@/contexts/ConfigContext';
 import { ChevronUpDownIcon, CheckIcon } from '@/components/icons/Icons';
 import { useEPUB } from '@/contexts/EPUBContext';
+
+const isDev = process.env.NEXT_PUBLIC_NODE_ENV !== 'production' || process.env.NODE_ENV == null;
 
 interface DocViewSettingsProps {
   isOpen: boolean;
@@ -93,136 +95,126 @@ export function DocumentSettings({ isOpen, setIsOpen, epub }: DocViewSettingsPro
               leaveTo="opacity-0 scale-95"
             >
               <DialogPanel className="w-full max-w-md transform rounded-2xl bg-base p-6 text-left align-middle shadow-xl transition-all">
-                <DialogTitle
-                  as="h3"
-                  className="text-lg font-semibold leading-6 text-foreground"
-                >
-                  View Settings
-                </DialogTitle>
-                <div className="mt-4">
-                  <div className="space-y-4">
-                    {!epub && <div className="space-y-2">
-                      <label className="block text-sm font-medium text-foreground">Mode</label>
-                      <Listbox
-                        value={selectedView}
-                        onChange={(newView) => updateConfigKey('viewType', newView.id as ViewType)}
+                <div className="space-y-4">
+                  {isDev && <div className="space-y-2 pb-2">
+                    {!isGenerating ? (
+                      <Button
+                        type="button"
+                        className="w-full inline-flex justify-center rounded-lg bg-accent px-4 py-2 text-sm 
+                                       font-medium text-background hover:opacity-95 focus:outline-none 
+                                       focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2
+                                       transform transition-transform duration-200 ease-in-out hover:scale-[1.04]"
+                        onClick={handleStartGeneration}
                       >
-                        <div className="relative z-10">
-                          <ListboxButton className="relative w-full cursor-pointer rounded-lg bg-background py-2 pl-3 pr-10 text-left text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-accent transform transition-transform duration-200 ease-in-out hover:scale-[1.01] hover:text-accent">
-                            <span className="block truncate">{selectedView.name}</span>
-                            <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-                              <ChevronUpDownIcon className="h-5 w-5 text-muted" />
-                            </span>
-                          </ListboxButton>
-                          <Transition
-                            as={Fragment}
-                            leave="transition ease-in duration-100"
-                            leaveFrom="opacity-100"
-                            leaveTo="opacity-0"
-                          >
-                            <ListboxOptions className="absolute mt-1 max-h-60 w-full overflow-auto rounded-md bg-background py-1 shadow-lg ring-1 ring-black/5 focus:outline-none">
-                              {viewTypes.map((view) => (
-                                <ListboxOption
-                                  key={view.id}
-                                  className={({ active }) =>
-                                    `relative cursor-pointer select-none py-2 pl-10 pr-4 ${active ? 'bg-accent/10 text-accent' : 'text-foreground'
-                                    }`
-                                  }
-                                  value={view}
-                                >
-                                  {({ selected }) => (
-                                    <>
-                                      <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>
-                                        {view.name}
-                                      </span>
-                                      {selected ? (
-                                        <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-accent">
-                                          <CheckIcon className="h-5 w-5" />
-                                        </span>
-                                      ) : null}
-                                    </>
-                                  )}
-                                </ListboxOption>
-                              ))}
-                            </ListboxOptions>
-                          </Transition>
+                        Export to Audiobook (experimental)
+                      </Button>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="w-full bg-background rounded-lg overflow-hidden">
+                          <div
+                            className="h-2 bg-accent transition-all duration-300 ease-in-out"
+                            style={{ width: `${progress}%` }}
+                          />
                         </div>
-                      </Listbox>
-                      {selectedView.id === 'scroll' && (
-                        <p className="text-sm text-warning pt-2">
-                          Note: Continuous scroll may perform poorly for larger documents.
-                        </p>
-                      )}
-                    </div>}
+                        <div className="flex justify-between items-center text-sm text-muted">
+                          <span>{Math.round(progress)}% complete</span>
+                          <Button
+                            type="button"
+                            className="inline-flex justify-center rounded-lg px-2.5 py-1 text-sm 
+                                    font-medium text-foreground hover:text-accent focus:outline-none 
+                                    focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2
+                                    transform transition-transform duration-200 ease-in-out hover:scale-[1.02]"
+                            onClick={handleCancel}
+                          >
+                            Cancel and download
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>}
+                  {!epub && <div className="space-y-2">
+                    <label className="block text-sm font-medium text-foreground">Mode</label>
+                    <Listbox
+                      value={selectedView}
+                      onChange={(newView) => updateConfigKey('viewType', newView.id as ViewType)}
+                    >
+                      <div className="relative z-10">
+                        <ListboxButton className="relative w-full cursor-pointer rounded-lg bg-background py-2 pl-3 pr-10 text-left text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-accent transform transition-transform duration-200 ease-in-out hover:scale-[1.01] hover:text-accent">
+                          <span className="block truncate">{selectedView.name}</span>
+                          <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                            <ChevronUpDownIcon className="h-5 w-5 text-muted" />
+                          </span>
+                        </ListboxButton>
+                        <Transition
+                          as={Fragment}
+                          leave="transition ease-in duration-100"
+                          leaveFrom="opacity-100"
+                          leaveTo="opacity-0"
+                        >
+                          <ListboxOptions className="absolute mt-1 max-h-60 w-full overflow-auto rounded-md bg-background py-1 shadow-lg ring-1 ring-black/5 focus:outline-none">
+                            {viewTypes.map((view) => (
+                              <ListboxOption
+                                key={view.id}
+                                className={({ active }) =>
+                                  `relative cursor-pointer select-none py-2 pl-10 pr-4 ${active ? 'bg-accent/10 text-accent' : 'text-foreground'
+                                  }`
+                                }
+                                value={view}
+                              >
+                                {({ selected }) => (
+                                  <>
+                                    <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>
+                                      {view.name}
+                                    </span>
+                                    {selected ? (
+                                      <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-accent">
+                                        <CheckIcon className="h-5 w-5" />
+                                      </span>
+                                    ) : null}
+                                  </>
+                                )}
+                              </ListboxOption>
+                            ))}
+                          </ListboxOptions>
+                        </Transition>
+                      </div>
+                    </Listbox>
+                    {selectedView.id === 'scroll' && (
+                      <p className="text-sm text-warning pt-2">
+                        Note: Continuous scroll may perform poorly for larger documents.
+                      </p>
+                    )}
+                  </div>}
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        checked={skipBlank}
+                        onChange={(e) => updateConfigKey('skipBlank', e.target.checked)}
+                        className="form-checkbox h-4 w-4 text-accent rounded border-muted"
+                      />
+                      <span className="text-sm font-medium text-foreground">Skip blank pages</span>
+                    </label>
+                    <p className="text-sm text-muted pl-6">
+                      Automatically skip pages with no text content
+                    </p>
+                  </div>
+                  {epub && (
                     <div className="space-y-2">
                       <label className="flex items-center space-x-2">
                         <input
                           type="checkbox"
-                          checked={skipBlank}
-                          onChange={(e) => updateConfigKey('skipBlank', e.target.checked)}
+                          checked={epubTheme}
+                          onChange={(e) => updateConfigKey('epubTheme', e.target.checked)}
                           className="form-checkbox h-4 w-4 text-accent rounded border-muted"
                         />
-                        <span className="text-sm font-medium text-foreground">Skip blank pages</span>
+                        <span className="text-sm font-medium text-foreground">Use theme (experimental)</span>
                       </label>
                       <p className="text-sm text-muted pl-6">
-                        Automatically skip pages with no text content
+                        Apply the current app theme to the EPUB viewer
                       </p>
                     </div>
-                    {epub && (
-                      <>
-                        <div className="space-y-2">
-                          <label className="flex items-center space-x-2">
-                            <input
-                              type="checkbox"
-                              checked={epubTheme}
-                              onChange={(e) => updateConfigKey('epubTheme', e.target.checked)}
-                              className="form-checkbox h-4 w-4 text-accent rounded border-muted"
-                            />
-                            <span className="text-sm font-medium text-foreground">Use theme (experimental)</span>
-                          </label>
-                          <p className="text-sm text-muted pl-6">
-                            Apply the current app theme to the EPUB viewer
-                          </p>
-                        </div>
-                        <div className="mt-4 space-y-2">
-                          {!isGenerating ? (
-                            <Button
-                              type="button"
-                              className="w-full inline-flex justify-center rounded-lg bg-accent px-4 py-2 text-sm 
-                                       font-medium text-background hover:opacity-95 focus:outline-none 
-                                       focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2
-                                       transform transition-transform duration-200 ease-in-out hover:scale-[1.04]"
-                              onClick={handleStartGeneration}
-                            >
-                              Export to Audiobook (.mp3)
-                            </Button>
-                          ) : (
-                            <div className="space-y-2">
-                              <div className="w-full bg-background rounded-lg overflow-hidden">
-                                <div
-                                  className="h-2 bg-accent transition-all duration-300 ease-in-out"
-                                  style={{ width: `${progress}%` }}
-                                />
-                              </div>
-                              <div className="flex justify-between items-center text-sm text-muted">
-                                <span>{Math.round(progress)}% complete</span>
-                                <Button
-                                  type="button"
-                                  className="inline-flex justify-center rounded-lg px-2.5 py-1 text-sm 
-                                    font-medium text-foreground hover:text-accent focus:outline-none 
-                                    focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2
-                                    transform transition-transform duration-200 ease-in-out hover:scale-[1.02]"
-                                  onClick={handleCancel}
-                                >
-                                  Cancel and download
-                                </Button>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </>
-                    )}
-                  </div>
+                  )}
                 </div>
 
                 <div className="mt-3 flex justify-end">
