@@ -5,9 +5,8 @@
 [![GitHub Last Commit](https://img.shields.io/github/last-commit/richardr1126/OpenReader-WebUI)](../../commits)
 [![GitHub Release](https://img.shields.io/github/v/release/richardr1126/OpenReader-WebUI)](../../releases)
 
-[![Docker Image Size](https://img.shields.io/docker/image-size/richardr1126/openreader-webui/latest)](https://hub.docker.com/r/richardr1126/openreader-webui)
-[![Docker Image Version](https://img.shields.io/docker/v/richardr1126/openreader-webui/latest?label=latest%20docker)](https://hub.docker.com/r/richardr1126/openreader-webui/tags)
-[![Docker Hub](https://img.shields.io/docker/pulls/richardr1126/openreader-webui)](https://hub.docker.com/r/richardr1126/openreader-webui)
+[![Container Image Size](https://img.shields.io/badge/dynamic/json?color=blue&label=image%20size&query=size&url=https://api.github.com/repos/richardr1126/OpenReader-WebUI/packages/container/openreader-webui/versions)](https://github.com/richardr1126/OpenReader-WebUI/pkgs/container/openreader-webui)
+[![Container Version](https://img.shields.io/github/v/release/richardr1126/OpenReader-WebUI?label=container)](https://github.com/richardr1126/OpenReader-WebUI/pkgs/container/openreader-webui)
 
 
 # OpenReader WebUI 📄🔊
@@ -42,7 +41,7 @@ https://github.com/user-attachments/assets/262b9a01-c608-4fee-893c-9461dd48c99b
 docker run --name openreader-webui \
   -p 3003:3003 \
   -v openreader_docstore:/app/docstore \
-  richardr1126/openreader-webui:latest
+  ghcr.io/openreader-webui:latest
 ```
 
 (Optionally): Set the TTS `API_BASE` URL and/or `API_KEY` to be default for all devices
@@ -51,7 +50,7 @@ docker run --name openreader-webui \
   -e API_BASE=http://host.docker.internal:8880/v1 \
   -p 3003:3003 \
   -v openreader_docstore:/app/docstore \
-  richardr1126/openreader-webui:latest
+  ghcr.io/openreader-webui:latest
 ```
 
 > Requesting audio from the TTS API happens on the Next.js server not the client. So the base URL for the TTS API should be accessible and relative to the Next.js server. If it is in a Docker you may need to use `host.docker.internal` to access the host machine, instead of `localhost`.
@@ -63,7 +62,7 @@ Visit [http://localhost:3003](http://localhost:3003) to run the app and set your
 ### ⬆️ Update Docker Image
 ```bash
 docker stop openreader-webui && docker rm openreader-webui
-docker pull richardr1126/openreader-webui:latest
+docker pull ghcr.io/openreader-webui:latest
 ```
 
 ### Adding to a Docker Compose (i.e. with open-webui or Kokoro-FastAPI)
@@ -75,7 +74,7 @@ volumes:
 services:
   openreader-webui:
     container_name: openreader-webui
-    image: richardr1126/openreader-webui:latest
+    image: ghcr.io/openreader-webui:latest
     environment:
       - API_BASE=http://host.docker.internal:8880/v1
     ports:
