@@ -1,6 +1,9 @@
 # Use Node.js slim image
 FROM node:slim
 
+# Add ffmpeg
+RUN apt-get update && apt-get install -y ffmpeg
+
 # Create app directory
 WORKDIR /app
 

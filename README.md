@@ -103,7 +103,7 @@ services:
 
 3. Configure the environment:
    ```bash
-   cp .env.template .env
+   cp template.env .env
    # Edit .env with your configuration settings
    ```
    > Note: The base URL for the TTS API should be accessible and relative to the Next.js server
