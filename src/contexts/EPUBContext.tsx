@@ -224,7 +224,7 @@ export function EPUBProvider({ children }: { children: ReactNode }) {
               text: text.trim(),
               voice: voice,
               speed: voiceSpeed,
-              format: 'aac'
+              format: 'audiobook'  // Request WAV format directly
             }),
             signal
           });
@@ -244,7 +244,7 @@ export function EPUBProvider({ children }: { children: ReactNode }) {
             let spineIndex = processedSections;
             let currentSpineHref: string | undefined;
             
-            spine.each((item: any) => {
+            spine.each((item: SpineItem) => {
               if (spineIndex === 0) {
                 currentSpineHref = item.href;
               }

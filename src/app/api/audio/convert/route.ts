@@ -87,26 +87,16 @@ export async function POST(request: NextRequest) {
       await mkdir(intermediateDir);
     }
 
-    // First, write each chapter to a temporary file and get its duration
+    // Process each chapter - no need for initial conversion since input is WAV
     const chapterFiles: { path: string; title: string; duration: number }[] = [];
     let currentTime = 0;
 
     for (let i = 0; i < data.chapters.length; i++) {
       const chapter = data.chapters[i];
-      const inputPath = join(intermediateDir, `${i}-input.aac`);
       const outputPath = join(intermediateDir, `${i}.wav`);
       
-      // Write the chapter audio to a temp file
-      await writeFile(inputPath, Buffer.from(new Uint8Array(chapter.buffer)));
-      
-      // Convert to WAV with consistent format (this helps with timestamp issues)
-      await runFFmpeg([
-        '-i', inputPath,
-        '-acodec', 'pcm_s16le',
-        '-ar', '44100',
-        '-ac', '2',
-        outputPath
-      ]);
+      // Write the chapter audio directly since it's already WAV
+      await writeFile(outputPath, Buffer.from(new Uint8Array(chapter.buffer)));
       
       // Get the duration of this chapter
       const duration = await getAudioDuration(outputPath);
@@ -116,9 +106,6 @@ export async function POST(request: NextRequest) {
         title: chapter.title,
         duration
       });
-
-      // Clean up input file
-      await unlink(inputPath).catch(console.error);
     }
 
     // Create chapter metadata file
@@ -129,7 +116,7 @@ export async function POST(request: NextRequest) {
     );
     
     // Calculate chapter timings based on actual durations
-    chapterFiles.forEach((chapter, index) => {
+    chapterFiles.forEach((chapter) => {
       const startMs = Math.floor(currentTime * 1000);
       currentTime += chapter.duration;
       const endMs = Math.floor(currentTime * 1000);

@@ -36,7 +36,6 @@ import {
 } from '@/utils/pdf';
 
 import type { PDFDocumentProxy } from 'pdfjs-dist';
-import { useParams } from 'next/navigation';
 
 /**
  * Interface defining all available methods and properties in the PDF context
@@ -234,7 +233,7 @@ export function PDFProvider({ children }: { children: ReactNode }) {
               text: text.trim(),
               voice: voice,
               speed: voiceSpeed,
-              format: 'aac'
+              format: 'audiobook'  // Request WAV format directly
             }),
             signal
           });

@@ -29,7 +29,8 @@ export async function POST(req: NextRequest) {
       voice: voice as "alloy",
       input: text,
       speed: speed,
-      response_format: format === 'aac' ? 'aac' : 'mp3',
+      // Use wav format for audiobook generation to avoid initial conversion
+      response_format: format === 'audiobook' ? 'wav' : (format === 'aac' ? 'aac' : 'mp3'),
     }, { signal: req.signal }); // Pass the abort signal to OpenAI client
 
     // Get the audio data as array buffer
@@ -37,7 +38,7 @@ export async function POST(req: NextRequest) {
     const stream = response.body;
 
     // Return audio data with appropriate headers
-    const contentType = format === 'aac' ? 'audio/aac' : 'audio/mpeg';
+    const contentType = format === 'audiobook' ? 'audio/wav' : (format === 'aac' ? 'audio/aac' : 'audio/mpeg');
     return new NextResponse(stream, {
       headers: {
         'Content-Type': contentType
