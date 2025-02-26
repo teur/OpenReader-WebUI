@@ -1,8 +1,8 @@
 # Use Node.js slim image
-FROM node:slim
+FROM node:current-alpine
 
-# Add ffmpeg
-RUN apt-get update && apt-get install -y ffmpeg
+# Add ffmpeg using Alpine package manager
+RUN apk add --no-cache ffmpeg
 
 # Create app directory
 WORKDIR /app
