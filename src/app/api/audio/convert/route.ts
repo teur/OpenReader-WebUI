@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
     for (let i = 0; i < data.chapters.length; i++) {
       const chapter = data.chapters[i];
       const inputPath = join(intermediateDir, `${i}-input.mp3`);
-      const outputPath = join(intermediateDir, `${i}.wav`);
+      const outputPath = join(intermediateDir, `${i}.aac`);
       
       tempFiles.push(inputPath, outputPath);
 
@@ -124,12 +124,10 @@ export async function POST(request: NextRequest) {
       await writeFile(inputPath, Buffer.concat(chunks));
       chunks.length = 0; // Clear chunks array
 
-      // Convert to WAV with consistent format
+      // Copy to AAC format for compatibility with M4B
       await runFFmpeg([
         '-i', inputPath,
-        '-acodec', 'pcm_s16le',
-        '-ar', '44100',
-        '-ac', '2',
+        '-c:a', 'copy', // Use copy instead of re-encoding
         outputPath
       ]);
       
@@ -177,16 +175,18 @@ export async function POST(request: NextRequest) {
       chapterFiles.map(f => `file '${f.path}'`).join('\n')
     );
 
-    // Combine all files into a single M4B
+    // Combine all files into a single M4B with optimized settings
     await runFFmpeg([
       '-f', 'concat',
       '-safe', '0',
       '-i', listPath,
       '-i', metadataPath,
       '-map_metadata', '1',
-      '-c:a', 'aac',
-      '-b:a', '192k',
+      '-c:a', 'copy', // Use macOS AudioToolbox AAC encoder
+      //'-b:a', '192k',
+      '-threads', '0', // Use maximum available threads
       '-movflags', '+faststart',
+      '-preset', 'ultrafast', // Use fastest encoding preset
       outputPath
     ]);
 

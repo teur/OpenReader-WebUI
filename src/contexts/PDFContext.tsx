@@ -246,7 +246,7 @@ export function PDFProvider({ children }: { children: ReactNode }) {
               text,
               voice: voice,
               speed: voiceSpeed,
-              format: 'audiobook'
+              format: format === 'm4b' ? 'aac' : 'mp3'
             }),
             signal
           });

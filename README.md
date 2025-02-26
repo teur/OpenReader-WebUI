@@ -42,7 +42,7 @@ https://github.com/user-attachments/assets/262b9a01-c608-4fee-893c-9461dd48c99b
 docker run --name openreader-webui \
   -p 3003:3003 \
   -v openreader_docstore:/app/docstore \
-  richardr1126/openreader-webui:v0.2.2-alpine
+  richardr1126/openreader-webui:latest
 ```
 
 (Optionally): Set the TTS `API_BASE` URL and/or `API_KEY` to be default for all devices
@@ -51,7 +51,7 @@ docker run --name openreader-webui \
   -e API_BASE=http://host.docker.internal:8880/v1 \
   -p 3003:3003 \
   -v openreader_docstore:/app/docstore \
-  richardr1126/openreader-webui:v0.2.2-alpine
+  richardr1126/openreader-webui:latest
 ```
 
 > Requesting audio from the TTS API happens on the Next.js server not the client. So the base URL for the TTS API should be accessible and relative to the Next.js server. If it is in a Docker you may need to use `host.docker.internal` to access the host machine, instead of `localhost`.

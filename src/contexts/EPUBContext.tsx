@@ -144,39 +144,40 @@ export function EPUBProvider({ children }: { children: ReactNode }) {
    * Extracts text content from the entire EPUB book
    * @returns {Promise<string[]>} Array of text content from each section
    */
-  const extractBookText = useCallback(async (): Promise<string[]> => {
+  const extractBookText = useCallback(async (): Promise<Array<{ text: string; href: string }>> => {
     try {
-      if (!bookRef.current || !bookRef.current.isOpen) return [''];
+      if (!bookRef.current || !bookRef.current.isOpen) return [{ text: '', href: '' }];
 
       const book = bookRef.current;
       const spine = book.spine;
-      const promises: Promise<string>[] = [];
+      const promises: Promise<{ text: string; href: string }>[] = [];
 
       spine.each((item: SpineItem) => {
         const url = item.href || '';
         if (!url) return;
+        //console.log('Extracting text from section:', item as SpineItem);
 
         const promise = book.load(url)
           .then((section) => (section as Document))
-          .then((section) => {
-            const textContent = section.body.textContent || '';
-            return textContent;
-          })
+          .then((section) => ({
+            text: section.body.textContent || '',
+            href: url
+          }))
           .catch((err) => {
             console.error(`Error loading section ${url}:`, err);
-            return '';
+            return { text: '', href: url };
           });
 
         promises.push(promise);
       });
 
       const textArray = await Promise.all(promises);
-      const filteredArray = textArray.filter(text => text.trim() !== '');
+      const filteredArray = textArray.filter(item => item.text.trim() !== '');
       console.log('Extracted entire EPUB text array:', filteredArray);
       return filteredArray;
     } catch (error) {
       console.error('Error extracting EPUB text:', error);
-      return [''];
+      return [{ text: '', href: '' }];
     }
   }, []);
 
@@ -189,29 +190,55 @@ export function EPUBProvider({ children }: { children: ReactNode }) {
     format: 'mp3' | 'm4b' = 'mp3'
   ): Promise<ArrayBuffer> => {
     try {
-      const textArray = await extractBookText();
-      if (!textArray.length) throw new Error('No text content found in book');
+      const sections = await extractBookText();
+      if (!sections.length) throw new Error('No text content found in book');
 
-      // Calculate total text length for accurate progress tracking
-      const totalLength = textArray.reduce((sum, text) => sum + text.trim().length, 0);
+      // Calculate total length for accurate progress tracking
+      const totalLength = sections.reduce((sum, section) => sum + section.text.trim().length, 0);
       const audioChunks: { buffer: ArrayBuffer; title?: string; startTime: number }[] = [];
       let processedLength = 0;
       let currentTime = 0;
 
-      // Get TOC for chapter titles if available
+      // Get TOC for chapter titles
       const chapters = tocRef.current || [];
-      const spine = bookRef.current?.spine;
+      console.log('Chapter map:', chapters);
       
-      for (const text of textArray) {
+      // Create a map of section hrefs to their chapter titles
+      const sectionTitleMap = new Map<string, string>();
+      
+      // First, loop through all chapters to create the mapping
+      for (const chapter of chapters) {
+        if (!chapter.href) continue;
+        
+        const chapterBaseHref = chapter.href.split('#')[0];
+        const chapterTitle = chapter.label.trim();
+        
+        // For each chapter, find all matching sections
+        for (const section of sections) {
+          const sectionHref = section.href;
+          const sectionBaseHref = sectionHref.split('#')[0];
+          
+          // If this section matches this chapter, map it
+          if (sectionHref === chapter.href || sectionBaseHref === chapterBaseHref) {
+            sectionTitleMap.set(sectionHref, chapterTitle);
+          }
+        }
+      }
+      
+      console.log('Section to chapter title mapping:', sectionTitleMap);
+
+      // Process each section
+      for (let i = 0; i < sections.length; i++) {
         if (signal?.aborted) {
           const partialBuffer = await combineAudioChunks(audioChunks, format);
           return partialBuffer;
         }
 
-        try {
-          const trimmedText = text.trim();
-          if (!trimmedText) continue;
+        const section = sections[i];
+        const trimmedText = section.text.trim();
+        if (!trimmedText) continue;
 
+        try {
           const ttsResponse = await fetch('/api/tts', {
             method: 'POST',
             headers: {
@@ -222,7 +249,7 @@ export function EPUBProvider({ children }: { children: ReactNode }) {
               text: trimmedText,
               voice: voice,
               speed: voiceSpeed,
-              format: 'audiobook'
+              format: format === 'm4b' ? 'aac' : 'mp3',
             }),
             signal
           });
@@ -236,27 +263,15 @@ export function EPUBProvider({ children }: { children: ReactNode }) {
             throw new Error('Received empty audio buffer from TTS');
           }
 
-          // Find matching chapter title from TOC if available
-          let chapterTitle;
-          if (spine && chapters.length > 0) {
-            let spineIndex = processedLength;
-            let currentSpineHref: string | undefined;
-            
-            spine.each((item: SpineItem) => {
-              if (spineIndex === 0) {
-                currentSpineHref = item.href;
-              }
-              spineIndex--;
-            });
-
-            const matchingChapter = chapters.find(chapter => 
-              chapter.href && currentSpineHref?.includes(chapter.href)
-            );
-            chapterTitle = matchingChapter?.label || `Section ${processedLength + 1}`;
-          } else {
-            chapterTitle = `Section ${processedLength + 1}`;
+          // Get the chapter title from our pre-computed map
+          let chapterTitle = sectionTitleMap.get(section.href);
+          
+          // If no chapter title found, use index-based naming
+          if (!chapterTitle) {
+            chapterTitle = `Unknown Section - ${i + 1}`;
           }
 
+          console.log('Processed audiobook chapter title:', chapterTitle);
           audioChunks.push({
             buffer: audioBuffer,
             title: chapterTitle,
@@ -271,8 +286,6 @@ export function EPUBProvider({ children }: { children: ReactNode }) {
           });
 
           currentTime += (audioBuffer.byteLength + 48000) / 48000;
-
-          // Update progress based on processed text length
           processedLength += trimmedText.length;
           onProgress((processedLength / totalLength) * 100);
 
