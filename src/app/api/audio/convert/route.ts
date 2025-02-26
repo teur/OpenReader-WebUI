@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { spawn } from 'child_process';
-import { writeFile, readFile, mkdir, unlink, rmdir } from 'fs/promises';
+import { writeFile, mkdir, unlink, rmdir } from 'fs/promises';
+import { createReadStream } from 'fs';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import { randomUUID } from 'crypto';
@@ -65,9 +66,19 @@ async function runFFmpeg(args: string[]): Promise<void> {
   });
 }
 
+async function cleanup(files: string[], directories: string[]) {
+  await Promise.all([
+    ...files.map(f => unlink(f).catch(console.error)),
+    ...directories.map(d => rmdir(d).catch(console.error))
+  ]);
+}
+
 export async function POST(request: NextRequest) {
+  const tempFiles: string[] = [];
+  const tempDirs: string[] = [];
+
   try {
-    // Parse the request body
+    // Parse the request body as a stream
     const data: ConversionRequest = await request.json();
     
     // Create temp directory if it doesn't exist
@@ -82,23 +93,46 @@ export async function POST(request: NextRequest) {
     const metadataPath = join(tempDir, `${id}.txt`);
     const intermediateDir = join(tempDir, `${id}-intermediate`);
     
+    tempFiles.push(outputPath, metadataPath);
+    tempDirs.push(intermediateDir);
+
     // Create intermediate directory
     if (!existsSync(intermediateDir)) {
       await mkdir(intermediateDir);
     }
 
-    // Process each chapter - no need for initial conversion since input is WAV
+    // Process chapters sequentially to avoid memory issues
     const chapterFiles: { path: string; title: string; duration: number }[] = [];
     let currentTime = 0;
 
     for (let i = 0; i < data.chapters.length; i++) {
       const chapter = data.chapters[i];
+      const inputPath = join(intermediateDir, `${i}-input.mp3`);
       const outputPath = join(intermediateDir, `${i}.wav`);
       
-      // Write the chapter audio directly since it's already WAV
-      await writeFile(outputPath, Buffer.from(new Uint8Array(chapter.buffer)));
+      tempFiles.push(inputPath, outputPath);
+
+      // Write the chapter audio to a temp file using a Buffer chunk size of 64KB
+      const chunkSize = 64 * 1024; // 64KB chunks
+      const buffer = Buffer.from(new Uint8Array(chapter.buffer));
+      const chunks: Buffer[] = [];
       
-      // Get the duration of this chapter
+      for (let offset = 0; offset < buffer.length; offset += chunkSize) {
+        chunks.push(buffer.slice(offset, offset + chunkSize));
+      }
+      
+      await writeFile(inputPath, Buffer.concat(chunks));
+      chunks.length = 0; // Clear chunks array
+
+      // Convert to WAV with consistent format
+      await runFFmpeg([
+        '-i', inputPath,
+        '-acodec', 'pcm_s16le',
+        '-ar', '44100',
+        '-ac', '2',
+        outputPath
+      ]);
+      
       const duration = await getAudioDuration(outputPath);
       
       chapterFiles.push({
@@ -106,16 +140,18 @@ export async function POST(request: NextRequest) {
         title: chapter.title,
         duration
       });
+
+      // Clean up input file early
+      await unlink(inputPath).catch(console.error);
+      const index = tempFiles.indexOf(inputPath);
+      if (index > -1) {
+        tempFiles.splice(index, 1);
+      }
     }
 
     // Create chapter metadata file
     const metadata: string[] = [];
-    metadata.push(
-      `title=Kokoro Audiobook`,
-      `artist=KokoroTTS`,
-    );
     
-    // Calculate chapter timings based on actual durations
     chapterFiles.forEach((chapter) => {
       const startMs = Math.floor(currentTime * 1000);
       currentTime += chapter.duration;
@@ -134,6 +170,8 @@ export async function POST(request: NextRequest) {
 
     // Create list file for concat
     const listPath = join(tempDir, `${id}-list.txt`);
+    tempFiles.push(listPath);
+    
     await writeFile(
       listPath,
       chapterFiles.map(f => `file '${f.path}'`).join('\n')
@@ -152,24 +190,46 @@ export async function POST(request: NextRequest) {
       outputPath
     ]);
 
-    // Read the converted file
-    const m4bData = await readFile(outputPath);
+    // Create a readable stream from the output file
+    const fileStream = createReadStream(outputPath);
 
-    // Clean up temp files
-    await Promise.all([
-      ...chapterFiles.map(f => unlink(f.path)),
-      unlink(metadataPath),
-      unlink(listPath),
-      unlink(outputPath),
-      rmdir(intermediateDir)
-    ].map(p => p.catch(console.error)));
+    // Create a web-compatible ReadableStream from the Node.js stream
+    const webStream = new ReadableStream({
+      start(controller) {
+        fileStream.on('data', (chunk) => {
+          controller.enqueue(chunk);
+        });
+        
+        fileStream.on('end', () => {
+          controller.close();
+          // Clean up only after the stream has been fully sent
+          cleanup(tempFiles, tempDirs).catch(console.error);
+        });
+        
+        fileStream.on('error', (error) => {
+          console.error('Stream error:', error);
+          controller.error(error);
+          cleanup(tempFiles, tempDirs).catch(console.error);
+        });
+      },
+      cancel() {
+        fileStream.destroy();
+        cleanup(tempFiles, tempDirs).catch(console.error);
+      }
+    });
 
-    return new NextResponse(m4bData, {
+    // Return the streaming response
+    return new NextResponse(webStream, {
       headers: {
         'Content-Type': 'audio/mp4',
+        'Transfer-Encoding': 'chunked'
       },
     });
+
   } catch (error) {
+    // Clean up in case of error
+    await cleanup(tempFiles, tempDirs).catch(console.error);
+    
     console.error('Error converting audio:', error);
     return NextResponse.json(
       { error: 'Failed to convert audio format' }, 

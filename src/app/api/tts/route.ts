@@ -6,8 +6,8 @@ export async function POST(req: NextRequest) {
     // Get API credentials from headers or fall back to environment variables
     const openApiKey = req.headers.get('x-openai-key') || process.env.API_KEY || 'none';
     const openApiBaseUrl = req.headers.get('x-openai-base-url') || process.env.API_BASE;
-    const { text, voice, speed, format } = await req.json();
-    console.log('Received TTS request:', text, voice, speed, format);
+    const { text, voice, speed } = await req.json();
+    console.log('Received TTS request:', text, voice, speed);
 
     if (!openApiKey) {
       return NextResponse.json({ error: 'Missing OpenAI API key' }, { status: 401 });
@@ -29,19 +29,16 @@ export async function POST(req: NextRequest) {
       voice: voice as "alloy",
       input: text,
       speed: speed,
-      // Use wav format for audiobook generation to avoid initial conversion
-      response_format: format === 'audiobook' ? 'wav' : (format === 'aac' ? 'aac' : 'mp3'),
-    }, { signal: req.signal }); // Pass the abort signal to OpenAI client
+      response_format: 'mp3',  // Always use mp3 since we convert to WAV later if needed
+    }, { signal: req.signal });
 
     // Get the audio data as array buffer
-    // This will also be aborted if the client cancels
     const stream = response.body;
 
     // Return audio data with appropriate headers
-    const contentType = format === 'audiobook' ? 'audio/wav' : (format === 'aac' ? 'audio/aac' : 'audio/mpeg');
     return new NextResponse(stream, {
       headers: {
-        'Content-Type': contentType
+        'Content-Type': 'audio/mpeg'
       }
     });
   } catch (error) {

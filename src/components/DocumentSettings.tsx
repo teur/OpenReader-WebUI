@@ -6,6 +6,8 @@ import { useConfig, ViewType } from '@/contexts/ConfigContext';
 import { ChevronUpDownIcon, CheckIcon } from '@/components/icons/Icons';
 import { useEPUB } from '@/contexts/EPUBContext';
 import { usePDF } from '@/contexts/PDFContext';
+import { useTimeEstimation } from '@/hooks/useTimeEstimation';
+import { LoadingSpinner } from './Spinner';
 
 const isDev = process.env.NEXT_PUBLIC_NODE_ENV !== 'production' || process.env.NODE_ENV == null;
 
@@ -37,9 +39,9 @@ export function DocumentSettings({ isOpen, setIsOpen, epub }: DocViewSettingsPro
     rightMargin,
     updateConfigKey
   } = useConfig();
-  const { createFullAudioBook } = useEPUB();
-  const { createFullAudioBook: createPDFAudioBook } = usePDF();
-  const [progress, setProgress] = useState(0);
+  const { createFullAudioBook, isAudioCombining } = useEPUB();
+  const { createFullAudioBook: createPDFAudioBook, isAudioCombining: isPDFAudioCombining } = usePDF();
+  const { progress, setProgress, estimatedTimeRemaining } = useTimeEstimation();
   const [isGenerating, setIsGenerating] = useState(false);
   const [audioFormat, setAudioFormat] = useState<'mp3' | 'm4b'>('mp3');
   const [localMargins, setLocalMargins] = useState({
@@ -116,7 +118,7 @@ export function DocumentSettings({ isOpen, setIsOpen, epub }: DocViewSettingsPro
       setProgress(0);
       abortControllerRef.current = null;
     }
-  }, [createFullAudioBook, createPDFAudioBook, epub, audioFormat]);
+  }, [createFullAudioBook, createPDFAudioBook, epub, audioFormat, setProgress]);
 
   const handleCancel = () => {
     if (abortControllerRef.current) {
@@ -195,7 +197,10 @@ export function DocumentSettings({ isOpen, setIsOpen, epub }: DocViewSettingsPro
                         />
                       </div>
                       <div className="flex justify-between items-center text-sm text-muted">
-                        <span>{Math.round(progress)}% complete</span>
+                        <span>
+                          {Math.round(progress)}% complete
+                          {estimatedTimeRemaining && ` • ${estimatedTimeRemaining} remaining`}
+                        </span>
                         <Button
                           type="button"
                           className="inline-flex justify-center rounded-lg px-2.5 py-1 text-sm 
@@ -204,7 +209,13 @@ export function DocumentSettings({ isOpen, setIsOpen, epub }: DocViewSettingsPro
                                     transform transition-transform duration-200 ease-in-out hover:scale-[1.02]"
                           onClick={handleCancel}
                         >
-                          Cancel and download
+                          {(epub ? isAudioCombining : isPDFAudioCombining) ? (
+                            <div className="w-full h-full flex items-center justify-end">
+                              <LoadingSpinner />
+                            </div>
+                          ) : (
+                            'Cancel and download'
+                          )}
                         </Button>
                       </div>
                     </div>

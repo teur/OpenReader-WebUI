@@ -36,6 +36,7 @@ interface EPUBContextType {
   locationRef: RefObject<string | number>;
   handleLocationChanged: (location: string | number) => void;
   setRendition: (rendition: Rendition) => void;
+  isAudioCombining: boolean;
 }
 
 const EPUBContext = createContext<EPUBContextType | undefined>(undefined);
@@ -60,6 +61,7 @@ export function EPUBProvider({ children }: { children: ReactNode }) {
   const [currDocData, setCurrDocData] = useState<ArrayBuffer>();
   const [currDocName, setCurrDocName] = useState<string>();
   const [currDocText, setCurrDocText] = useState<string>();
+  const [isAudioCombining, setIsAudioCombining] = useState(false);
 
   // Add new refs
   const bookRef = useRef<Book | null>(null);
@@ -180,9 +182,6 @@ export function EPUBProvider({ children }: { children: ReactNode }) {
 
   /**
    * Creates a complete audiobook by processing all text through NLP and TTS
-   * @param {string} voice - The voice to use for TTS
-   * @param {number} speed - The speed to use for TTS
-   * @returns {Promise<ArrayBuffer>} The complete audiobook as an ArrayBuffer
    */
   const createFullAudioBook = useCallback(async (
     onProgress: (progress: number) => void,
@@ -193,9 +192,10 @@ export function EPUBProvider({ children }: { children: ReactNode }) {
       const textArray = await extractBookText();
       if (!textArray.length) throw new Error('No text content found in book');
 
+      // Calculate total text length for accurate progress tracking
+      const totalLength = textArray.reduce((sum, text) => sum + text.trim().length, 0);
       const audioChunks: { buffer: ArrayBuffer; title?: string; startTime: number }[] = [];
-      let processedSections = 0;
-      const totalSections = textArray.length;
+      let processedLength = 0;
       let currentTime = 0;
 
       // Get TOC for chapter titles if available
@@ -209,10 +209,8 @@ export function EPUBProvider({ children }: { children: ReactNode }) {
         }
 
         try {
-          if (!text.trim()) {
-            processedSections++;
-            continue;
-          }
+          const trimmedText = text.trim();
+          if (!trimmedText) continue;
 
           const ttsResponse = await fetch('/api/tts', {
             method: 'POST',
@@ -221,10 +219,10 @@ export function EPUBProvider({ children }: { children: ReactNode }) {
               'x-openai-base-url': baseUrl,
             },
             body: JSON.stringify({
-              text: text.trim(),
+              text: trimmedText,
               voice: voice,
               speed: voiceSpeed,
-              format: 'audiobook'  // Request WAV format directly
+              format: 'audiobook'
             }),
             signal
           });
@@ -241,7 +239,7 @@ export function EPUBProvider({ children }: { children: ReactNode }) {
           // Find matching chapter title from TOC if available
           let chapterTitle;
           if (spine && chapters.length > 0) {
-            let spineIndex = processedSections;
+            let spineIndex = processedLength;
             let currentSpineHref: string | undefined;
             
             spine.each((item: SpineItem) => {
@@ -254,9 +252,9 @@ export function EPUBProvider({ children }: { children: ReactNode }) {
             const matchingChapter = chapters.find(chapter => 
               chapter.href && currentSpineHref?.includes(chapter.href)
             );
-            chapterTitle = matchingChapter?.label || `Chapter ${processedSections + 1}`;
+            chapterTitle = matchingChapter?.label || `Section ${processedLength + 1}`;
           } else {
-            chapterTitle = `Chapter ${processedSections + 1}`;
+            chapterTitle = `Section ${processedLength + 1}`;
           }
 
           audioChunks.push({
@@ -266,13 +264,17 @@ export function EPUBProvider({ children }: { children: ReactNode }) {
           });
 
           // Add silence between sections
-          const silenceBuffer = new ArrayBuffer(48000); // 1 second of silence
+          const silenceBuffer = new ArrayBuffer(48000);
           audioChunks.push({
             buffer: silenceBuffer,
             startTime: currentTime + (audioBuffer.byteLength / 48000)
           });
 
-          currentTime += (audioBuffer.byteLength + 48000) / 48000; // Update time including silence
+          currentTime += (audioBuffer.byteLength + 48000) / 48000;
+
+          // Update progress based on processed text length
+          processedLength += trimmedText.length;
+          onProgress((processedLength / totalLength) * 100);
 
         } catch (error) {
           if (error instanceof Error && error.name === 'AbortError') {
@@ -282,9 +284,6 @@ export function EPUBProvider({ children }: { children: ReactNode }) {
           }
           console.error('Error processing section:', error);
         }
-
-        processedSections++;
-        onProgress((processedSections / totalSections) * 100);
       }
 
       if (audioChunks.length === 0) {
@@ -302,41 +301,46 @@ export function EPUBProvider({ children }: { children: ReactNode }) {
     audioChunks: { buffer: ArrayBuffer; title?: string; startTime: number }[],
     format: 'mp3' | 'm4b'
   ): Promise<ArrayBuffer> => {
-    if (format === 'm4b') {
-      // Convert to M4B format using the audio conversion API
-      const response = await fetch('/api/audio/convert', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          chapters: audioChunks
-            .filter(chunk => chunk.title) // Only include chunks with titles
-            .map(chunk => ({
-              title: chunk.title,
-              buffer: Array.from(new Uint8Array(chunk.buffer))
-            }))
-        }),
-      });
+    setIsAudioCombining(true);
+    try {
+      if (format === 'm4b') {
+        // Convert to M4B format using the audio conversion API
+        const response = await fetch('/api/audio/convert', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            chapters: audioChunks
+              .filter(chunk => chunk.title) // Only include chunks with titles
+              .map(chunk => ({
+                title: chunk.title,
+                buffer: Array.from(new Uint8Array(chunk.buffer))
+              }))
+          }),
+        });
 
-      if (!response.ok) {
-        throw new Error('Failed to convert audio to M4B format');
+        if (!response.ok) {
+          throw new Error('Failed to convert audio to M4B format');
+        }
+
+        return response.arrayBuffer();
       }
 
-      return response.arrayBuffer();
+      // For MP3, just concatenate the buffers
+      const totalLength = audioChunks.reduce((acc, chunk) => acc + chunk.buffer.byteLength, 0);
+      const combinedBuffer = new Uint8Array(totalLength);
+
+      let offset = 0;
+      for (const chunk of audioChunks) {
+        combinedBuffer.set(new Uint8Array(chunk.buffer), offset);
+        offset += chunk.buffer.byteLength;
+      }
+
+      return combinedBuffer.buffer;
+    } finally {
+      setIsAudioCombining(false);
     }
-
-    // For MP3, just concatenate the buffers
-    const totalLength = audioChunks.reduce((acc, chunk) => acc + chunk.buffer.byteLength, 0);
-    const combinedBuffer = new Uint8Array(totalLength);
-
-    let offset = 0;
-    for (const chunk of audioChunks) {
-      combinedBuffer.set(new Uint8Array(chunk.buffer), offset);
-      offset += chunk.buffer.byteLength;
-    }
-
-    return combinedBuffer.buffer;
   }
 
   const setRendition = useCallback((rendition: Rendition) => {
@@ -398,6 +402,7 @@ export function EPUBProvider({ children }: { children: ReactNode }) {
       locationRef,
       handleLocationChanged,
       setRendition,
+      isAudioCombining,
     }),
     [
       setCurrentDocument,
@@ -411,6 +416,7 @@ export function EPUBProvider({ children }: { children: ReactNode }) {
       createFullAudioBook,
       handleLocationChanged,
       setRendition,
+      isAudioCombining,
     ]
   );
 

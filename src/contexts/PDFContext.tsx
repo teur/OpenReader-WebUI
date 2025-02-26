@@ -63,6 +63,7 @@ interface PDFContextType {
     isProcessing: boolean
   ) => void;
   createFullAudioBook: (onProgress: (progress: number) => void, signal?: AbortSignal, format?: 'mp3' | 'm4b') => Promise<ArrayBuffer>;
+  isAudioCombining: boolean;
 }
 
 // Create the context
@@ -101,6 +102,7 @@ export function PDFProvider({ children }: { children: ReactNode }) {
   const [currDocName, setCurrDocName] = useState<string>();
   const [currDocText, setCurrDocText] = useState<string>();
   const [pdfDocument, setPdfDocument] = useState<PDFDocumentProxy>();
+  const [isAudioCombining, setIsAudioCombining] = useState(false);
 
   /**
    * Handles successful PDF document load
@@ -199,29 +201,40 @@ export function PDFProvider({ children }: { children: ReactNode }) {
         throw new Error('No PDF document loaded');
       }
 
-      const audioChunks: { buffer: ArrayBuffer; title?: string; startTime: number }[] = [];
-      const totalPages = pdfDocument.numPages;
-      let processedPages = 0;
-      let currentTime = 0;
-
-      for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
-        if (signal?.aborted) {
-          const partialBuffer = await combineAudioChunks(audioChunks, format);
-          return partialBuffer;
-        }
-
+      // First pass: extract and measure all text
+      const textPerPage: string[] = [];
+      let totalLength = 0;
+      
+      for (let pageNum = 1; pageNum <= pdfDocument.numPages; pageNum++) {
         const text = await extractTextFromPDF(pdfDocument, pageNum, {
           header: headerMargin,
           footer: footerMargin,
           left: leftMargin,
           right: rightMargin
         });
+        const trimmedText = text.trim();
+        if (trimmedText) {
+          textPerPage.push(trimmedText);
+          totalLength += trimmedText.length;
+        }
+      }
 
-        if (!text.trim()) {
-          processedPages++;
-          continue;
+      if (totalLength === 0) {
+        throw new Error('No text content found in PDF');
+      }
+
+      const audioChunks: { buffer: ArrayBuffer; title?: string; startTime: number }[] = [];
+      let processedLength = 0;
+      let currentTime = 0;
+
+      // Second pass: process text into audio
+      for (let i = 0; i < textPerPage.length; i++) {
+        if (signal?.aborted) {
+          const partialBuffer = await combineAudioChunks(audioChunks, format);
+          return partialBuffer;
         }
 
+        const text = textPerPage[i];
         try {
           const ttsResponse = await fetch('/api/tts', {
             method: 'POST',
@@ -230,10 +243,10 @@ export function PDFProvider({ children }: { children: ReactNode }) {
               'x-openai-base-url': baseUrl,
             },
             body: JSON.stringify({
-              text: text.trim(),
+              text,
               voice: voice,
               speed: voiceSpeed,
-              format: 'audiobook'  // Request WAV format directly
+              format: 'audiobook'
             }),
             signal
           });
@@ -247,10 +260,9 @@ export function PDFProvider({ children }: { children: ReactNode }) {
             throw new Error('Received empty audio buffer from TTS');
           }
 
-          // Add chapter metadata for each page
           audioChunks.push({
             buffer: audioBuffer,
-            title: `Page ${pageNum}`,
+            title: `Page ${i + 1}`,
             startTime: currentTime
           });
 
@@ -263,6 +275,10 @@ export function PDFProvider({ children }: { children: ReactNode }) {
 
           currentTime += (audioBuffer.byteLength + 48000) / 48000;
 
+          // Update progress based on processed text length
+          processedLength += text.length;
+          onProgress((processedLength / totalLength) * 100);
+
         } catch (error) {
           if (error instanceof Error && error.name === 'AbortError') {
             console.log('TTS request aborted');
@@ -271,9 +287,6 @@ export function PDFProvider({ children }: { children: ReactNode }) {
           }
           console.error('Error processing page:', error);
         }
-
-        processedPages++;
-        onProgress((processedPages / totalPages) * 100);
       }
 
       if (audioChunks.length === 0) {
@@ -291,41 +304,46 @@ export function PDFProvider({ children }: { children: ReactNode }) {
     audioChunks: { buffer: ArrayBuffer; title?: string; startTime: number }[],
     format: 'mp3' | 'm4b'
   ): Promise<ArrayBuffer> => {
-    if (format === 'm4b') {
-      // Convert to M4B format using the audio conversion API
-      const response = await fetch('/api/audio/convert', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          chapters: audioChunks
-            .filter(chunk => chunk.title) // Only include chunks with titles
-            .map(chunk => ({
-              title: chunk.title,
-              buffer: Array.from(new Uint8Array(chunk.buffer))
-            }))
-        }),
-      });
+    setIsAudioCombining(true);
+    try {
+      if (format === 'm4b') {
+        // Convert to M4B format using the audio conversion API
+        const response = await fetch('/api/audio/convert', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            chapters: audioChunks
+              .filter(chunk => chunk.title) // Only include chunks with titles
+              .map(chunk => ({
+                title: chunk.title,
+                buffer: Array.from(new Uint8Array(chunk.buffer))
+              }))
+          }),
+        });
 
-      if (!response.ok) {
-        throw new Error('Failed to convert audio to M4B format');
+        if (!response.ok) {
+          throw new Error('Failed to convert audio to M4B format');
+        }
+
+        return response.arrayBuffer();
       }
 
-      return response.arrayBuffer();
+      // For MP3, just concatenate the buffers
+      const totalLength = audioChunks.reduce((acc, chunk) => acc + chunk.buffer.byteLength, 0);
+      const combinedBuffer = new Uint8Array(totalLength);
+
+      let offset = 0;
+      for (const chunk of audioChunks) {
+        combinedBuffer.set(new Uint8Array(chunk.buffer), offset);
+        offset += chunk.buffer.byteLength;
+      }
+
+      return combinedBuffer.buffer;
+    } finally {
+      setIsAudioCombining(false);
     }
-
-    // For MP3, just concatenate the buffers
-    const totalLength = audioChunks.reduce((acc, chunk) => acc + chunk.buffer.byteLength, 0);
-    const combinedBuffer = new Uint8Array(totalLength);
-
-    let offset = 0;
-    for (const chunk of audioChunks) {
-      combinedBuffer.set(new Uint8Array(chunk.buffer), offset);
-      offset += chunk.buffer.byteLength;
-    }
-
-    return combinedBuffer.buffer;
   }
 
   // Context value memoization
@@ -344,6 +362,7 @@ export function PDFProvider({ children }: { children: ReactNode }) {
       handleTextClick,
       pdfDocument,
       createFullAudioBook,
+      isAudioCombining,
     }),
     [
       onDocumentLoadSuccess,
@@ -356,6 +375,7 @@ export function PDFProvider({ children }: { children: ReactNode }) {
       clearCurrDoc,
       pdfDocument,
       createFullAudioBook,
+      isAudioCombining,
     ]
   );
 
