@@ -21,21 +21,27 @@ const viewTypes = [
   { id: 'scroll', name: 'Continuous Scroll' },
 ];
 
+const audioFormats = [
+  { id: 'mp3', name: 'MP3' },
+  { id: 'm4b', name: 'M4B' },
+];
+
 export function DocumentSettings({ isOpen, setIsOpen, epub }: DocViewSettingsProps) {
-  const { 
-    viewType, 
-    skipBlank, 
-    epubTheme, 
+  const {
+    viewType,
+    skipBlank,
+    epubTheme,
     headerMargin,
     footerMargin,
     leftMargin,
     rightMargin,
-    updateConfigKey 
+    updateConfigKey
   } = useConfig();
   const { createFullAudioBook } = useEPUB();
   const { createFullAudioBook: createPDFAudioBook } = usePDF();
   const [progress, setProgress] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [audioFormat, setAudioFormat] = useState<'mp3' | 'm4b'>('mp3');
   const [localMargins, setLocalMargins] = useState({
     header: headerMargin,
     footer: footerMargin,
@@ -80,18 +86,21 @@ export function DocumentSettings({ isOpen, setIsOpen, epub }: DocViewSettingsPro
     try {
       const audioBuffer = epub ? await createFullAudioBook(
         (progress) => setProgress(progress),
-        abortControllerRef.current.signal
+        abortControllerRef.current.signal,
+        audioFormat
       ) : await createPDFAudioBook(
         (progress) => setProgress(progress),
-        abortControllerRef.current.signal
+        abortControllerRef.current.signal,
+        audioFormat
       );
 
       // Create and trigger download
-      const blob = new Blob([audioBuffer], { type: 'audio/mp3' });
+      const mimeType = audioFormat === 'mp3' ? 'audio/mp3' : 'audio/mp4';
+      const blob = new Blob([audioBuffer], { type: mimeType });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'audiobook.mp3';
+      a.download = `audiobook.${audioFormat}`;
       document.body.appendChild(a);
       a.click();
 
@@ -107,7 +116,7 @@ export function DocumentSettings({ isOpen, setIsOpen, epub }: DocViewSettingsPro
       setProgress(0);
       abortControllerRef.current = null;
     }
-  }, [createFullAudioBook, createPDFAudioBook, epub]);
+  }, [createFullAudioBook, createPDFAudioBook, epub, audioFormat]);
 
   const handleCancel = () => {
     if (abortControllerRef.current) {
@@ -142,46 +151,69 @@ export function DocumentSettings({ isOpen, setIsOpen, epub }: DocViewSettingsPro
               leaveTo="opacity-0 scale-95"
             >
               <DialogPanel className="w-full max-w-md transform rounded-2xl bg-base p-6 text-left align-middle shadow-xl transition-all">
-                <div className="space-y-4">
-                  {isDev && <div className="space-y-2 pb-2">
-                    {!isGenerating ? (
+                {isDev && <div className="space-y-2">
+                  {!isGenerating ? (
+                    <div className="flex flex-col space-y-2">
                       <Button
                         type="button"
                         className="w-full inline-flex justify-center rounded-lg bg-accent px-4 py-2 text-sm 
-                                       font-medium text-background hover:opacity-95 focus:outline-none 
-                                       focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2
-                                       transform transition-transform duration-200 ease-in-out hover:scale-[1.04]"
+                                         font-medium text-background hover:opacity-95 focus:outline-none 
+                                         focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2
+                                         transform transition-transform duration-200 ease-in-out hover:scale-[1.04]"
                         onClick={handleStartGeneration}
                       >
-                        Export to audiobook.mp3 (experimental)
+                        Export to {audioFormat.toUpperCase()} (experimental)
                       </Button>
-                    ) : (
-                      <div className="space-y-2">
-                        <div className="w-full bg-background rounded-lg overflow-hidden">
-                          <div
-                            className="h-2 bg-accent transition-all duration-300 ease-in-out"
-                            style={{ width: `${progress}%` }}
-                          />
+                      <Listbox value={audioFormat} onChange={(format) => setAudioFormat(format as 'mp3' | 'm4b')}>
+                        <div className="relative flex self-end">
+                          <ListboxButton className="flex self-end justify-center items-center space-x-0.5 sm:space-x-1 bg-transparent text-foreground text-xs sm:text-sm focus:outline-none cursor-pointer hover:bg-offbase rounded pl-1.5 sm:pl-2 pr-0.5 sm:pr-1 py-0.5 sm:py-1">
+                            <span>{audioFormat === 'mp3' ? 'MP3' : 'M4B (Audiobook)'}</span>
+                            <ChevronUpDownIcon className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                          </ListboxButton>
+                          <ListboxOptions anchor='bottom end' className="absolute z-50 w-28 sm:w-32 overflow-auto rounded-lg bg-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                            {audioFormats.map((format) => (
+                              <ListboxOption
+                                key={format.id}
+                                value={format.id}
+                                className={({ active, selected }) =>
+                                  `relative cursor-pointer select-none py-0.5 px-1.5 sm:py-2 sm:px-3 ${active ? 'bg-offbase' : ''} ${selected ? 'font-medium' : ''}`
+                                }
+                              >
+                                <span className="text-xs sm:text-sm">{format.name}</span>
+                              </ListboxOption>
+                            ))}
+                          </ListboxOptions>
                         </div>
-                        <div className="flex justify-between items-center text-sm text-muted">
-                          <span>{Math.round(progress)}% complete</span>
-                          <Button
-                            type="button"
-                            className="inline-flex justify-center rounded-lg px-2.5 py-1 text-sm 
+                      </Listbox>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 mb-4">
+                      <div className="w-full bg-background rounded-lg overflow-hidden">
+                        <div
+                          className="h-2 bg-accent transition-all duration-300 ease-in-out"
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+                      <div className="flex justify-between items-center text-sm text-muted">
+                        <span>{Math.round(progress)}% complete</span>
+                        <Button
+                          type="button"
+                          className="inline-flex justify-center rounded-lg px-2.5 py-1 text-sm 
                                     font-medium text-foreground hover:text-accent focus:outline-none 
                                     focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2
                                     transform transition-transform duration-200 ease-in-out hover:scale-[1.02]"
-                            onClick={handleCancel}
-                          >
-                            Cancel and download
-                          </Button>
-                        </div>
+                          onClick={handleCancel}
+                        >
+                          Cancel and download
+                        </Button>
                       </div>
-                    )}
-                  </div>}
+                    </div>
+                  )}
+                </div>}
+                <div className="space-y-4">
                   {!epub && <div className="space-y-6">
-                    <div className="mt-4 space-y-2">
-                      <label className="block text-sm font-medium text-foreground mb-4">
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-foreground">
                         Text extraction margins
                       </label>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -204,7 +236,7 @@ export function DocumentSettings({ isOpen, setIsOpen, epub }: DocViewSettingsPro
                             className="w-full bg-offbase rounded-lg appearance-none cursor-pointer accent-accent [&::-webkit-slider-runnable-track]:bg-offbase [&::-webkit-slider-runnable-track]:rounded-lg [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-accent [&::-moz-range-track]:bg-offbase [&::-moz-range-track]:rounded-lg [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-accent"
                           />
                         </div>
-                        
+
                         {/* Footer Margin */}
                         <div className="space-y-1">
                           <div className="flex justify-between">
@@ -323,7 +355,7 @@ export function DocumentSettings({ isOpen, setIsOpen, epub }: DocViewSettingsPro
 
                   </div>}
 
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     <label className="flex items-center space-x-2">
                       <input
                         type="checkbox"
@@ -338,7 +370,7 @@ export function DocumentSettings({ isOpen, setIsOpen, epub }: DocViewSettingsPro
                     </p>
                   </div>
                   {epub && (
-                    <div className="space-y-2">
+                    <div className="space-y-1">
                       <label className="flex items-center space-x-2">
                         <input
                           type="checkbox"

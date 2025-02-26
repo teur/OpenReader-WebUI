@@ -6,8 +6,8 @@ export async function POST(req: NextRequest) {
     // Get API credentials from headers or fall back to environment variables
     const openApiKey = req.headers.get('x-openai-key') || process.env.API_KEY || 'none';
     const openApiBaseUrl = req.headers.get('x-openai-base-url') || process.env.API_BASE;
-    const { text, voice, speed } = await req.json();
-    console.log('Received TTS request:', text, voice, speed);
+    const { text, voice, speed, format } = await req.json();
+    console.log('Received TTS request:', text, voice, speed, format);
 
     if (!openApiKey) {
       return NextResponse.json({ error: 'Missing OpenAI API key' }, { status: 401 });
@@ -29,6 +29,7 @@ export async function POST(req: NextRequest) {
       voice: voice as "alloy",
       input: text,
       speed: speed,
+      response_format: format === 'aac' ? 'aac' : 'mp3',
     }, { signal: req.signal }); // Pass the abort signal to OpenAI client
 
     // Get the audio data as array buffer
@@ -36,7 +37,12 @@ export async function POST(req: NextRequest) {
     const stream = response.body;
 
     // Return audio data with appropriate headers
-    return new NextResponse(stream);
+    const contentType = format === 'aac' ? 'audio/aac' : 'audio/mpeg';
+    return new NextResponse(stream, {
+      headers: {
+        'Content-Type': contentType
+      }
+    });
   } catch (error) {
     // Check if this was an abort error
     if (error instanceof Error && error.name === 'AbortError') {
