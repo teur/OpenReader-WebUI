@@ -17,14 +17,16 @@ OpenReader WebUI is a document reader with Text-to-Speech capabilities, offering
 - 🎯 **TTS API Integration**: Compatible with OpenAI text to speech API, Kokoro FastAPI TTS, or any other compatible service; enabling high-quality voice narration
 - 💾 **Local-First Architecture**: Uses IndexedDB browser storage - no server uploads required
 - 🛜 **Optional Server-side documents**: Manually upload documents to the next backend for all users to download
-- 🔍 **Smart Text Processing**: Splits content into sentence blocks (ePub tries to split at paragraphs)
-- 📚 **EPUB Support**: Read EPUB files with table of contents and synchronized text
-- 📄 **PDF Support**: Read PDF files with text extraction and page navigation
+- 📖 **Read Along Experience**: Follow along with highlighted text as the TTS narrates
+- 🎧 **Audiobook Creation**: Create and export audiobooks from PDF and ePub files with m4b format
+- 📚 **EPUB Support**: Read EPUB files with table of contents
+- 📄 **PDF Support**: Read PDF files with clean text extraction
   - 💬 Follow along with highlighted text as the TTS narrates
 - 📲 **Mobile Support**: Works on mobile devices, and can be added as a PWA web app
 - 🎨 **Customizable Experience**: 
   - 🔑 Set TTS API base URL (with optional API key)
   - 🏎️ Adjustable playback speed
+  - 📐 Customize PDF text extraction margins
   - 🗣️ Multiple voice options (checks `/v1/audio/voices` endpoint)
   - 🎨 Multiple app theme options
 
@@ -87,6 +89,7 @@ services:
 
 ### Prerequisites
 - Node.js & npm (recommended: use [nvm](https://github.com/nvm-sh/nvm))
+- [FFmpeg](https://ffmpeg.org) (required for audiobook m4b creation only)
 
 ### Steps
 
