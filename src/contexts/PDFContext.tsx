@@ -29,7 +29,6 @@ import { useTTS } from '@/contexts/TTSContext';
 import { useConfig } from '@/contexts/ConfigContext';
 import {
   extractTextFromPDF,
-  convertPDFDataToURL,
   highlightPattern,
   clearHighlights,
   handleTextClick,
@@ -43,7 +42,7 @@ import { combineAudioChunks } from '@/utils/audio';
  */
 interface PDFContextType {
   // Current document state
-  currDocURL: string | undefined;
+  currDocData: ArrayBuffer | undefined;
   currDocName: string | undefined;
   currDocPages: number | undefined;
   currDocPage: number;
@@ -99,7 +98,7 @@ export function PDFProvider({ children }: { children: ReactNode }) {
   } = useConfig();
 
   // Current document state
-  const [currDocURL, setCurrDocURL] = useState<string>();
+  const [currDocData, setCurrDocData] = useState<ArrayBuffer>();
   const [currDocName, setCurrDocName] = useState<string>();
   const [currDocText, setCurrDocText] = useState<string>();
   const [pdfDocument, setPdfDocument] = useState<PDFDocumentProxy>();
@@ -147,14 +146,14 @@ export function PDFProvider({ children }: { children: ReactNode }) {
    * Triggers text extraction and processing when either the document URL or page changes
    */
   useEffect(() => {
-    if (currDocURL) {
+    if (currDocData) {
       loadCurrDocText();
     }
-  }, [currDocPage, currDocURL, loadCurrDocText]);
+  }, [currDocPage, currDocData, loadCurrDocText]);
 
   /**
    * Sets the current document based on its ID
-   * Retrieves document from IndexedDB and converts it to a viewable URL
+   * Retrieves document from IndexedDB
    * 
    * @param {string} id - The unique identifier of the document to set
    * @returns {Promise<void>}
@@ -163,12 +162,11 @@ export function PDFProvider({ children }: { children: ReactNode }) {
     try {
       const doc = await indexedDBService.getDocument(id);
       if (doc) {
-        const url = await convertPDFDataToURL(doc.data);
         setCurrDocName(doc.name);
-        setCurrDocURL(url);
+        setCurrDocData(doc.data);
       }
     } catch (error) {
-      console.error('Failed to get document URL:', error);
+      console.error('Failed to get document:', error);
     }
   }, []);
 
@@ -178,7 +176,7 @@ export function PDFProvider({ children }: { children: ReactNode }) {
    */
   const clearCurrDoc = useCallback(() => {
     setCurrDocName(undefined);
-    setCurrDocURL(undefined);
+    setCurrDocData(undefined);
     setCurrDocText(undefined);
     setCurrDocPages(undefined);
     setPdfDocument(undefined);
@@ -306,7 +304,7 @@ export function PDFProvider({ children }: { children: ReactNode }) {
     () => ({
       onDocumentLoadSuccess,
       setCurrentDocument,
-      currDocURL,
+      currDocData,
       currDocName,
       currDocPages,
       currDocPage,
@@ -322,7 +320,7 @@ export function PDFProvider({ children }: { children: ReactNode }) {
     [
       onDocumentLoadSuccess,
       setCurrentDocument,
-      currDocURL,
+      currDocData,
       currDocName,
       currDocPages,
       currDocPage,

@@ -36,7 +36,7 @@ export function PDFViewer({ zoomLevel }: PDFViewerProps) {
     clearHighlights,
     handleTextClick,
     onDocumentLoadSuccess,
-    currDocURL,
+    currDocData,
     currDocPages,
     currDocText,
     currDocPage,
@@ -163,7 +163,7 @@ export function PDFViewer({ zoomLevel }: PDFViewerProps) {
       <Document
         loading={<DocumentSkeleton />}
         noData={<DocumentSkeleton />}
-        file={currDocURL}
+        file={currDocData}
         onLoadSuccess={(pdf) => {
           onDocumentLoadSuccess(pdf);
         }}

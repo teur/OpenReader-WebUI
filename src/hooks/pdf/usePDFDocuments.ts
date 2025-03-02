@@ -39,13 +39,15 @@ export function usePDFDocuments() {
    */
   const addDocument = useCallback(async (file: File): Promise<string> => {
     const id = uuidv4();
+    const arrayBuffer = await file.arrayBuffer();
+    
     const newDoc: PDFDocument = {
       id,
       type: 'pdf',
       name: file.name,
       size: file.size,
       lastModified: file.lastModified,
-      data: new Blob([file], { type: file.type }),
+      data: arrayBuffer,
     };
 
     try {

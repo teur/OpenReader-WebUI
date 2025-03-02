@@ -43,7 +43,7 @@ class IndexedDBService {
       request.onupgradeneeded = (event) => {
         console.log('Upgrading IndexedDB schema...');
         const db = (event.target as IDBOpenDBRequest).result;
-        
+
         if (!db.objectStoreNames.contains(PDF_STORE_NAME)) {
           console.log('Creating PDF documents store...');
           db.createObjectStore(PDF_STORE_NAME, { keyPath: 'id' });
@@ -75,7 +75,12 @@ class IndexedDBService {
         console.log('Adding document to IndexedDB:', document.name);
         const transaction = this.db!.transaction([PDF_STORE_NAME], 'readwrite');
         const store = transaction.objectStore(PDF_STORE_NAME);
-        const request = store.put(document);
+
+        // Create a structured clone of the document to ensure proper storage
+        const request = store.put({
+          ...document,
+          data: document.data // Store ArrayBuffer directly
+        });
 
         request.onerror = (event) => {
           const error = (event.target as IDBRequest).error;
@@ -165,7 +170,7 @@ class IndexedDBService {
         // Create two transactions - one for document deletion, one for location cleanup
         const docTransaction = this.db!.transaction([PDF_STORE_NAME], 'readwrite');
         const configTransaction = this.db!.transaction([CONFIG_STORE_NAME], 'readwrite');
-        
+
         const docStore = docTransaction.objectStore(PDF_STORE_NAME);
         const configStore = configTransaction.objectStore(CONFIG_STORE_NAME);
 
@@ -221,7 +226,7 @@ class IndexedDBService {
 
         const transaction = this.db!.transaction([EPUB_STORE_NAME], 'readwrite');
         const store = transaction.objectStore(EPUB_STORE_NAME);
-        
+
         // Create a structured clone of the document to ensure proper storage
         const request = store.put({
           ...document,
@@ -315,7 +320,7 @@ class IndexedDBService {
         // Create two transactions - one for document deletion, one for location cleanup
         const docTransaction = this.db!.transaction([EPUB_STORE_NAME], 'readwrite');
         const configTransaction = this.db!.transaction([CONFIG_STORE_NAME], 'readwrite');
-        
+
         const docStore = docTransaction.objectStore(EPUB_STORE_NAME);
         const configStore = configTransaction.objectStore(CONFIG_STORE_NAME);
 
@@ -477,17 +482,15 @@ class IndexedDBService {
   async syncToServer(): Promise<{ lastSync: number }> {
     const pdfDocs = await this.getAllDocuments();
     const epubDocs = await this.getAllEPUBDocuments();
-    
+
     const documents = [];
-    
-    // Process PDF documents - store the raw PDF data
+
+    // Process PDF documents - convert ArrayBuffer to array for JSON serialization
     for (const doc of pdfDocs) {
-      const arrayBuffer = await doc.data.arrayBuffer();
-      const uint8Array = new Uint8Array(arrayBuffer);
       documents.push({
         ...doc,
         type: 'pdf',
-        data: Array.from(uint8Array) // Convert to regular array for JSON serialization
+        data: Array.from(new Uint8Array(doc.data))
       });
     }
 
@@ -496,7 +499,7 @@ class IndexedDBService {
       documents.push({
         ...doc,
         type: 'epub',
-        data: Array.from(new Uint8Array(doc.data)) // Convert to regular array for JSON serialization
+        data: Array.from(new Uint8Array(doc.data))
       });
     }
 
@@ -520,31 +523,26 @@ class IndexedDBService {
     }
 
     const { documents } = await response.json();
-    
+
     // Process each document
     for (const doc of documents) {
+      // Convert the numeric array back to ArrayBuffer
+      const uint8Array = new Uint8Array(doc.data);
+      const documentData = {
+        id: doc.id,
+        type: doc.type,
+        name: doc.name,
+        size: doc.size,
+        lastModified: doc.lastModified,
+        data: uint8Array.buffer
+      };
+
       if (doc.type === 'pdf') {
-        // Create a Blob from the raw binary data
-        const blob = new Blob([new Uint8Array(doc.data)], { type: 'application/pdf' });
-        await this.addDocument({
-          id: doc.id,
-          type: doc.type,
-          name: doc.name,
-          size: doc.size,
-          lastModified: doc.lastModified,
-          data: blob
-        });
+        await this.addDocument(documentData);
       } else if (doc.type === 'epub') {
-        // Convert the numeric array back to ArrayBuffer for EPUB
-        const uint8Array = new Uint8Array(doc.data);
-        await this.addEPUBDocument({
-          id: doc.id,
-          type: doc.type,
-          name: doc.name,
-          size: doc.size,
-          lastModified: doc.lastModified,
-          data: uint8Array.buffer
-        });
+        await this.addEPUBDocument(documentData);
+      } else {
+        console.warn(`Unknown document type: ${doc.type}`);
       }
     }
 
