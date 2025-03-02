@@ -71,6 +71,7 @@ export function EPUBViewer({ className = '' }: EPUBViewerProps) {
       </div>
       <div className="flex-1 -mt-16 pt-16">
         <ReactReader
+          loadingView={<DocumentSkeleton />}
           key={'epub-reader'}
           location={locationRef.current}
           locationChanged={handleLocationChanged}
