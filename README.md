@@ -28,12 +28,16 @@ OpenReader WebUI is a document reader with Text-to-Speech capabilities, offering
   - 📐 Customize PDF text extraction margins
   - 🗣️ Multiple voice options (checks `/v1/audio/voices` endpoint)
   - 🎨 Multiple app theme options
+  
 
-## [**Demo**](https://openreader.richardr.dev/)
-
-
-https://github.com/user-attachments/assets/262b9a01-c608-4fee-893c-9461dd48c99b
-
+### 🛠️ Work in progress
+- &#x2611; **Audiobook creation and download**
+- &#x2610; **More documents formats**:
+  - &#x2611; **.epub** files
+  - &#x2610; **.txt** files
+  - &#x2610; **.docx** files
+  - &#x2610; **.md** files
+- &#x2610; **End-to-end Testing**: Cypress tests
 
 ## 🐳 Docker Quick Start
 
@@ -83,6 +87,11 @@ services:
       - docstore:/app/docstore
     restart: unless-stopped
 ```
+
+## [**Demo**](https://openreader.richardr.dev/)
+
+
+https://github.com/user-attachments/assets/262b9a01-c608-4fee-893c-9461dd48c99b
 
 ## Dev Installation
 
