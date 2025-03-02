@@ -49,7 +49,7 @@ export function DocumentListItem({
         <Link
           href={`/${doc.type}/${encodeURIComponent(doc.id)}`}
           draggable={false}
-          className="flex items-center align-center space-x-4 w-full truncate hover:bg-base rounded-lg p-0.5 sm:p-1 transition-colors"
+          className="document-link flex items-center align-center space-x-4 w-full truncate hover:bg-base rounded-lg p-0.5 sm:p-1 transition-colors"
         >
           <div className="flex-shrink-0">
             {doc.type === 'pdf' ? <PDFIcon /> : <EPUBIcon />}
