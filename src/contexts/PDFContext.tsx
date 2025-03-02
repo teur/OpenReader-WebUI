@@ -36,6 +36,7 @@ import {
 } from '@/utils/pdf';
 
 import type { PDFDocumentProxy } from 'pdfjs-dist';
+import { combineAudioChunks } from '@/utils/audio';
 
 /**
  * Interface defining all available methods and properties in the PDF context
@@ -230,7 +231,7 @@ export function PDFProvider({ children }: { children: ReactNode }) {
       // Second pass: process text into audio
       for (let i = 0; i < textPerPage.length; i++) {
         if (signal?.aborted) {
-          const partialBuffer = await combineAudioChunks(audioChunks, format);
+          const partialBuffer = await combineAudioChunks(audioChunks, format, setIsAudioCombining);
           return partialBuffer;
         }
 
@@ -282,7 +283,7 @@ export function PDFProvider({ children }: { children: ReactNode }) {
         } catch (error) {
           if (error instanceof Error && error.name === 'AbortError') {
             console.log('TTS request aborted');
-            const partialBuffer = await combineAudioChunks(audioChunks, format);
+            const partialBuffer = await combineAudioChunks(audioChunks, format, setIsAudioCombining);
             return partialBuffer;
           }
           console.error('Error processing page:', error);
@@ -293,58 +294,12 @@ export function PDFProvider({ children }: { children: ReactNode }) {
         throw new Error('No audio was generated from the PDF content');
       }
 
-      return combineAudioChunks(audioChunks, format);
+      return combineAudioChunks(audioChunks, format, setIsAudioCombining);
     } catch (error) {
       console.error('Error creating audiobook:', error);
       throw error;
     }
   }, [pdfDocument, headerMargin, footerMargin, leftMargin, rightMargin, apiKey, baseUrl, voice, voiceSpeed]);
-
-  const combineAudioChunks = async (
-    audioChunks: { buffer: ArrayBuffer; title?: string; startTime: number }[],
-    format: 'mp3' | 'm4b'
-  ): Promise<ArrayBuffer> => {
-    setIsAudioCombining(true);
-    try {
-      if (format === 'm4b') {
-        // Convert to M4B format using the audio conversion API
-        const response = await fetch('/api/audio/convert', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            chapters: audioChunks
-              .filter(chunk => chunk.title) // Only include chunks with titles
-              .map(chunk => ({
-                title: chunk.title,
-                buffer: Array.from(new Uint8Array(chunk.buffer))
-              }))
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to convert audio to M4B format');
-        }
-
-        return response.arrayBuffer();
-      }
-
-      // For MP3, just concatenate the buffers
-      const totalLength = audioChunks.reduce((acc, chunk) => acc + chunk.buffer.byteLength, 0);
-      const combinedBuffer = new Uint8Array(totalLength);
-
-      let offset = 0;
-      for (const chunk of audioChunks) {
-        combinedBuffer.set(new Uint8Array(chunk.buffer), offset);
-        offset += chunk.buffer.byteLength;
-      }
-
-      return combinedBuffer.buffer;
-    } finally {
-      setIsAudioCombining(false);
-    }
-  }
 
   // Context value memoization
   const contextValue = useMemo(

@@ -1,18 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { spawn } from 'child_process';
-import { writeFile, mkdir, unlink, rmdir } from 'fs/promises';
-import { createReadStream } from 'fs';
-import { existsSync } from 'fs';
+import { writeFile, readFile, mkdir, unlink, rmdir, readdir } from 'fs/promises';
+import { existsSync, createReadStream } from 'fs';
 import { join } from 'path';
 import { randomUUID } from 'crypto';
 
-interface Chapter {
-  title: string;
-  buffer: number[];
-}
-
 interface ConversionRequest {
-  chapters: Chapter[];
+  chapterTitle: string;
+  buffer: number[];
+  bookId?: string;
 }
 
 async function getAudioDuration(filePath: string): Promise<number> {
@@ -66,19 +62,9 @@ async function runFFmpeg(args: string[]): Promise<void> {
   });
 }
 
-async function cleanup(files: string[], directories: string[]) {
-  await Promise.all([
-    ...files.map(f => unlink(f).catch(console.error)),
-    ...directories.map(d => rmdir(d).catch(console.error))
-  ]);
-}
-
 export async function POST(request: NextRequest) {
-  const tempFiles: string[] = [];
-  const tempDirs: string[] = [];
-
   try {
-    // Parse the request body as a stream
+    // Parse the request body
     const data: ConversionRequest = await request.json();
     
     // Create temp directory if it doesn't exist
@@ -87,70 +73,100 @@ export async function POST(request: NextRequest) {
       await mkdir(tempDir);
     }
 
-    // Generate unique filenames
-    const id = randomUUID();
-    const outputPath = join(tempDir, `${id}.m4b`);
-    const metadataPath = join(tempDir, `${id}.txt`);
-    const intermediateDir = join(tempDir, `${id}-intermediate`);
+    // Generate or use existing book ID
+    const bookId = data.bookId || randomUUID();
+    const intermediateDir = join(tempDir, `${bookId}-intermediate`);
     
-    tempFiles.push(outputPath, metadataPath);
-    tempDirs.push(intermediateDir);
-
     // Create intermediate directory
     if (!existsSync(intermediateDir)) {
       await mkdir(intermediateDir);
     }
 
-    // Process chapters sequentially to avoid memory issues
-    const chapterFiles: { path: string; title: string; duration: number }[] = [];
-    let currentTime = 0;
+    // Count existing files to determine chapter index
+    const files = await readdir(intermediateDir);
+    const wavFiles = files.filter(f => f.endsWith('.wav'));
+    const chapterIndex = wavFiles.length;
 
-    for (let i = 0; i < data.chapters.length; i++) {
-      const chapter = data.chapters[i];
-      const inputPath = join(intermediateDir, `${i}-input.mp3`);
-      const outputPath = join(intermediateDir, `${i}.aac`);
-      
-      tempFiles.push(inputPath, outputPath);
+    // Write input file
+    const inputPath = join(intermediateDir, `${chapterIndex}-input.aac`);
+    const outputPath = join(intermediateDir, `${chapterIndex}.wav`);
+    const metadataPath = join(intermediateDir, `${chapterIndex}.meta.json`);
+    
+    // Write the chapter audio to a temp file
+    await writeFile(inputPath, Buffer.from(new Uint8Array(data.buffer)));
+    
+    // Convert to WAV from raw aac with consistent format
+    await runFFmpeg([
+      '-i', inputPath,
+      '-f', 'wav',
+      '-c:a', 'copy',
+      '-preset', 'ultrafast',
+      '-threads', '0',
+      outputPath
+    ]);
 
-      // Write the chapter audio to a temp file using a Buffer chunk size of 64KB
-      const chunkSize = 64 * 1024; // 64KB chunks
-      const buffer = Buffer.from(new Uint8Array(chapter.buffer));
-      const chunks: Buffer[] = [];
-      
-      for (let offset = 0; offset < buffer.length; offset += chunkSize) {
-        chunks.push(buffer.slice(offset, offset + chunkSize));
-      }
-      
-      await writeFile(inputPath, Buffer.concat(chunks));
-      chunks.length = 0; // Clear chunks array
+    // Get the duration and save metadata
+    const duration = await getAudioDuration(outputPath);
+    await writeFile(metadataPath, JSON.stringify({
+      title: data.chapterTitle,
+      duration,
+      index: chapterIndex
+    }));
 
-      // Copy to AAC format for compatibility with M4B
-      await runFFmpeg([
-        '-i', inputPath,
-        '-c:a', 'copy', // Use copy instead of re-encoding
-        outputPath
-      ]);
-      
-      const duration = await getAudioDuration(outputPath);
-      
-      chapterFiles.push({
-        path: outputPath,
-        title: chapter.title,
-        duration
-      });
+    // Clean up input file
+    await unlink(inputPath).catch(console.error);
 
-      // Clean up input file early
-      await unlink(inputPath).catch(console.error);
-      const index = tempFiles.indexOf(inputPath);
-      if (index > -1) {
-        tempFiles.splice(index, 1);
-      }
+    return NextResponse.json({ 
+      bookId,
+      chapterIndex,
+      duration
+    });
+
+  } catch (error) {
+    console.error('Error processing audio chapter:', error);
+    return NextResponse.json(
+      { error: 'Failed to process audio chapter' }, 
+      { status: 500 }
+    );
+  }
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    const bookId = request.nextUrl.searchParams.get('bookId');
+    if (!bookId) {
+      return NextResponse.json({ error: 'Missing bookId parameter' }, { status: 400 });
     }
+
+    const tempDir = join(process.cwd(), 'temp');
+    const intermediateDir = join(tempDir, `${bookId}-intermediate`);
+    const outputPath = join(tempDir, `${bookId}.m4b`);
+    const metadataPath = join(tempDir, `${bookId}-metadata.txt`);
+    const listPath = join(tempDir, `${bookId}-list.txt`);
+
+    if (!existsSync(intermediateDir)) {
+      return NextResponse.json({ error: 'Book not found' }, { status: 404 });
+    }
+
+    // Read all chapter metadata
+    const files = await readdir(intermediateDir);
+    const metaFiles = files.filter(f => f.endsWith('.meta.json'));
+    const chapters: { title: string; duration: number; index: number }[] = [];
+    
+    for (const metaFile of metaFiles) {
+      const meta = JSON.parse(await readFile(join(intermediateDir, metaFile), 'utf-8'));
+      chapters.push(meta);
+    }
+
+    // Sort chapters by index
+    chapters.sort((a, b) => a.index - b.index);
 
     // Create chapter metadata file
     const metadata: string[] = [];
+    let currentTime = 0;
     
-    chapterFiles.forEach((chapter) => {
+    // Calculate chapter timings based on actual durations
+    chapters.forEach((chapter) => {
       const startMs = Math.floor(currentTime * 1000);
       currentTime += chapter.duration;
       const endMs = Math.floor(currentTime * 1000);
@@ -167,72 +183,73 @@ export async function POST(request: NextRequest) {
     await writeFile(metadataPath, ';FFMETADATA1\n' + metadata.join('\n'));
 
     // Create list file for concat
-    const listPath = join(tempDir, `${id}-list.txt`);
-    tempFiles.push(listPath);
-    
     await writeFile(
       listPath,
-      chapterFiles.map(f => `file '${f.path}'`).join('\n')
+      chapters.map(c => `file '${join(intermediateDir, `${c.index}.wav`)}'`).join('\n')
     );
 
-    // Combine all files into a single M4B with optimized settings
+    // Combine all files into a single M4B
     await runFFmpeg([
       '-f', 'concat',
       '-safe', '0',
       '-i', listPath,
       '-i', metadataPath,
       '-map_metadata', '1',
-      '-c:a', 'copy', // Use macOS AudioToolbox AAC encoder
+      '-c:a', 'copy', // c:a is codec for audio and :a is stream specifier
+      //'-codec', 'wav',
       //'-b:a', '192k',
-      '-threads', '0', // Use maximum available threads
-      '-movflags', '+faststart',
-      '-preset', 'ultrafast', // Use fastest encoding preset
+      //'-threads', '0', // Use maximum available threads
+      //'-movflags', '+faststart',
+      //'-preset', 'ultrafast', // Use fastest encoding preset
       outputPath
     ]);
 
-    // Create a readable stream from the output file
-    const fileStream = createReadStream(outputPath);
+    // Stream the file back to the client
+    const stream = createReadStream(outputPath);
+    
+    // Clean up function
+    const cleanup = async () => {
+      try {
+        await Promise.all([
+          ...chapters.map(c => unlink(join(intermediateDir, `${c.index}.wav`))),
+          ...chapters.map(c => unlink(join(intermediateDir, `${c.index}.meta.json`))),
+          unlink(metadataPath),
+          unlink(listPath),
+          unlink(outputPath),
+          rmdir(intermediateDir)
+        ]);
+      } catch (error) {
+        console.error('Cleanup error:', error);
+      }
+    };
 
-    // Create a web-compatible ReadableStream from the Node.js stream
-    const webStream = new ReadableStream({
+    // Clean up after streaming is complete
+    stream.on('end', cleanup);
+
+    const readableWebStream = new ReadableStream({
       start(controller) {
-        fileStream.on('data', (chunk) => {
+        stream.on('data', (chunk) => {
           controller.enqueue(chunk);
         });
-        
-        fileStream.on('end', () => {
+        stream.on('end', () => {
           controller.close();
-          // Clean up only after the stream has been fully sent
-          cleanup(tempFiles, tempDirs).catch(console.error);
         });
-        
-        fileStream.on('error', (error) => {
-          console.error('Stream error:', error);
-          controller.error(error);
-          cleanup(tempFiles, tempDirs).catch(console.error);
+        stream.on('error', (err) => {
+          controller.error(err);
         });
       },
-      cancel() {
-        fileStream.destroy();
-        cleanup(tempFiles, tempDirs).catch(console.error);
-      }
     });
 
-    // Return the streaming response
-    return new NextResponse(webStream, {
+    return new NextResponse(readableWebStream, {
       headers: {
         'Content-Type': 'audio/mp4',
-        'Transfer-Encoding': 'chunked'
       },
     });
 
   } catch (error) {
-    // Clean up in case of error
-    await cleanup(tempFiles, tempDirs).catch(console.error);
-    
-    console.error('Error converting audio:', error);
+    console.error('Error creating M4B:', error);
     return NextResponse.json(
-      { error: 'Failed to convert audio format' }, 
+      { error: 'Failed to create M4B file' }, 
       { status: 500 }
     );
   }
