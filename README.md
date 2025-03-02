@@ -31,13 +31,11 @@ OpenReader WebUI is a document reader with Text-to-Speech capabilities, offering
   
 
 ### 🛠️ Work in progress
-- &#x2611; **Audiobook creation and download**
-- &#x2610; **More documents formats**:
-  - &#x2611; **.epub** files
-  - &#x2610; **.txt** files
-  - &#x2610; **.docx** files
-  - &#x2610; **.md** files
-- &#x2610; **End-to-end Testing**: Cypress tests
+&#x2611; **Audiobook creation and download** (m4b format) <br>
+&#x2611; **Get PDFs on iOS working** <br>
+&#x2610; **More documents formats**: .txt, .docx, .md, etc. <br>
+&#x2610; **End-to-end Testing**: Playwright tests (in progress) <br>
+&#x2610; **Accessibility Improvements**: Ongoing
 
 ## 🐳 Docker Quick Start
 
