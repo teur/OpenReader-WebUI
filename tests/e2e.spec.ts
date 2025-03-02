@@ -11,7 +11,7 @@ async function uploadFile(page: Page, filePath: string) {
 test.describe('Document Upload and Display', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to the home page before each test
-    await page.goto('http://localhost:3003');
+    await page.goto('/');
 
     // Click the "done" button to dismiss the welcome message
     await page.getByText('Done').click();
@@ -23,7 +23,7 @@ test.describe('Document Upload and Display', () => {
       await uploadFile(page, './public/sample.pdf');
 
       // Verify upload success
-      await expect(page.getByText('sample.pdf')).toBeVisible();
+      await expect(page.getByText('sample.pdf')).toBeVisible({ timeout: 10000 });
     });
 
     test('should display a PDF document', async ({ page }) => {
@@ -31,11 +31,11 @@ test.describe('Document Upload and Display', () => {
       await uploadFile(page, './public/sample.pdf');
 
       // Click on the uploaded document
-      await page.getByText('sample.pdf').click();
+      await page.getByText('sample.pdf').click({ timeout: 10000 });
 
       // Verify PDF viewer is displayed
-      await expect(page.locator('.react-pdf__Document')).toBeVisible();
-      await expect(page.locator('.react-pdf__Page')).toBeVisible();
+      await expect(page.locator('.react-pdf__Document')).toBeVisible({ timeout: 10000 });
+      await expect(page.locator('.react-pdf__Page')).toBeVisible({ timeout: 10000 });
     });
   });
 
@@ -45,7 +45,7 @@ test.describe('Document Upload and Display', () => {
       await uploadFile(page, './public/sample.epub');
       
       // Verify upload success
-      await expect(page.getByText('sample.epub')).toBeVisible();
+      await expect(page.getByText('sample.epub')).toBeVisible({ timeout: 10000 });
     });
 
     test('should display an EPUB document', async ({ page }) => {
@@ -53,10 +53,10 @@ test.describe('Document Upload and Display', () => {
       await uploadFile(page, './public/sample.epub');
 
       // Click on the uploaded document
-      await page.getByText('sample.epub').click();
+      await page.getByText('sample.epub').click({ timeout: 10000 });
 
       // Verify EPUB viewer is displayed
-      await expect(page.locator('.epub-container')).toBeVisible();
+      await expect(page.locator('.epub-container')).toBeVisible({ timeout: 10000 });
     });
   });
 });

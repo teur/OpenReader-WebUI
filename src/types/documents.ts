@@ -11,7 +11,7 @@ export interface BaseDocument {
 
 export interface PDFDocument extends BaseDocument {
   type: 'pdf';
-  data: Blob;
+  data: ArrayBuffer;
 }
 
 export interface EPUBDocument extends BaseDocument {
