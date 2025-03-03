@@ -29,7 +29,6 @@ import toast from 'react-hot-toast';
 import { useParams } from 'next/navigation';
 
 import { useConfig } from '@/contexts/ConfigContext';
-import { audioBufferToURL } from '@/utils/audio';
 import { useAudioCache } from '@/hooks/audio/useAudioCache';
 import { useVoiceManagement } from '@/hooks/audio/useVoiceManagement';
 import { useMediaSession } from '@/hooks/audio/useMediaSession';
@@ -488,7 +487,13 @@ export function TTSProvider({ children }: { children: ReactNode }) {
     const processPromise = (async () => {
       try {
         const audioBuffer = await getAudio(sentence);
-        return audioBufferToURL(audioBuffer!);
+        if (!audioBuffer) throw new Error('No audio data generated');
+        
+        // Convert to base64 data URI
+        const bytes = new Uint8Array(audioBuffer);
+        const binaryString = bytes.reduce((acc, byte) => acc + String.fromCharCode(byte), '');
+        const base64String = btoa(binaryString);
+        return `data:audio/mp3;base64,${base64String}`;
       } catch (error) {
         setIsProcessing(false);
         throw error;
@@ -520,9 +525,10 @@ export function TTSProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const audioUrl = await processSentence(sentence);
-      if (!audioUrl) {
-        throw new Error('No audio URL generated');
+      // Get the processed audio data URI directly from processSentence
+      const audioDataUri = await processSentence(sentence);
+      if (!audioDataUri) {
+        throw new Error('No audio data generated');
       }
 
       // Force unload any previous Howl instance to free up resources
@@ -531,7 +537,7 @@ export function TTSProvider({ children }: { children: ReactNode }) {
       }
 
       const howl = new Howl({
-        src: [audioUrl],
+        src: [audioDataUri],
         format: ['mp3'],
         html5: true,
         preload: true,
@@ -548,7 +554,6 @@ export function TTSProvider({ children }: { children: ReactNode }) {
           }
         },
         onend: () => {
-          URL.revokeObjectURL(audioUrl);
           howl.unload();
           setActiveHowl(null);
           if (isPlaying) {
@@ -559,13 +564,11 @@ export function TTSProvider({ children }: { children: ReactNode }) {
           console.warn('Error loading audio:', error);
           setIsProcessing(false);
           setActiveHowl(null);
-          URL.revokeObjectURL(audioUrl);
           howl.unload();
           setIsPlaying(false);
         },
         onstop: () => {
           setIsProcessing(false);
-          URL.revokeObjectURL(audioUrl);
           howl.unload();
         }
       });
@@ -590,7 +593,7 @@ export function TTSProvider({ children }: { children: ReactNode }) {
       advance();
       return null;
     }
-  }, [isPlaying, processSentence, advance, activeHowl]);
+  }, [isPlaying, advance, activeHowl, processSentence]);
 
   const playAudio = useCallback(async () => {
     const howl = await playSentenceWithHowl(sentences[currentIndex]);
