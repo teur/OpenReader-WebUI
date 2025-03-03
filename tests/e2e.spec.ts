@@ -13,8 +13,8 @@ async function uploadAndDisplay(page: Page, fileName: string) {
   await uploadFile(page, fileName);
   
   // Wait for link with document-link class
-  await page.waitForSelector('.document-link', { timeout: 20000 });
-  await page.getByText(fileName).click();
+  const size = fileName.endsWith('.pdf') ? '0.02 MB' : '0.33 MB';
+  await page.getByRole('link', { name: `${fileName} ${size}` }).click();
 
   // Wait for the document to load
   if (fileName.endsWith('.pdf')) {
@@ -27,25 +27,23 @@ async function uploadAndDisplay(page: Page, fileName: string) {
 
 async function waitAndClickPlay(page: Page) {
   // Wait for play button selector without disabled attribute
-  await page.waitForSelector('button[aria-label="Play"]:not([disabled])', { timeout: 20000 });
-  // Play the TTS by aria-label play button
-  await page.locator('button[aria-label="Play"]').click();
+  await expect(page.getByRole('button', { name: 'Play' })).toBeVisible();
+  // Play the TTS by clicking the button
+  await page.getByRole('button', { name: 'Play' }).click();
 
-  // Wait for buttons to be disabled
-  await Promise.all([
-    page.waitForSelector('button[aria-label="Skip forward"][disabled]'),
-    page.waitForSelector('button[aria-label="Skip backward"][disabled]'),
-  ]);
+  // Expect for buttons to be disabled
+  await expect(page.locator('button[aria-label="Skip forward"][disabled]')).toBeVisible();
+  await expect(page.locator('button[aria-label="Skip backward"][disabled]')).toBeVisible();
 
   // Wait for the TTS to stop processing
   await Promise.all([
-    page.waitForSelector('button[aria-label="Skip forward"]:not([disabled])', { timeout: 30000 }),
-    page.waitForSelector('button[aria-label="Skip backward"]:not([disabled])', { timeout: 30000 }),
+    page.waitForSelector('button[aria-label="Skip forward"]:not([disabled])', { timeout: 45000 }),
+    page.waitForSelector('button[aria-label="Skip backward"]:not([disabled])', { timeout: 45000 }),
   ]);
 
   await page.waitForFunction(() => {
     return navigator.mediaSession?.playbackState === 'playing';
-  }, { timeout: 30000 })
+  });
 }
 
 async function playTTSAndWaitForASecond(page: Page, fileName: string) {
@@ -61,18 +59,27 @@ test.describe('Document flow', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to the home page before each test
     await page.goto('/');
+    await page.waitForLoadState('networkidle');
 
     // Click the "done" button to dismiss the welcome message
     await page.getByText('Done').click();
   });
 
-  test.describe('PDF check', () => {
+  // Basic upload tests can run in parallel
+  test.describe('Basic document tests', () => {
     test('upload a PDF document', async ({ page }) => {
       // Upload the file
       await uploadFile(page, 'sample.pdf');
 
       // Verify upload success
       await expect(page.getByText('sample.pdf')).toBeVisible({ timeout: 10000 });
+    });
+
+    test('upload a EPUB document', async ({ page }) => {
+      // Upload the file
+      await uploadFile(page, 'sample.epub');
+      // Verify upload success
+      await expect(page.getByText('sample.epub')).toBeVisible({ timeout: 10000 });
     });
 
     test('display a PDF document', async ({ page }) => {
@@ -82,24 +89,7 @@ test.describe('Document flow', () => {
       // Verify PDF viewer is displayed
       await expect(page.locator('.react-pdf__Document')).toBeVisible();
       await expect(page.locator('.react-pdf__Page')).toBeVisible();
-    });
-
-    test('play and pause TTS for a PDF document (naive)', async ({ page }) => {
-      // Play TTS for the PDF document
-      await playTTSAndWaitForASecond(page, 'sample.pdf');
-      // Click pause to stop playback
-      await page.locator('button[aria-label="Pause"]').click();
-      // Check for play button to be visible
-      await expect(page.locator('button[aria-label="Play"]')).toBeVisible({ timeout: 10000 });
-    });
-  });
-
-  test.describe('EPUB check', () => {
-    test('upload a EPUB document', async ({ page }) => {
-      // Upload the file
-      await uploadFile(page, 'sample.epub');
-      // Verify upload success
-      await expect(page.getByText('sample.epub')).toBeVisible({ timeout: 10000 });
+      await expect(page.getByText('Sample PDF')).toBeVisible();
     });
 
     test('display an EPUB document', async ({ page }) => {
@@ -107,15 +97,30 @@ test.describe('Document flow', () => {
       await uploadAndDisplay(page, 'sample.epub');
       // Verify EPUB viewer is displayed
       await expect(page.locator('.epub-container')).toBeVisible({ timeout: 10000 });
+      await expect(page.getByRole('button', { name: '‹' })).toBeVisible();
+      await expect(page.getByRole('button', { name: '›' })).toBeVisible();
+    });
+  });
+
+  // TTS tests run with limited concurrency
+  test.describe('TTS functionality', () => {
+    test.describe.configure({ mode: 'serial' });
+    test('play and pause TTS for a PDF document', async ({ page }) => {
+      // Play TTS for the PDF document
+      await playTTSAndWaitForASecond(page, 'sample.pdf');
+      // Click pause to stop playback
+      await page.getByRole('button', { name: 'Pause' }).click();
+      // Check for play button to be visible
+      await expect(page.getByRole('button', { name: 'Play' })).toBeVisible({ timeout: 10000 });
     });
 
-    test('play and pause TTS for an EPUB document (naive)', async ({ page }) => {
+    test('play and pause TTS for an EPUB document', async ({ page }) => {
       // Play TTS for the EPUB document
       await playTTSAndWaitForASecond(page, 'sample.epub');
       // Click pause to stop playback
-      await page.locator('button[aria-label="Pause"]').click();
+      await page.getByRole('button', { name: 'Pause' }).click();
       // Check for play button to be visible
-      await expect(page.locator('button[aria-label="Play"]')).toBeVisible({ timeout: 10000 });
+      await expect(page.getByRole('button', { name: 'Play' })).toBeVisible({ timeout: 10000 });
     });
   });
 });

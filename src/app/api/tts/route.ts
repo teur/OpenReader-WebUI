@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
       return new NextResponse(null, { status: 499 }); // Use 499 status for client closed request
     }
 
-    console.error('Error generating TTS:', error);
+    console.warn('Error generating TTS:', error);
     return NextResponse.json(
       { error: 'Failed to generate audio' },
       { status: 500 }
