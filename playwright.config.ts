@@ -35,6 +35,14 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
 
+  /* Run your local dev server before starting the tests */
+  webServer: {
+    command: process.env.CI ? 'npm run build && npm run start' : 'npm run dev',
+    url: 'http://localhost:3003',
+    reuseExistingServer: !process.env.CI,
+    timeout: 120 * 1000,
+  },
+
   /* Configure projects for major browsers */
   projects: [
     {
@@ -72,12 +80,4 @@ export default defineConfig({
     //   use: { ...devices['Desktop Chrome'], channel: 'chrome' },
     // },
   ],
-
-  /* Run your local dev server before starting the tests */
-  webServer: {
-    command: 'npm run build && npm run start',
-    url: 'http://localhost:3003',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120 * 1000,
-  },
 });

@@ -150,7 +150,7 @@ export function TTSProvider({ children }: { children: ReactNode }) {
    * @returns {Promise<string[]>} Array of processed sentences
    */
   const processTextToSentences = useCallback(async (text: string): Promise<string[]> => {
-    if (text.length === 0) {
+    if (text.length < 1) {
       return [];
     }
 
@@ -524,58 +524,107 @@ export function TTSProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    try {
-      // Get the processed audio data URI directly from processSentence
-      const audioDataUri = await processSentence(sentence);
-      if (!audioDataUri) {
-        throw new Error('No audio data generated');
-      }
+    const MAX_RETRIES = 3;
+    const INITIAL_RETRY_DELAY = 1000; // 1 second
 
-      // Force unload any previous Howl instance to free up resources
-      if (activeHowl) {
-        activeHowl.unload();
-      }
-
-      const howl = new Howl({
-        src: [audioDataUri],
-        format: ['mp3'],
-        html5: true,
-        preload: true,
-        pool: 5,
-        onplay: () => {
-          setIsProcessing(false);
-          if ('mediaSession' in navigator) {
-            navigator.mediaSession.playbackState = 'playing';
-          }
-        },
-        onpause: () => {
-          if ('mediaSession' in navigator) {
-            navigator.mediaSession.playbackState = 'paused';
-          }
-        },
-        onend: () => {
-          howl.unload();
-          setActiveHowl(null);
-          if (isPlaying) {
-            advance();
-          }
-        },
-        onloaderror: (id, error) => {
-          console.warn('Error loading audio:', error);
-          setIsProcessing(false);
-          setActiveHowl(null);
-          howl.unload();
-          setIsPlaying(false);
-        },
-        onstop: () => {
-          setIsProcessing(false);
-          howl.unload();
+    const createHowl = async (retryCount = 0): Promise<Howl | null> => {
+      try {
+        // Get the processed audio data URI directly from processSentence
+        const audioDataUri = await processSentence(sentence);
+        if (!audioDataUri) {
+          throw new Error('No audio data generated');
         }
-      });
 
-      setActiveHowl(howl);
-      return howl;
+        // Force unload any previous Howl instance to free up resources
+        if (activeHowl) {
+          activeHowl.unload();
+        }
 
+        return new Howl({
+          src: [audioDataUri],
+          format: ['mp3', 'mpeg'],
+          html5: true,
+          preload: true,
+          pool: 5,
+          onplay: () => {
+            setIsProcessing(false);
+            if ('mediaSession' in navigator) {
+              navigator.mediaSession.playbackState = 'playing';
+            }
+          },
+          onplayerror: function(this: Howl, error) {
+            console.warn('Howl playback error:', error);
+            // Try to recover by forcing HTML5 audio mode
+            if (this.state() === 'loaded') {
+              this.unload();
+              this.once('load', () => {
+                this.play();
+              });
+              this.load();
+            }
+          },
+          onloaderror: async function(this: Howl, error) {
+            console.warn(`Error loading audio (attempt ${retryCount + 1}/${MAX_RETRIES}):`, error);
+            
+            if (retryCount < MAX_RETRIES) {
+              // Calculate exponential backoff delay
+              const delay = INITIAL_RETRY_DELAY * Math.pow(2, retryCount);
+              console.log(`Retrying in ${delay}ms...`);
+              
+              // Wait for the delay
+              await new Promise(resolve => setTimeout(resolve, delay));
+              
+              // Try to create a new Howl instance
+              const retryHowl = await createHowl(retryCount + 1);
+              if (retryHowl) {
+                setActiveHowl(retryHowl);
+                retryHowl.play();
+              }
+            } else {
+              console.error('Max retries reached, moving to next sentence');
+              setIsProcessing(false);
+              setActiveHowl(null);
+              this.unload();
+              setIsPlaying(false);
+              
+              toast.error('Audio loading failed after retries. Moving to next sentence...', {
+                id: 'audio-load-error',
+                style: {
+                  background: 'var(--background)',
+                  color: 'var(--accent)',
+                },
+                duration: 2000,
+              });
+              
+              advance();
+            }
+          },
+          onend: function(this: Howl) {
+            this.unload();
+            setActiveHowl(null);
+            if (isPlaying) {
+              advance();
+            }
+          },
+          onstop: function(this: Howl) {
+            setIsProcessing(false);
+            this.unload();
+          }
+        });
+      } catch (error) {
+        console.error('Error creating Howl instance:', error);
+        return null;
+      }
+    };
+
+    try {
+      const howl = await createHowl();
+      if (howl) {
+        setActiveHowl(howl);
+        return howl;
+      }
+
+      throw new Error('Failed to create Howl instance');
     } catch (error) {
       console.error('Error playing TTS:', error);
       setActiveHowl(null);
