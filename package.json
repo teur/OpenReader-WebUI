@@ -1,6 +1,6 @@
 {
   "name": "openreader-webui",
-  "version": "0.2.4",
+  "version": "0.2.4-patch.1",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack -p 3003",
@@ -16,19 +16,19 @@
     "compromise": "^14.14.4",
     "howler": "^2.2.4",
     "lru-cache": "^11.0.2",
-    "next": "15.1.5",
-    "openai": "^4.79.1",
+    "next": "15.2.1",
+    "openai": "^4.86.1",
     "pdfjs-dist": "4.8.69",
     "react": "^19.0.0",
     "react-dnd": "^16.0.1",
     "react-dnd-html5-backend": "^16.0.1",
     "react-dom": "^19.0.0",
-    "react-dropzone": "^14.3.5",
-    "react-hot-toast": "^2.5.1",
+    "react-dropzone": "^14.3.8",
+    "react-hot-toast": "^2.5.2",
     "react-pdf": "^9.2.1",
     "react-reader": "^2.0.12",
     "string-similarity": "^4.0.4",
-    "uuid": "^11.0.5"
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

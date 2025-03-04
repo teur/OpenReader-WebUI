@@ -4,9 +4,46 @@ import stringSimilarity from 'string-similarity';
 import type { TextItem } from 'pdfjs-dist/types/src/display/api';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 
-// Set worker from public directory and compatibility mode
-pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.mjs';
-pdfjs.GlobalWorkerOptions.workerPort = null;
+// Function to detect if we need to use legacy build
+function shouldUseLegacyBuild() {
+  try {
+    if (typeof window === 'undefined') return false;
+    
+    const ua = window.navigator.userAgent;
+    const isSafari = /^((?!chrome|android).)*safari/i.test(ua);
+    
+    console.log(isSafari ? 'Running on Safari' : 'Not running on Safari');
+    if (!isSafari) return false;
+    
+    // Extract Safari version - matches "Version/18" format
+    const match = ua.match(/Version\/(\d+)/i);
+    console.log('Safari version:', match);
+    if (!match || !match[1]) return true; // If we can't determine version, use legacy to be safe
+    
+    const version = parseInt(match[1]);
+    return version < 18; // Use legacy build for Safari versions equal or below 18
+  } catch (e) {
+    console.error('Error detecting Safari version:', e);
+    return false;
+  }
+}
+
+// Initialize PDF.js worker
+function initPDFWorker() {
+  try {
+    if (typeof window !== 'undefined') {
+      const useLegacy = shouldUseLegacyBuild();
+      const workerSrc = useLegacy ? '/pdf.legacy.worker.mjs' : '/pdf.worker.mjs';
+      console.log('Setting PDF worker to:', workerSrc);
+      pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
+    }
+  } catch (e) {
+    console.error('Error setting PDF worker:', e);
+  }
+}
+
+// Initialize the worker
+initPDFWorker();
 
 interface TextMatch {
   elements: HTMLElement[];
@@ -22,6 +59,9 @@ export async function extractTextFromPDF(
   margins = { header: 0.07, footer: 0.07, left: 0.07, right: 0.07 }
 ): Promise<string> {
   try {
+    // Log pdf worker version
+    //console.log('PDF worker version:', pdfjs.GlobalWorkerOptions.workerSrc);
+
     const page = await pdf.getPage(pageNumber);
     const textContent = await page.getTextContent();
     
@@ -61,7 +101,7 @@ export async function extractTextFromPDF(
       return item.str.trim().length > 0;
     });
 
-    console.log('Filtered text items:', textItems);
+    //console.log('Filtered text items:', textItems);
 
     const tolerance = 2;
     const lines: TextItem[][] = [];
