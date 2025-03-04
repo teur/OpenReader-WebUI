@@ -11,16 +11,15 @@
 
 # OpenReader WebUI 📄🔊
 
-OpenReader WebUI is a document reader with Text-to-Speech capabilities, offering a TTS read along experience with narration for both PDF and EPUB documents. It can use any OpenAI compatible TTS endpoint, including [Kokoro-FastAPI](https://github.com/remsky/Kokoro-FastAPI/tree/v0.0.5post1-stable).
+OpenReader WebUI is a document reader with Text-to-Speech capabilities, offering a TTS read along experience with narration for both PDF and EPUB documents. It can use any OpenAI compatible TTS endpoint, including [Kokoro-FastAPI](https://github.com/remsky/Kokoro-FastAPI).
 
 - 🎯 **TTS API Integration**: Compatible with OpenAI text to speech API, Kokoro FastAPI TTS, or any other compatible service; enabling high-quality voice narration
 - 💾 **Local-First Architecture**: Uses IndexedDB browser storage - no server uploads required
 - 🛜 **Optional Server-side documents**: Manually upload documents to the next backend for all users to download
 - 📖 **Read Along Experience**: Follow along with highlighted text as the TTS narrates
-- 🎧 **Audiobook Creation**: Create and export audiobooks from PDF and ePub files with m4b format
 - 📚 **EPUB Support**: Read EPUB files with table of contents
 - 📄 **PDF Support**: Read PDF files with clean text extraction
-  - 💬 Follow along with highlighted text as the TTS narrates
+- 🎧 **Audiobook Creation**: Create and export audiobooks from PDF and ePub files with m4b format
 - 📲 **Mobile Support**: Works on mobile devices, and can be added as a PWA web app
 - 🎨 **Customizable Experience**: 
   - 🔑 Set TTS API base URL (with optional API key)
@@ -31,11 +30,11 @@ OpenReader WebUI is a document reader with Text-to-Speech capabilities, offering
   
 
 ### 🛠️ Work in progress
-&#x2611; **Audiobook creation and download** (m4b format) <br>
-&#x2611; **Get PDFs on iOS working** <br>
-&#x2610; **More documents formats**: .txt, .docx, .md, etc. <br>
-&#x2610; **End-to-end Testing**: Playwright tests (in progress) <br>
-&#x2610; **Accessibility Improvements**: Ongoing
+- [x] **Audiobook creation and download** (m4b format)
+- [x] **Get PDFs on iOS working**
+- [ ] **End-to-end Testing**: More playwright tests (in progress)
+- [ ] **More document formats**: .txt, .docx, .md, etc.
+- [ ] **Accessibility Improvements**
 
 ## 🐳 Docker Quick Start
 
@@ -155,7 +154,6 @@ Contributions are welcome! Fork the repository and submit a pull request with yo
 ## Docker Supported Architectures
 - linux/amd64 (x86_64)
 - linux/arm64 (Apple Silicon)
-- linux/arm/v7 (Raspberry Pi)
 
 ## Stack
 
