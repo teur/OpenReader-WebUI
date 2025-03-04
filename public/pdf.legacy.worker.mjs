@@ -20,6 +20,18 @@
  * JavaScript code in this page
  */
 
+// Add polyfill before any code that uses Promise.withResolvers
+if (typeof Promise.withResolvers === 'undefined') {
+  Promise.withResolvers = function () {
+    let resolve, reject
+    const promise = new Promise((res, rej) => {
+      resolve = res
+      reject = rej
+    })
+    return { promise, resolve, reject }
+  }
+}
+
 /******/ var __webpack_modules__ = ({
 
 /***/ 9306:
@@ -3622,7 +3634,7 @@ var $ = __webpack_require__(6518);
 var newPromiseCapabilityModule = __webpack_require__(6043);
 
 // `Promise.withResolvers` method
-// https://github.com/tc39/proposal-promise-with-resolvers
+// // https://github.com/tc39/proposal-promise-with-resolvers
 $({ target: 'Promise', stat: true }, {
   withResolvers: function withResolvers() {
     var promiseCapability = newPromiseCapabilityModule.f(this);

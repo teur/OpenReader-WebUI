@@ -36,6 +36,7 @@ function initPDFWorker() {
       const workerSrc = useLegacy ? '/pdf.legacy.worker.mjs' : '/pdf.worker.mjs';
       console.log('Setting PDF worker to:', workerSrc);
       pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
+      pdfjs.GlobalWorkerOptions.workerPort = null;
     }
   } catch (e) {
     console.error('Error setting PDF worker:', e);
