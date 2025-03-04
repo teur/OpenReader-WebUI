@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: You must report bugs in this format
+about: Please report bugs in this format (provide error message or detailed description at the minimum)
 title: ''
 labels: bug
 assignees: richardr1126
@@ -8,21 +8,17 @@ assignees: richardr1126
 ---
 
 **Describe the bug**
-A clear and concise description of what the bug is, which explains how you got there.
+A description of what the bug is, which explains how you got there.
 
-**Screenshots**
-If applicable, add screenshots to help explain your problem.
-
-**Desktop (please complete the following information):**
- - OS: [e.g. Windows, macOS]
- - Browser [e.g. chrome, safari]
- - Version [e.g. 22]
-
-**Mobile (if using mobile):**
- - Device: [e.g. iPhone6]
- - OS: [e.g. iOS8.1]
- - Browser [e.g. stock browser, safari]
- - Version [e.g. 22]
+**Environment info:**
+ - OpenReader-WebUI version: [e.g. v0.2.4]
+ - Using Docker: yes/no
+ - Browser: [e.g. Safari, Firefox, Chromium]
+ - Device: [e.g. iPhone16, Macbook Pro]
+ - OS: [e.g. iOS17.2]
 
 **Additional context**
 Add any other context about the problem here.
+
+**Screenshots**
+If applicable, add screenshots to help explain your problem.
