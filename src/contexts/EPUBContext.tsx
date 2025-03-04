@@ -20,6 +20,7 @@ import { SpineItem } from 'epubjs/types/section';
 import { useParams } from 'next/navigation';
 import { useConfig } from './ConfigContext';
 import { combineAudioChunks } from '@/utils/audio';
+import { withRetry } from '@/utils/audio';
 
 interface EPUBContextType {
   currDocData: ArrayBuffer | undefined;
@@ -202,7 +203,7 @@ export function EPUBProvider({ children }: { children: ReactNode }) {
 
       // Get TOC for chapter titles
       const chapters = tocRef.current || [];
-      console.log('Chapter map:', chapters);
+      console.log('Chapters:', chapters);
       
       // Create a map of section hrefs to their chapter titles
       const sectionTitleMap = new Map<string, string>();
@@ -210,7 +211,6 @@ export function EPUBProvider({ children }: { children: ReactNode }) {
       // First, loop through all chapters to create the mapping
       for (const chapter of chapters) {
         if (!chapter.href) continue;
-        
         const chapterBaseHref = chapter.href.split('#')[0];
         const chapterTitle = chapter.label.trim();
         
@@ -240,29 +240,40 @@ export function EPUBProvider({ children }: { children: ReactNode }) {
         if (!trimmedText) continue;
 
         try {
-          const ttsResponse = await fetch('/api/tts', {
-            method: 'POST',
-            headers: {
-              'x-openai-key': apiKey,
-              'x-openai-base-url': baseUrl,
+          const audioBuffer = await withRetry(
+            async () => {
+              const ttsResponse = await fetch('/api/tts', {
+                method: 'POST',
+                headers: {
+                  'x-openai-key': apiKey,
+                  'x-openai-base-url': baseUrl,
+                },
+                body: JSON.stringify({
+                  text: trimmedText,
+                  voice: voice,
+                  speed: voiceSpeed,
+                  format: format === 'm4b' ? 'aac' : 'mp3',
+                }),
+                signal
+              });
+
+              if (!ttsResponse.ok) {
+                throw new Error(`TTS processing failed with status ${ttsResponse.status}`);
+              }
+
+              const buffer = await ttsResponse.arrayBuffer();
+              if (buffer.byteLength === 0) {
+                throw new Error('Received empty audio buffer from TTS');
+              }
+              return buffer;
             },
-            body: JSON.stringify({
-              text: trimmedText,
-              voice: voice,
-              speed: voiceSpeed,
-              format: format === 'm4b' ? 'aac' : 'mp3',
-            }),
-            signal
-          });
-
-          if (!ttsResponse.ok) {
-            throw new Error(`TTS processing failed with status ${ttsResponse.status}`);
-          }
-
-          const audioBuffer = await ttsResponse.arrayBuffer();
-          if (audioBuffer.byteLength === 0) {
-            throw new Error('Received empty audio buffer from TTS');
-          }
+            {
+              maxRetries: 2,
+              initialDelay: 5000,
+              maxDelay: 10000,
+              backoffFactor: 2
+            }
+          );
 
           // Get the chapter title from our pre-computed map
           let chapterTitle = sectionTitleMap.get(section.href);

@@ -35,6 +35,7 @@ import { useMediaSession } from '@/hooks/audio/useMediaSession';
 import { useAudioContext } from '@/hooks/audio/useAudioContext';
 import { getLastDocumentLocation } from '@/utils/indexedDB';
 import { useBackgroundState } from '@/hooks/audio/useBackgroundState';
+import { withRetry } from '@/utils/audio';
 
 // Media globals
 declare global {
@@ -409,30 +410,39 @@ export function TTSProvider({ children }: { children: ReactNode }) {
       const controller = new AbortController();
       activeAbortControllers.current.add(controller);
 
-      const response = await fetch('/api/tts', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-openai-key': openApiKey || '',
-          'x-openai-base-url': openApiBaseUrl || '',
+      const arrayBuffer = await withRetry(
+        async () => {
+          const response = await fetch('/api/tts', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-openai-key': openApiKey || '',
+              'x-openai-base-url': openApiBaseUrl || '',
+            },
+            body: JSON.stringify({
+              text: sentence,
+              voice: voice,
+              speed: speed,
+            }),
+            signal: controller.signal,
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to generate audio');
+          }
+
+          return response.arrayBuffer();
         },
-        body: JSON.stringify({
-          text: sentence,
-          voice: voice,
-          speed: speed,
-        }),
-        signal: controller.signal,
-      });
+        {
+          maxRetries: 3,
+          initialDelay: 1000,
+          maxDelay: 5000,
+          backoffFactor: 2
+        }
+      );
 
       // Remove the controller once the request is complete
       activeAbortControllers.current.delete(controller);
-
-      if (!response.ok) {
-        throw new Error('Failed to generate audio');
-      }
-
-      // Get the raw array buffer - no need to decode since it's already MP3
-      const arrayBuffer = await response.arrayBuffer();
 
       // Cache the array buffer
       audioCache.set(sentence, arrayBuffer);

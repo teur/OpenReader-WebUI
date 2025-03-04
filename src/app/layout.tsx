@@ -50,7 +50,7 @@ const isDev = process.env.NEXT_PUBLIC_NODE_ENV !== 'production' || process.env.N
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en">
       <head>
         <meta name="color-scheme" content="light dark" />
       </head>

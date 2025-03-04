@@ -35,7 +35,7 @@ import {
 } from '@/utils/pdf';
 
 import type { PDFDocumentProxy } from 'pdfjs-dist';
-import { combineAudioChunks } from '@/utils/audio';
+import { combineAudioChunks, withRetry } from '@/utils/audio';
 
 /**
  * Interface defining all available methods and properties in the PDF context
@@ -235,29 +235,40 @@ export function PDFProvider({ children }: { children: ReactNode }) {
 
         const text = textPerPage[i];
         try {
-          const ttsResponse = await fetch('/api/tts', {
-            method: 'POST',
-            headers: {
-              'x-openai-key': apiKey,
-              'x-openai-base-url': baseUrl,
+          const audioBuffer = await withRetry(
+            async () => {
+              const ttsResponse = await fetch('/api/tts', {
+                method: 'POST',
+                headers: {
+                  'x-openai-key': apiKey,
+                  'x-openai-base-url': baseUrl,
+                },
+                body: JSON.stringify({
+                  text,
+                  voice: voice,
+                  speed: voiceSpeed,
+                  format: format === 'm4b' ? 'aac' : 'mp3'
+                }),
+                signal
+              });
+
+              if (!ttsResponse.ok) {
+                throw new Error(`TTS processing failed with status ${ttsResponse.status}`);
+              }
+
+              const buffer = await ttsResponse.arrayBuffer();
+              if (buffer.byteLength === 0) {
+                throw new Error('Received empty audio buffer from TTS');
+              }
+              return buffer;
             },
-            body: JSON.stringify({
-              text,
-              voice: voice,
-              speed: voiceSpeed,
-              format: format === 'm4b' ? 'aac' : 'mp3'
-            }),
-            signal
-          });
-
-          if (!ttsResponse.ok) {
-            throw new Error(`TTS processing failed with status ${ttsResponse.status}`);
-          }
-
-          const audioBuffer = await ttsResponse.arrayBuffer();
-          if (audioBuffer.byteLength === 0) {
-            throw new Error('Received empty audio buffer from TTS');
-          }
+            {
+              maxRetries: 3,
+              initialDelay: 1000,
+              maxDelay: 5000,
+              backoffFactor: 2
+            }
+          );
 
           audioChunks.push({
             buffer: audioBuffer,
@@ -273,8 +284,6 @@ export function PDFProvider({ children }: { children: ReactNode }) {
           });
 
           currentTime += (audioBuffer.byteLength + 48000) / 48000;
-
-          // Update progress based on processed text length
           processedLength += text.length;
           onProgress((processedLength / totalLength) * 100);
 

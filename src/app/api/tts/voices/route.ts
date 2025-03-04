@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
     const openApiBaseUrl = req.headers.get('x-openai-base-url') || process.env.API_BASE;
 
     // Request voices from OpenAI
-    const response = await fetch(`${openApiBaseUrl || 'https://api.openai.com/v1'}/audio/voices`, {
+    const response = await fetch(`${openApiBaseUrl}/audio/voices`, {
       headers: {
         'Authorization': `Bearer ${openApiKey}`,
         'Content-Type': 'application/json',
