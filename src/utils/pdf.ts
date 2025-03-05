@@ -28,12 +28,15 @@ function shouldUseLegacyBuild() {
   }
 }
 
-// Initialize PDF.js worker
+// Function to initialize PDF worker
 function initPDFWorker() {
   try {
     if (typeof window !== 'undefined') {
       const useLegacy = shouldUseLegacyBuild();
-      const workerSrc = useLegacy ? '/pdf.legacy.worker.mjs' : '/pdf.worker.mjs';
+      // Use local worker file instead of unpkg
+      const workerSrc = useLegacy 
+        ? new URL('pdfjs-dist/legacy/build/pdf.worker.min.mjs', import.meta.url).href
+        : new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).href;
       console.log('Setting PDF worker to:', workerSrc);
       pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
       pdfjs.GlobalWorkerOptions.workerPort = null;
