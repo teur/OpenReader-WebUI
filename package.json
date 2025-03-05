@@ -1,6 +1,6 @@
 {
   "name": "openreader-webui",
-  "version": "0.2.4-patch.3",
+  "version": "0.2.4-patch.4",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack -p 3003",
@@ -14,6 +14,7 @@
     "@types/string-similarity": "^4.0.2",
     "@types/uuid": "^10.0.0",
     "compromise": "^14.14.4",
+    "core-js": "^3.41.0",
     "howler": "^2.2.4",
     "lru-cache": "^11.0.2",
     "next": "15.2.1",

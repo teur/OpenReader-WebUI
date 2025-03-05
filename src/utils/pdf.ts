@@ -3,6 +3,7 @@ import nlp from 'compromise';
 import stringSimilarity from 'string-similarity';
 import type { TextItem } from 'pdfjs-dist/types/src/display/api';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
+import "core-js/proposals/promise-with-resolvers";
 
 // Function to detect if we need to use legacy build
 function shouldUseLegacyBuild() {
