@@ -14,15 +14,14 @@
 OpenReader WebUI is a document reader with Text-to-Speech capabilities, offering a TTS read along experience with narration for both PDF and EPUB documents. It can use any OpenAI compatible TTS endpoint, including [Kokoro-FastAPI](https://github.com/remsky/Kokoro-FastAPI).
 
 - 🎯 **TTS API Integration**: Compatible with OpenAI text to speech API, Kokoro FastAPI TTS, or any other compatible service; enabling high-quality voice narration
-- 💾 **Local-First Architecture**: Uses IndexedDB browser storage - no server uploads required
+- 💾 **Local-First Architecture**: Uses IndexedDB browser storage for documents
 - 🛜 **Optional Server-side documents**: Manually upload documents to the next backend for all users to download
 - 📖 **Read Along Experience**: Follow along with highlighted text as the TTS narrates
-- 📚 **EPUB Support**: Read EPUB files with table of contents
-- 📄 **PDF Support**: Read PDF files with clean text extraction
+- 📄 **Document formats**: EPUB, PDF, DOCX
 - 🎧 **Audiobook Creation**: Create and export audiobooks from PDF and ePub files with m4b format
 - 📲 **Mobile Support**: Works on mobile devices, and can be added as a PWA web app
 - 🎨 **Customizable Experience**: 
-  - 🔑 Set TTS API base URL (with optional API key)
+  - 🔑 Set TTS API base URL (and optional API key)
   - 🏎️ Adjustable playback speed
   - 📐 Customize PDF text extraction margins
   - 🗣️ Multiple voice options (checks `/v1/audio/voices` endpoint)
@@ -31,9 +30,10 @@ OpenReader WebUI is a document reader with Text-to-Speech capabilities, offering
 
 ### 🛠️ Work in progress
 - [x] **Audiobook creation and download** (m4b format)
-- [x] **Get PDFs on iOS working**
+- [x] **Get PDFs on iOS 17 and below working 🤞**
 - [ ] **End-to-end Testing**: More playwright tests (in progress)
-- [ ] **More document formats**: .txt, .docx, .md, etc.
+- [ ] **More document formats**: .txt, .md
+- [ ] **Support more TTS APIs**: ElevenLabs, Ollama, etc.
 - [ ] **Accessibility Improvements**
 
 ## 🐳 Docker Quick Start
