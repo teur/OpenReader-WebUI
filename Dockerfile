@@ -1,8 +1,8 @@
 # Use Node.js slim image
 FROM node:current-alpine
 
-# Add ffmpeg using Alpine package manager
-RUN apk add --no-cache ffmpeg
+# Add ffmpeg and libreoffice using Alpine package manager
+RUN apk add --no-cache ffmpeg libreoffice
 
 # Create app directory
 WORKDIR /app

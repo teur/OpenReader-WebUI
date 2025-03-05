@@ -1,4 +1,4 @@
-export type DocumentType = 'pdf' | 'epub';
+export type DocumentType = 'pdf' | 'epub' | 'docx';
 
 export interface BaseDocument {
   id: string;
@@ -7,6 +7,7 @@ export interface BaseDocument {
   lastModified: number;
   type: DocumentType;
   folderId?: string;
+  isConverting?: boolean;
 }
 
 export interface PDFDocument extends BaseDocument {
@@ -16,6 +17,11 @@ export interface PDFDocument extends BaseDocument {
 
 export interface EPUBDocument extends BaseDocument {
   type: 'epub';
+  data: ArrayBuffer;
+}
+
+export interface DOCXDocument extends BaseDocument {
+  type: 'docx';
   data: ArrayBuffer;
 }
 

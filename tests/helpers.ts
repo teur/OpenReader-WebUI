@@ -1,6 +1,6 @@
 import { Page, expect } from '@playwright/test';
 
-const DIR = './public/';
+const DIR = './tests/files/';
 
 /**
  * Upload a sample epub or pdf

@@ -94,7 +94,11 @@ https://github.com/user-attachments/assets/262b9a01-c608-4fee-893c-9461dd48c99b
 
 ### Prerequisites
 - Node.js & npm (recommended: use [nvm](https://github.com/nvm-sh/nvm))
+Optionally required for different features:
 - [FFmpeg](https://ffmpeg.org) (required for audiobook m4b creation only)
+- [libreoffice](https://www.libreoffice.org) (required for DOCX files)
+  - On Linux: `sudo apt install ffmpeg libreoffice`
+  - On MacOS: `brew install ffmpeg libreoffice`
 
 ### Steps
 
@@ -128,8 +132,6 @@ https://github.com/user-attachments/assets/262b9a01-c608-4fee-893c-9461dd48c99b
    ```
 
    Visit [http://localhost:3003](http://localhost:3003) to run the app.
-
-   > Dev server runs on port 3000 by default, while the production server runs on port 3003.
 
 
 ## 💡 Feature requests
