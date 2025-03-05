@@ -2,7 +2,7 @@
 FROM node:current-alpine
 
 # Add ffmpeg and libreoffice using Alpine package manager
-RUN apk add --no-cache ffmpeg libreoffice
+RUN apk add --no-cache ffmpeg libreoffice-writer
 
 # Create app directory
 WORKDIR /app
