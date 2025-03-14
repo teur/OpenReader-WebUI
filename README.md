@@ -17,7 +17,7 @@ OpenReader WebUI is a document reader with Text-to-Speech capabilities, offering
 - 💾 **Local-First Architecture**: Uses IndexedDB browser storage for documents
 - 🛜 **Optional Server-side documents**: Manually upload documents to the next backend for all users to download
 - 📖 **Read Along Experience**: Follow along with highlighted text as the TTS narrates
-- 📄 **Document formats**: EPUB, PDF, DOCX
+- 📄 **Document formats**: EPUB, PDF, DOCX (with libreoffice installed)
 - 🎧 **Audiobook Creation**: Create and export audiobooks from PDF and ePub files with m4b format
 - 📲 **Mobile Support**: Works on mobile devices, and can be added as a PWA web app
 - 🎨 **Customizable Experience**: 
@@ -33,7 +33,7 @@ OpenReader WebUI is a document reader with Text-to-Speech capabilities, offering
 - [x] **Get PDFs on iOS 17 and below working 🤞**
 - [ ] **End-to-end Testing**: More playwright tests (in progress)
 - [ ] **More document formats**: .txt, .md
-- [ ] **Support more TTS APIs**: ElevenLabs, Ollama, etc.
+- [ ] **Support more TTS APIs**: ElevenLabs, etc.
 - [ ] **Accessibility Improvements**
 
 ## 🐳 Docker Quick Start

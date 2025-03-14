@@ -97,6 +97,7 @@ export function TTSProvider({ children }: { children: ReactNode }) {
     isLoading: configIsLoading,
     voiceSpeed,
     voice: configVoice,
+    ttsModel: configTTSModel,
     updateConfigKey,
     skipBlank,
   } = useConfig();
@@ -138,6 +139,7 @@ export function TTSProvider({ children }: { children: ReactNode }) {
   const [activeHowl, setActiveHowl] = useState<Howl | null>(null);
   const [speed, setSpeed] = useState(voiceSpeed);
   const [voice, setVoice] = useState(configVoice);
+  const [ttsModel, setTTSModel] = useState(configTTSModel);
 
   // Track pending preload requests
   const preloadRequests = useRef<Map<string, Promise<string>>>(new Map());
@@ -386,8 +388,9 @@ export function TTSProvider({ children }: { children: ReactNode }) {
     if (!configIsLoading) {
       fetchVoices();
       updateVoiceAndSpeed();
+      setTTSModel(configTTSModel);
     }
-  }, [configIsLoading, openApiKey, openApiBaseUrl, updateVoiceAndSpeed, fetchVoices]);
+  }, [configIsLoading, openApiKey, openApiBaseUrl, updateVoiceAndSpeed, fetchVoices, configTTSModel]);
 
   /**
    * Generates and plays audio for the current sentence
@@ -423,6 +426,7 @@ export function TTSProvider({ children }: { children: ReactNode }) {
               text: sentence,
               voice: voice,
               speed: speed,
+              model: ttsModel
             }),
             signal: controller.signal,
           });
@@ -466,7 +470,7 @@ export function TTSProvider({ children }: { children: ReactNode }) {
       });
       throw error;
     }
-  }, [voice, speed, audioCache, openApiKey, openApiBaseUrl]);
+  }, [voice, speed, ttsModel, audioCache, openApiKey, openApiBaseUrl]);
 
   /**
    * Processes and plays the current sentence

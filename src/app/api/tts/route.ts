@@ -6,8 +6,8 @@ export async function POST(req: NextRequest) {
     // Get API credentials from headers or fall back to environment variables
     const openApiKey = req.headers.get('x-openai-key') || process.env.API_KEY || 'none';
     const openApiBaseUrl = req.headers.get('x-openai-base-url') || process.env.API_BASE;
-    const { text, voice, speed, format } = await req.json();
-    console.log('Received TTS request:', text, voice, speed, format);
+    const { text, voice, speed, format, model } = await req.json();
+    console.log('Received TTS request:', text, voice, speed, format, model);
 
     if (!openApiKey) {
       return NextResponse.json({ error: 'Missing OpenAI API key' }, { status: 401 });
@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
 
     // Request audio from OpenAI and pass along the abort signal
     const response = await openai.audio.speech.create({
-      model: 'tts-1',
+      model: model || 'tts-1',
       voice: voice as "alloy",
       input: text,
       speed: speed,

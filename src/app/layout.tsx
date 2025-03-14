@@ -40,7 +40,6 @@ export const metadata: Metadata = {
     },
   },
   verification: {
-    // Add your verification codes if you have them
     google: "MJXyTudn1kgQF8EtGD-tsnAWev7Iawso9hEvqeGHB3U",
   },
 };

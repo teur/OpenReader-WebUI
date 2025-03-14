@@ -1,7 +1,24 @@
 'use client';
 
 import { Fragment, useState, useEffect, useCallback } from 'react';
-import { Dialog, DialogPanel, DialogTitle, Transition, TransitionChild, Listbox, ListboxButton, ListboxOptions, ListboxOption, Button, Input } from '@headlessui/react';
+import {
+  Dialog,
+  DialogPanel,
+  DialogTitle,
+  Transition,
+  TransitionChild,
+  Listbox,
+  ListboxButton,
+  ListboxOptions,
+  ListboxOption,
+  Button,
+  Input,
+  TabGroup,
+  TabList,
+  Tab,
+  TabPanels,
+  TabPanel,
+} from '@headlessui/react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useConfig } from '@/contexts/ConfigContext';
 import { ChevronUpDownIcon, CheckIcon, SettingsIcon } from '@/components/icons/Icons';
@@ -22,10 +39,11 @@ export function SettingsModal() {
   const [isOpen, setIsOpen] = useState(false);
 
   const { theme, setTheme } = useTheme();
-  const { apiKey, baseUrl, updateConfig } = useConfig();
+  const { apiKey, baseUrl, ttsModel, updateConfig, updateConfigKey } = useConfig();
   const { refreshPDFs, refreshEPUBs, clearPDFs, clearEPUBs } = useDocuments();
   const [localApiKey, setLocalApiKey] = useState(apiKey);
   const [localBaseUrl, setLocalBaseUrl] = useState(baseUrl);
+  const [localTTSModel, setLocalTTSModel] = useState(ttsModel);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const selectedTheme = themes.find(t => t.id === theme) || themes[0];
@@ -46,7 +64,8 @@ export function SettingsModal() {
     checkFirstVist();
     setLocalApiKey(apiKey);
     setLocalBaseUrl(baseUrl);
-  }, [apiKey, baseUrl, checkFirstVist]);
+    setLocalTTSModel(ttsModel);
+  }, [apiKey, baseUrl, ttsModel, checkFirstVist]);
 
   const handleSync = async () => {
     try {
@@ -91,13 +110,21 @@ export function SettingsModal() {
     setShowClearServerConfirm(false);
   };
 
-  const handleInputChange = (type: 'apiKey' | 'baseUrl', value: string) => {
+  const handleInputChange = (type: 'apiKey' | 'baseUrl' | 'ttsModel', value: string) => {
     if (type === 'apiKey') {
       setLocalApiKey(value === '' ? '' : value);
-    } else {
+    } else if (type === 'baseUrl') {
       setLocalBaseUrl(value === '' ? '' : value);
+    } else if (type === 'ttsModel') {
+      setLocalTTSModel(value === '' ? 'tts-1' : value);
     }
   };
+
+  const tabs = [
+    { name: 'Appearance', icon: '✨' },
+    { name: 'API', icon: '🔑' },
+    { name: 'Documents', icon: '📄' }
+  ];
 
   return (
     <Button
@@ -140,173 +167,218 @@ export function SettingsModal() {
                 <DialogPanel className="w-full max-w-md transform rounded-2xl bg-base p-6 text-left align-middle shadow-xl transition-all">
                   <DialogTitle
                     as="h3"
-                    className="text-lg font-semibold leading-6 text-foreground"
+                    className="text-lg font-semibold leading-6 text-foreground mb-4"
                   >
                     Settings
                   </DialogTitle>
-                  <div className="mt-4">
-                    <div className="relative space-y-4">
-                      <div className="space-y-2">
-                        <label className="block text-sm font-medium text-foreground">Theme</label>
-                        <Listbox value={selectedTheme} onChange={(newTheme) => setTheme(newTheme.id)}>
-                          <ListboxButton className="relative w-full cursor-pointer rounded-lg bg-background py-2 pl-3 pr-10 text-left text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-accent transform transition-transform duration-200 ease-in-out hover:scale-[1.01] hover:text-accent">
-                            <span className="block truncate">{selectedTheme.name}</span>
-                            <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-                              <ChevronUpDownIcon className="h-5 w-5 text-muted" />
-                            </span>
-                          </ListboxButton>
-                          <Transition
-                            as={Fragment}
-                            leave="transition ease-in duration-100"
-                            leaveFrom="opacity-100"
-                            leaveTo="opacity-0"
-                          >
-                            <ListboxOptions className="absolute mt-1 max-h-40 w-full overflow-auto rounded-md bg-background py-1 shadow-lg ring-1 ring-black/5 focus:outline-none">
-                              {themes.map((theme) => (
-                                <ListboxOption
-                                  key={theme.id}
-                                  className={({ active }) =>
-                                    `relative cursor-pointer select-none py-2 pl-10 pr-4 ${active ? 'bg-accent/10 text-accent' : 'text-foreground'
-                                    }`
-                                  }
-                                  value={theme}
-                                >
-                                  {({ selected }) => (
-                                    <>
-                                      <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>
-                                        {theme.name}
-                                      </span>
-                                      {selected ? (
-                                        <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-accent">
-                                          <CheckIcon className="h-5 w-5" />
+
+                  <TabGroup>
+                    <TabList className="flex space-x-1 rounded-xl bg-background p-1 mb-4">
+                      {tabs.map((tab) => (
+                        <Tab
+                          key={tab.name}
+                          className={({ selected }) =>
+                            `w-full rounded-lg py-1 text-sm font-medium
+                             ring-accent/60 ring-offset-2 ring-offset-base
+                             ${selected
+                              ? 'bg-accent text-white shadow'
+                              : 'text-foreground hover:bg-accent/[0.12] hover:text-accent'
+                            }`
+                          }
+                        >
+                          <span className="flex items-center justify-center gap-2">
+                            <span>{tab.icon}</span>
+                            {tab.name}
+                          </span>
+                        </Tab>
+                      ))}
+                    </TabList>
+                    <TabPanels className="mt-2">
+                      <TabPanel className="space-y-4 pb-3">
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium text-foreground">Theme</label>
+                          <Listbox value={selectedTheme} onChange={(newTheme) => setTheme(newTheme.id)}>
+                            <ListboxButton className="relative w-full cursor-pointer rounded-lg bg-background py-2 pl-3 pr-10 text-left text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-accent transform transition-transform duration-200 ease-in-out hover:scale-[1.01] hover:text-accent">
+                              <span className="block truncate">{selectedTheme.name}</span>
+                              <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                                <ChevronUpDownIcon className="h-5 w-5 text-muted" />
+                              </span>
+                            </ListboxButton>
+                            <Transition
+                              as={Fragment}
+                              leave="transition ease-in duration-100"
+                              leaveFrom="opacity-100"
+                              leaveTo="opacity-0"
+                            >
+                              <ListboxOptions className="absolute mt-1 max-h-40 w-full overflow-auto rounded-md bg-background py-1 shadow-lg ring-1 ring-black/5 focus:outline-none">
+                                {themes.map((theme) => (
+                                  <ListboxOption
+                                    key={theme.id}
+                                    className={({ active }) =>
+                                      `relative cursor-pointer select-none py-2 pl-10 pr-4 ${active ? 'bg-accent/10 text-accent' : 'text-foreground'
+                                      }`
+                                    }
+                                    value={theme}
+                                  >
+                                    {({ selected }) => (
+                                      <>
+                                        <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>
+                                          {theme.name}
                                         </span>
-                                      ) : null}
-                                    </>
-                                  )}
-                                </ListboxOption>
-                              ))}
-                            </ListboxOptions>
-                          </Transition>
-                        </Listbox>
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="block text-sm font-medium text-foreground">
-                          OpenAI API Key
-                          {localApiKey && <span className="ml-2 text-xs text-accent">(Overriding env)</span>}
-                        </label>
-                        <div className="flex gap-2">
-                          <Input
-                            type="password"
-                            value={localApiKey}
-                            onChange={(e) => handleInputChange('apiKey', e.target.value)}
-                            placeholder="Using environment variable"
-                            className="w-full rounded-lg bg-background py-2 px-3 text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-accent"
-                          />
+                                        {selected ? (
+                                          <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-accent">
+                                            <CheckIcon className="h-5 w-5" />
+                                          </span>
+                                        ) : null}
+                                      </>
+                                    )}
+                                  </ListboxOption>
+                                ))}
+                              </ListboxOptions>
+                            </Transition>
+                          </Listbox>
                         </div>
-                      </div>
+                      </TabPanel>
 
-                      <div className="space-y-2">
-                        <label className="block text-sm font-medium text-foreground">
-                          OpenAI API Base URL
-                          {localBaseUrl && <span className="ml-2 text-xs text-accent">(Overriding env)</span>}
-                        </label>
-                        <div className="flex gap-2">
-                          <Input
-                            type="text"
-                            value={localBaseUrl}
-                            onChange={(e) => handleInputChange('baseUrl', e.target.value)}
-                            placeholder="Using environment variable"
-                            className="w-full rounded-lg bg-background py-2 px-3 text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-accent"
-                          />
+                      <TabPanel className="space-y-4">
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium text-foreground">
+                            OpenAI API Key
+                            {localApiKey && <span className="ml-2 text-xs text-accent">(Overriding env)</span>}
+                          </label>
+                          <div className="flex gap-2">
+                            <Input
+                              type="password"
+                              value={localApiKey}
+                              onChange={(e) => handleInputChange('apiKey', e.target.value)}
+                              placeholder="Using environment variable"
+                              className="w-full rounded-lg bg-background py-2 px-3 text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                            />
+                          </div>
                         </div>
-                      </div>
 
-                      {isDev && <div className="space-y-2">
-                        <label className="block text-sm font-medium text-foreground">Document Sync</label>
-                        <div className="flex gap-2">
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium text-foreground">
+                            OpenAI API Base URL
+                            {localBaseUrl && <span className="ml-2 text-xs text-accent">(Overriding env)</span>}
+                          </label>
+                          <div className="flex gap-2">
+                            <Input
+                              type="text"
+                              value={localBaseUrl}
+                              onChange={(e) => handleInputChange('baseUrl', e.target.value)}
+                              placeholder="Using environment variable"
+                              className="w-full rounded-lg bg-background py-2 px-3 text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium text-foreground">
+                            OpenAI TTS Model
+                            {localTTSModel !== 'tts-1' && <span className="ml-2 text-xs text-accent">(Custom model)</span>}
+                          </label>
+                          <div className="flex gap-2">
+                            <Input
+                              type="text"
+                              value={localTTSModel}
+                              onChange={(e) => handleInputChange('ttsModel', e.target.value)}
+                              placeholder="tts-1"
+                              className="w-full rounded-lg bg-background py-2 px-3 text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="mt-6 flex justify-end gap-2">
                           <Button
-                            onClick={handleLoad}
-                            disabled={isSyncing || isLoading}
-                            className="justify-center rounded-lg bg-background px-3 py-1.5 text-sm 
-                                         font-medium text-foreground hover:bg-background/90 focus:outline-none 
-                                         focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2
-                                         transform transition-transform duration-200 ease-in-out hover:scale-[1.04] hover:text-accent
-                                         disabled:opacity-50"
-                          >
-                            {isLoading ? 'Loading...' : 'Load docs from Server'}
-                          </Button>
-                          <Button
-                            onClick={handleSync}
-                            disabled={isSyncing || isLoading}
-                            className="justify-center rounded-lg bg-background px-3 py-1.5 text-sm 
-                                         font-medium text-foreground hover:bg-background/90 focus:outline-none 
-                                         focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2
-                                         transform transition-transform duration-200 ease-in-out hover:scale-[1.04] hover:text-accent
-                                         disabled:opacity-50"
-                          >
-                            {isSyncing ? 'Saving...' : 'Save local to Server'}
-                          </Button>
-                        </div>
-                      </div>}
-
-                      <div className="space-y-2">
-                        <label className="block text-sm font-medium text-foreground">Bulk Delete</label>
-                        <div className="flex gap-2">
-                          <Button
-                            onClick={() => setShowClearLocalConfirm(true)}
-                            className="justify-center rounded-lg bg-red-600 px-3 py-1.5 text-sm 
-                                     font-medium text-white hover:bg-red-700 focus:outline-none 
-                                     focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2
-                                     transform transition-transform duration-200 ease-in-out hover:scale-[1.04]"
-                          >
-                            Delete local docs
-                          </Button>
-                          {isDev && <Button
-                            onClick={() => setShowClearServerConfirm(true)}
-                            className="justify-center rounded-lg bg-red-600 px-3 py-1.5 text-sm 
-                                     font-medium text-white hover:bg-red-700 focus:outline-none 
-                                     focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2
-                                     transform transition-transform duration-200 ease-in-out hover:scale-[1.04]"
-                          >
-                            Delete server docs
-                          </Button>}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-6 flex justify-end gap-2">
-                    <Button
-                      type="button"
-                      className="inline-flex justify-center rounded-lg bg-background px-3 py-1.5 text-sm 
+                            type="button"
+                            className="inline-flex justify-center rounded-lg bg-background px-3 py-1.5 text-sm 
                                font-medium text-foreground hover:bg-background/90 focus:outline-none 
                                focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2
                                transform transition-transform duration-200 ease-in-out hover:scale-[1.04] hover:text-accent"
-                      onClick={async () => {
-                        setLocalApiKey('');
-                        setLocalBaseUrl('');
-                      }}
-                    >
-                      Reset
-                    </Button>
-                    <Button
-                      type="button"
-                      className="inline-flex justify-center rounded-lg bg-accent px-3 py-1.5 text-sm 
+                            onClick={async () => {
+                              setLocalApiKey('');
+                              setLocalBaseUrl('');
+                              setLocalTTSModel('tts-1');
+                            }}
+                          >
+                            Reset
+                          </Button>
+                          <Button
+                            type="button"
+                            className="inline-flex justify-center rounded-lg bg-accent px-3 py-1.5 text-sm 
                                font-medium text-white hover:bg-accent/90 focus:outline-none 
                                focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2
                                transform transition-transform duration-200 ease-in-out hover:scale-[1.04] hover:text-background"
-                      onClick={async () => {
-                        await updateConfig({
-                          apiKey: localApiKey || '',
-                          baseUrl: localBaseUrl || '',
-                        });
-                        setIsOpen(false);
-                      }}
-                    >
-                      Done
-                    </Button>
-                  </div>
+                            onClick={async () => {
+                              await updateConfig({
+                                apiKey: localApiKey || '',
+                                baseUrl: localBaseUrl || '',
+                              });
+                              await updateConfigKey('ttsModel', localTTSModel || 'tts-1');
+                              setIsOpen(false);
+                            }}
+                          >
+                            Done
+                          </Button>
+                        </div>
+                      </TabPanel>
+
+                      <TabPanel className="space-y-4">
+                        {isDev && <div className="space-y-2">
+                          <label className="block text-sm font-medium text-foreground">Document Sync</label>
+                          <div className="flex gap-2">
+                            <Button
+                              onClick={handleLoad}
+                              disabled={isSyncing || isLoading}
+                              className="justify-center rounded-lg bg-background px-3 py-1.5 text-sm 
+                                       font-medium text-foreground hover:bg-background/90 focus:outline-none 
+                                       focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2
+                                       transform transition-transform duration-200 ease-in-out hover:scale-[1.04] hover:text-accent
+                                       disabled:opacity-50"
+                            >
+                              {isLoading ? 'Loading...' : 'Load docs from Server'}
+                            </Button>
+                            <Button
+                              onClick={handleSync}
+                              disabled={isSyncing || isLoading}
+                              className="justify-center rounded-lg bg-background px-3 py-1.5 text-sm 
+                                       font-medium text-foreground hover:bg-background/90 focus:outline-none 
+                                       focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2
+                                       transform transition-transform duration-200 ease-in-out hover:scale-[1.04] hover:text-accent
+                                       disabled:opacity-50"
+                            >
+                              {isSyncing ? 'Saving...' : 'Save local to Server'}
+                            </Button>
+                          </div>
+                        </div>}
+
+                        <div className="space-y-2 pb-3">
+                          <label className="block text-sm font-medium text-foreground">Bulk Delete</label>
+                          <div className="flex gap-2">
+                            <Button
+                              onClick={() => setShowClearLocalConfirm(true)}
+                              className="justify-center rounded-lg bg-red-600 px-3 py-1.5 text-sm 
+                                       font-medium text-white hover:bg-red-700 focus:outline-none 
+                                       focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2
+                                       transform transition-transform duration-200 ease-in-out hover:scale-[1.04]"
+                            >
+                              Delete local docs
+                            </Button>
+                            {isDev && <Button
+                              onClick={() => setShowClearServerConfirm(true)}
+                              className="justify-center rounded-lg bg-red-600 px-3 py-1.5 text-sm 
+                                       font-medium text-white hover:bg-red-700 focus:outline-none 
+                                       focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2
+                                       transform transition-transform duration-200 ease-in-out hover:scale-[1.04]"
+                            >
+                              Delete server docs
+                            </Button>}
+                          </div>
+                        </div>
+                      </TabPanel>
+                    </TabPanels>
+                  </TabGroup>
                 </DialogPanel>
               </TransitionChild>
             </div>

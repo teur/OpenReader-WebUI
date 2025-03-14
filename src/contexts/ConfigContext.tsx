@@ -15,11 +15,11 @@ type ConfigValues = {
   voice: string;
   skipBlank: boolean;
   epubTheme: boolean;
-  textExtractionMargin: number;
   headerMargin: number;
   footerMargin: number;
   leftMargin: number;
   rightMargin: number;
+  ttsModel: string;
 };
 
 /** Interface defining the configuration context shape and functionality */
@@ -31,11 +31,11 @@ interface ConfigContextType {
   voice: string;
   skipBlank: boolean;
   epubTheme: boolean;
-  textExtractionMargin: number;
   headerMargin: number;
   footerMargin: number;
   leftMargin: number;
   rightMargin: number;
+  ttsModel: string;
   updateConfig: (newConfig: Partial<{ apiKey: string; baseUrl: string; viewType: ViewType }>) => Promise<void>;
   updateConfigKey: <K extends keyof ConfigValues>(key: K, value: ConfigValues[K]) => Promise<void>;
   isLoading: boolean;
@@ -59,11 +59,11 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
   const [voice, setVoice] = useState<string>('af_sarah');
   const [skipBlank, setSkipBlank] = useState<boolean>(true);
   const [epubTheme, setEpubTheme] = useState<boolean>(false);
-  const [textExtractionMargin, setTextExtractionMargin] = useState<number>(0.07);
   const [headerMargin, setHeaderMargin] = useState<number>(0.07);
   const [footerMargin, setFooterMargin] = useState<number>(0.07);
   const [leftMargin, setLeftMargin] = useState<number>(0.07);
   const [rightMargin, setRightMargin] = useState<number>(0.07);
+  const [ttsModel, setTTSModel] = useState<string>('tts-1');
 
   const [isLoading, setIsLoading] = useState(true);
   const [isDBReady, setIsDBReady] = useState(false);
@@ -83,11 +83,11 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
         const cachedVoice = await getItem('voice');
         const cachedSkipBlank = await getItem('skipBlank');
         const cachedEpubTheme = await getItem('epubTheme');
-        const cachedMargin = await getItem('textExtractionMargin');
         const cachedHeaderMargin = await getItem('headerMargin');
         const cachedFooterMargin = await getItem('footerMargin');
         const cachedLeftMargin = await getItem('leftMargin');
         const cachedRightMargin = await getItem('rightMargin');
+        const cachedTTSModel = await getItem('ttsModel');
 
         // Only set API key and base URL if they were explicitly saved by the user
         if (cachedApiKey) {
@@ -105,11 +105,11 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
         setVoice(cachedVoice || 'af_sarah');
         setSkipBlank(cachedSkipBlank === 'false' ? false : true);
         setEpubTheme(cachedEpubTheme === 'true');
-        setTextExtractionMargin(parseFloat(cachedMargin || '0.07'));
         setHeaderMargin(parseFloat(cachedHeaderMargin || '0.07'));
         setFooterMargin(parseFloat(cachedFooterMargin || '0.07'));
         setLeftMargin(parseFloat(cachedLeftMargin || '0.07'));
         setRightMargin(parseFloat(cachedRightMargin || '0.07'));
+        setTTSModel(cachedTTSModel || 'tts-1');
 
         // Only save non-sensitive settings by default
         if (!cachedViewType) {
@@ -121,13 +121,13 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
         if (cachedEpubTheme === null) {
           await setItem('epubTheme', 'false');
         }
-        if (cachedMargin === null) {
-          await setItem('textExtractionMargin', '0.07');
-        }
         if (cachedHeaderMargin === null) await setItem('headerMargin', '0.07');
         if (cachedFooterMargin === null) await setItem('footerMargin', '0.07');
         if (cachedLeftMargin === null) await setItem('leftMargin', '0.0');
         if (cachedRightMargin === null) await setItem('rightMargin', '0.0');
+        if (cachedTTSModel === null) {
+          await setItem('ttsModel', 'tts-1');
+        }
         
       } catch (error) {
         console.error('Error initializing:', error);
@@ -145,6 +145,7 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
    */
   const updateConfig = async (newConfig: Partial<{ apiKey: string; baseUrl: string }>) => {
     try {
+      setIsLoading(true);
       if (newConfig.apiKey !== undefined || newConfig.apiKey !== '') {
         // Only save API key to IndexedDB if it's different from env default
         await setItem('apiKey', newConfig.apiKey!);
@@ -169,6 +170,8 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Error updating config:', error);
       throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -179,6 +182,7 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
    */
   const updateConfigKey = async <K extends keyof ConfigValues>(key: K, value: ConfigValues[K]) => {
     try {
+      setIsLoading(true);
       await setItem(key, value.toString());
       switch (key) {
         case 'apiKey':
@@ -202,9 +206,6 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
         case 'epubTheme':
           setEpubTheme(value as boolean);
           break;
-        case 'textExtractionMargin':
-          setTextExtractionMargin(value as number);
-          break;
         case 'headerMargin':
           setHeaderMargin(value as number);
           break;
@@ -217,10 +218,15 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
         case 'rightMargin':
           setRightMargin(value as number);
           break;
+        case 'ttsModel':
+          setTTSModel(value as string);
+          break;
       }
     } catch (error) {
       console.error(`Error updating config key ${key}:`, error);
       throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -233,11 +239,11 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
       voice,
       skipBlank,
       epubTheme,
-      textExtractionMargin,
       headerMargin,
       footerMargin,
       leftMargin,
       rightMargin,
+      ttsModel,
       updateConfig, 
       updateConfigKey,
       isLoading, 

@@ -75,5 +75,6 @@ export async function setupTest(page: Page) {
   await page.waitForLoadState('networkidle');
 
   // Click the "done" button to dismiss the welcome message
-  await page.getByText('Done').click();
+  await page.getByRole('tab', { name: '🔑 API' }).click();
+  await page.getByRole('button', { name: 'Done' }).click();
 }
