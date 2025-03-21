@@ -13,7 +13,11 @@
 
 OpenReader WebUI is a document reader with Text-to-Speech capabilities, offering a TTS read along experience with narration for both PDF and EPUB documents. It can use any OpenAI compatible TTS endpoint, including [Kokoro-FastAPI](https://github.com/remsky/Kokoro-FastAPI).
 
-- 🎯 **TTS API Integration**: Compatible with OpenAI text to speech API, Kokoro FastAPI TTS, or any other compatible service; enabling high-quality voice narration
+- 🎯 **TTS API Integration**: 
+  - Compatible with OpenAI text to speech API and GPT-4o Mini TTS, Kokoro-FastAPI TTS, or any other compatible service
+  - Support for multiple TTS models (tts-1, tts-1-hd, gpt-4o-mini-tts, kokoro)
+  - Custom model support for experimental or self-hosted models
+  - Model-specific instructions support (for gpt-4o-mini-tts)
 - 💾 **Local-First Architecture**: Uses IndexedDB browser storage for documents
 - 🛜 **Optional Server-side documents**: Manually upload documents to the next backend for all users to download
 - 📖 **Read Along Experience**: Follow along with highlighted text as the TTS narrates
@@ -22,6 +26,8 @@ OpenReader WebUI is a document reader with Text-to-Speech capabilities, offering
 - 📲 **Mobile Support**: Works on mobile devices, and can be added as a PWA web app
 - 🎨 **Customizable Experience**: 
   - 🔑 Set TTS API base URL (and optional API key)
+  - 🤖 Choose from multiple TTS models or use custom models
+  - 🎯 Set model-specific instructions for GPT-4o Mini TTS
   - 🏎️ Adjustable playback speed
   - 📐 Customize PDF text extraction margins
   - 🗣️ Multiple voice options (checks `/v1/audio/voices` endpoint)
@@ -31,6 +37,7 @@ OpenReader WebUI is a document reader with Text-to-Speech capabilities, offering
 ### 🛠️ Work in progress
 - [x] **Audiobook creation and download** (m4b format)
 - [x] **Get PDFs on iOS 17 and below working 🤞**
+- [x] **Support for GPT-4o Mini TTS with instructions**
 - [ ] **End-to-end Testing**: More playwright tests (in progress)
 - [ ] **More document formats**: .txt, .md
 - [ ] **Support more TTS APIs**: ElevenLabs, etc.

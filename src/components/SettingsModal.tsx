@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useState, useEffect, useCallback } from 'react';
+import { Fragment, useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Dialog,
   DialogPanel,
@@ -39,16 +39,26 @@ export function SettingsModal() {
   const [isOpen, setIsOpen] = useState(false);
 
   const { theme, setTheme } = useTheme();
-  const { apiKey, baseUrl, ttsModel, updateConfig, updateConfigKey } = useConfig();
+  const { apiKey, baseUrl, ttsModel, ttsInstructions, updateConfig, updateConfigKey } = useConfig();
   const { refreshPDFs, refreshEPUBs, clearPDFs, clearEPUBs } = useDocuments();
   const [localApiKey, setLocalApiKey] = useState(apiKey);
   const [localBaseUrl, setLocalBaseUrl] = useState(baseUrl);
   const [localTTSModel, setLocalTTSModel] = useState(ttsModel);
+  const [customModel, setCustomModel] = useState('');
+  const [localTTSInstructions, setLocalTTSInstructions] = useState(ttsInstructions);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const selectedTheme = themes.find(t => t.id === theme) || themes[0];
   const [showClearLocalConfirm, setShowClearLocalConfirm] = useState(false);
   const [showClearServerConfirm, setShowClearServerConfirm] = useState(false);
+
+  const ttsModels = useMemo(() => [
+    { id: 'tts-1', name: 'TTS-1' },
+    { id: 'tts-1-hd', name: '($$) TTS-1-HD' },
+    { id: 'gpt-4o-mini-tts', name: '($$$) GPT-4o Mini TTS' },
+    { id: 'kokoro', name: 'Kokoro' },
+    { id: 'custom', name: 'Custom Model' }
+  ], []);
 
   // set firstVisit on initial load
   const checkFirstVist = useCallback(async () => {
@@ -65,7 +75,13 @@ export function SettingsModal() {
     setLocalApiKey(apiKey);
     setLocalBaseUrl(baseUrl);
     setLocalTTSModel(ttsModel);
-  }, [apiKey, baseUrl, ttsModel, checkFirstVist]);
+    setLocalTTSInstructions(ttsInstructions);
+    // Set custom model if current model is not in predefined list
+    if (!ttsModels.some(m => m.id === ttsModel) && ttsModel !== '') {
+      setCustomModel(ttsModel);
+      setLocalTTSModel('custom');
+    }
+  }, [apiKey, baseUrl, ttsModel, ttsModels, ttsInstructions, checkFirstVist]);
 
   const handleSync = async () => {
     try {
@@ -120,6 +136,18 @@ export function SettingsModal() {
     }
   };
 
+  const resetToCurrent = useCallback(() => {
+    setIsOpen(false);
+    setLocalApiKey(apiKey);
+    setLocalBaseUrl(baseUrl);
+    setLocalTTSModel(ttsModel);
+    setLocalTTSInstructions(ttsInstructions);
+    if (!ttsModels.some(m => m.id === ttsModel) && ttsModel !== '') {
+      setCustomModel(ttsModel);
+      setLocalTTSModel('custom');
+    }
+  }, [apiKey, baseUrl, ttsModel, ttsInstructions, ttsModels]);
+
   const tabs = [
     { name: 'Appearance', icon: '✨' },
     { name: 'API', icon: '🔑' },
@@ -136,11 +164,7 @@ export function SettingsModal() {
       <SettingsIcon className="w-4 h-4 sm:w-5 sm:h-5 hover:animate-spin-slow" />
 
       <Transition appear show={isOpen} as={Fragment}>
-        <Dialog as="div" className="relative z-50" onClose={() => {
-          setIsOpen(false);
-          setLocalApiKey(apiKey);
-          setLocalBaseUrl(baseUrl);
-        }}>
+        <Dialog as="div" className="relative z-50" onClose={resetToCurrent}>
           <TransitionChild
             as={Fragment}
             enter="ease-out duration-300"
@@ -173,7 +197,7 @@ export function SettingsModal() {
                   </DialogTitle>
 
                   <TabGroup>
-                    <TabList className="flex space-x-1 rounded-xl bg-background p-1 mb-4">
+                    <TabList className="flex flex-col sm:flex-col-none sm:flex-row gap-1 rounded-xl bg-background p-1 mb-4">
                       {tabs.map((tab) => (
                         <Tab
                           key={tab.name}
@@ -274,20 +298,83 @@ export function SettingsModal() {
                         </div>
 
                         <div className="space-y-2">
-                          <label className="block text-sm font-medium text-foreground">
-                            OpenAI TTS Model
-                            {localTTSModel !== 'tts-1' && <span className="ml-2 text-xs text-accent">(Custom model)</span>}
-                          </label>
-                          <div className="flex gap-2">
-                            <Input
-                              type="text"
-                              value={localTTSModel}
-                              onChange={(e) => handleInputChange('ttsModel', e.target.value)}
-                              placeholder="tts-1"
-                              className="w-full rounded-lg bg-background py-2 px-3 text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-accent"
-                            />
+                          <label className="block text-sm font-medium text-foreground">TTS Model</label>
+                          <div className="flex flex-col gap-2">
+                            <Listbox 
+                              value={ttsModels.find(m => m.id === localTTSModel) || ttsModels[0]} 
+                              onChange={(model) => {
+                                setLocalTTSModel(model.id);
+                                if (model.id !== 'custom') {
+                                  setCustomModel('');
+                                }
+                              }}
+                            >
+                              <ListboxButton className="relative w-full cursor-pointer rounded-lg bg-background py-2 pl-3 pr-10 text-left text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-accent transform transition-transform duration-200 ease-in-out hover:scale-[1.01] hover:text-accent">
+                                <span className="block truncate">
+                                  {ttsModels.find(m => m.id === localTTSModel)?.name || 'Select Model'}
+                                </span>
+                                <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                                  <ChevronUpDownIcon className="h-5 w-5 text-muted" />
+                                </span>
+                              </ListboxButton>
+                              <Transition
+                                as={Fragment}
+                                leave="transition ease-in duration-100"
+                                leaveFrom="opacity-100"
+                                leaveTo="opacity-0"
+                              >
+                                <ListboxOptions className="absolute mt-1 w-full overflow-auto rounded-md bg-background py-1 shadow-lg ring-1 ring-black/5 focus:outline-none z-50">
+                                  {ttsModels.map((model) => (
+                                    <ListboxOption
+                                      key={model.id}
+                                      className={({ active }) =>
+                                        `relative cursor-pointer select-none py-2 pl-10 pr-4 ${
+                                          active ? 'bg-accent/10 text-accent' : 'text-foreground'
+                                        }`
+                                      }
+                                      value={model}
+                                    >
+                                      {({ selected }) => (
+                                        <>
+                                          <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>
+                                            {model.name}
+                                          </span>
+                                          {selected ? (
+                                            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-accent">
+                                              <CheckIcon className="h-5 w-5" />
+                                            </span>
+                                          ) : null}
+                                        </>
+                                      )}
+                                    </ListboxOption>
+                                  ))}
+                                </ListboxOptions>
+                              </Transition>
+                            </Listbox>
+
+                            {localTTSModel === 'custom' && (
+                              <Input
+                                type="text"
+                                value={customModel}
+                                onChange={(e) => setCustomModel(e.target.value)}
+                                placeholder="Enter custom model name"
+                                className="w-full rounded-lg bg-background py-2 px-3 text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                              />
+                            )}
                           </div>
                         </div>
+
+                        {localTTSModel === 'gpt-4o-mini-tts' && (
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium text-foreground">TTS Instructions</label>
+                            <textarea
+                              value={localTTSInstructions}
+                              onChange={(e) => setLocalTTSInstructions(e.target.value)}
+                              placeholder="Enter instructions for the TTS model"
+                              className="w-full h-24 rounded-lg bg-background py-2 px-3 text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                            />
+                          </div>
+                        )}
 
                         <div className="mt-6 flex justify-end gap-2">
                           <Button
@@ -300,6 +387,8 @@ export function SettingsModal() {
                               setLocalApiKey('');
                               setLocalBaseUrl('');
                               setLocalTTSModel('tts-1');
+                              setCustomModel('');
+                              setLocalTTSInstructions('');
                             }}
                           >
                             Reset
@@ -315,7 +404,9 @@ export function SettingsModal() {
                                 apiKey: localApiKey || '',
                                 baseUrl: localBaseUrl || '',
                               });
-                              await updateConfigKey('ttsModel', localTTSModel || 'tts-1');
+                              const finalModel = localTTSModel === 'custom' ? customModel : localTTSModel;
+                              await updateConfigKey('ttsModel', finalModel);
+                              await updateConfigKey('ttsInstructions', localTTSInstructions);
                               setIsOpen(false);
                             }}
                           >

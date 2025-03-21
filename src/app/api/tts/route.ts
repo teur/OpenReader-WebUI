@@ -1,12 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { SpeechCreateParams } from 'openai/resources/audio/speech.mjs';
+
+type CustomVoice = string;
+type ExtendedSpeechParams = Omit<SpeechCreateParams, 'voice'> & {
+  voice: SpeechCreateParams['voice'] | CustomVoice;
+  instructions?: string;
+};
 
 export async function POST(req: NextRequest) {
   try {
     // Get API credentials from headers or fall back to environment variables
     const openApiKey = req.headers.get('x-openai-key') || process.env.API_KEY || 'none';
     const openApiBaseUrl = req.headers.get('x-openai-base-url') || process.env.API_BASE;
-    const { text, voice, speed, format, model } = await req.json();
+    const { text, voice, speed, format, model, instructions } = await req.json();
     console.log('Received TTS request:', text, voice, speed, format, model);
 
     if (!openApiKey) {
@@ -24,13 +31,20 @@ export async function POST(req: NextRequest) {
     });
 
     // Request audio from OpenAI and pass along the abort signal
-    const response = await openai.audio.speech.create({
+    const createParams: ExtendedSpeechParams = {
       model: model || 'tts-1',
       voice: voice as "alloy",
       input: text,
       speed: speed,
       response_format: format === 'aac' ? 'aac' : 'mp3',
-    }, { signal: req.signal }); // Pass the abort signal to OpenAI client
+    };
+
+    // Only add instructions if model is gpt-4o-mini-tts and instructions are provided
+    if (model === 'gpt-4o-mini-tts' && instructions) {
+      createParams.instructions = instructions;
+    }
+
+    const response = await openai.audio.speech.create(createParams as SpeechCreateParams, { signal: req.signal });
 
     // Get the audio data as array buffer
     // This will also be aborted if the client cancels

@@ -20,6 +20,7 @@ type ConfigValues = {
   leftMargin: number;
   rightMargin: number;
   ttsModel: string;
+  ttsInstructions: string;
 };
 
 /** Interface defining the configuration context shape and functionality */
@@ -36,6 +37,7 @@ interface ConfigContextType {
   leftMargin: number;
   rightMargin: number;
   ttsModel: string;
+  ttsInstructions: string;
   updateConfig: (newConfig: Partial<{ apiKey: string; baseUrl: string; viewType: ViewType }>) => Promise<void>;
   updateConfigKey: <K extends keyof ConfigValues>(key: K, value: ConfigValues[K]) => Promise<void>;
   isLoading: boolean;
@@ -64,6 +66,7 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
   const [leftMargin, setLeftMargin] = useState<number>(0.07);
   const [rightMargin, setRightMargin] = useState<number>(0.07);
   const [ttsModel, setTTSModel] = useState<string>('tts-1');
+  const [ttsInstructions, setTTSInstructions] = useState<string>('');
 
   const [isLoading, setIsLoading] = useState(true);
   const [isDBReady, setIsDBReady] = useState(false);
@@ -88,6 +91,7 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
         const cachedLeftMargin = await getItem('leftMargin');
         const cachedRightMargin = await getItem('rightMargin');
         const cachedTTSModel = await getItem('ttsModel');
+        const cachedTTSInstructions = await getItem('ttsInstructions');
 
         // Only set API key and base URL if they were explicitly saved by the user
         if (cachedApiKey) {
@@ -110,6 +114,7 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
         setLeftMargin(parseFloat(cachedLeftMargin || '0.07'));
         setRightMargin(parseFloat(cachedRightMargin || '0.07'));
         setTTSModel(cachedTTSModel || 'tts-1');
+        setTTSInstructions(cachedTTSInstructions || '');
 
         // Only save non-sensitive settings by default
         if (!cachedViewType) {
@@ -127,6 +132,9 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
         if (cachedRightMargin === null) await setItem('rightMargin', '0.0');
         if (cachedTTSModel === null) {
           await setItem('ttsModel', 'tts-1');
+        }
+        if (cachedTTSInstructions === null) {
+          await setItem('ttsInstructions', '');
         }
         
       } catch (error) {
@@ -221,6 +229,9 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
         case 'ttsModel':
           setTTSModel(value as string);
           break;
+        case 'ttsInstructions':
+          setTTSInstructions(value as string);
+          break;
       }
     } catch (error) {
       console.error(`Error updating config key ${key}:`, error);
@@ -244,6 +255,7 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
       leftMargin,
       rightMargin,
       ttsModel,
+      ttsInstructions,
       updateConfig, 
       updateConfigKey,
       isLoading, 
