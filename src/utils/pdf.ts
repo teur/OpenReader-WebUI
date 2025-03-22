@@ -141,11 +141,23 @@ export async function extractTextFromPDF(
           const prevEndX = prevItem.transform[4] + (prevItem.width ?? 0);
           const currentStartX = item.transform[4];
           const space = currentStartX - prevEndX;
+          
+          // Get average character width as fallback
+          const avgCharWidth = (item.width ?? 0) / Math.max(1, item.str.length);
+          
+          // Multiple conditions for space detection
+          const needsSpace = 
+              // Primary check: significant gap between items
+              space > Math.max(avgCharWidth * 0.3, 2) ||
+              // Secondary check: natural word boundary
+              (!/^\W/.test(item.str) && !/\W$/.test(prevItem.str)) ||
+              // Tertiary check: items are far enough apart relative to their size
+              (space > ((prevItem.width ?? 0) * 0.25));
 
-          if (space > ((item.width ?? 0) * 0.3)) {
-            lineText += ' ' + item.str;
+          if (needsSpace) {
+              lineText += ' ' + item.str;
           } else {
-            lineText += item.str;
+              lineText += item.str;
           }
         }
         prevItem = item;
