@@ -71,6 +71,8 @@ export function EPUBProvider({ children }: { children: ReactNode }) {
   const tocRef = useRef<NavItem[]>([]);
   const locationRef = useRef<string | number>(currDocPage);
   const isEPUBSetOnce = useRef(false);
+  // Should pause ref
+  const shouldPauseRef = useRef(true);
 
   /**
    * Clears all current document state and stops any active TTS
@@ -80,6 +82,11 @@ export function EPUBProvider({ children }: { children: ReactNode }) {
     setCurrDocName(undefined);
     setCurrDocText(undefined);
     setCurrDocPages(undefined);
+    isEPUBSetOnce.current = false;
+    bookRef.current = null;
+    renditionRef.current = undefined;
+    locationRef.current = 1;
+    tocRef.current = [];
     stop();
   }, [setCurrDocPages, stop]);
 
@@ -341,10 +348,12 @@ export function EPUBProvider({ children }: { children: ReactNode }) {
 
     // Handle special 'next' and 'prev' cases
     if (location === 'next' && renditionRef.current) {
+      shouldPauseRef.current = false;
       renditionRef.current.next();
       return;
     }
     if (location === 'prev' && renditionRef.current) {
+      shouldPauseRef.current = false;
       renditionRef.current.prev();
       return;
     }
@@ -359,7 +368,8 @@ export function EPUBProvider({ children }: { children: ReactNode }) {
 
     locationRef.current = location;
     if (bookRef.current && renditionRef.current) {
-      extractPageText(bookRef.current, renditionRef.current);
+      extractPageText(bookRef.current, renditionRef.current, shouldPauseRef.current);
+      shouldPauseRef.current = true;
     }
   }, [id, skipToLocation, extractPageText, setIsEPUB]);
 

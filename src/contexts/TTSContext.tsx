@@ -222,6 +222,7 @@ export function TTSProvider({ children }: { children: ReactNode }) {
 
     // Handle within current page bounds
     if (nextIndex < sentences.length && nextIndex >= 0) {
+      console.log('isEPUB', isEPUB!);
       setCurrentIndex(nextIndex);
       return;
     }

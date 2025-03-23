@@ -134,7 +134,7 @@ export function PDFProvider({ children }: { children: ReactNode }) {
       // This prevents unnecessary resets of the sentence index
       if (text !== currDocText || text === '') {
         setCurrDocText(text);
-        setTTSText(text);
+        setTTSText(text, true);
       }
     } catch (error) {
       console.error('Error loading PDF text:', error);
