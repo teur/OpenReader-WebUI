@@ -11,11 +11,11 @@ assignees: richardr1126
 A description of what the bug is, which explains how you got there.
 
 **Environment info:**
- - OpenReader-WebUI version: [e.g. v0.2.4]
+ - OpenReader-WebUI version: [e.g. v0.2.5 (found in the terminal when starting)]
  - Using Docker: yes/no
  - Browser: [e.g. Safari, Firefox, Chromium]
- - Device: [e.g. iPhone16, Macbook Pro]
- - OS: [e.g. iOS17.2]
+ - Device: [e.g. iPhone16, Macbook Pro, Intel/AMD PC]
+ - OS (need if iOS): [e.g. iOS17.2]
 
 **Additional context**
 Add any other context about the problem here.
