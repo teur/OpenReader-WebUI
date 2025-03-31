@@ -6,44 +6,46 @@
 [![GitHub Release](https://img.shields.io/github/v/release/richardr1126/OpenReader-WebUI)](../../releases)
 
 [![Discussions](https://img.shields.io/badge/Discussions-Ask%20a%20Question-blue)](../../discussions)
-[![Bluesky](https://img.shields.io/badge/Bluesky-Chat%20with%20me-blue)](https://bsky.app/profile/richardr.dev)
-
 
 # OpenReader WebUI 📄🔊
 
-OpenReader WebUI is a document reader with Text-to-Speech capabilities, offering a TTS read along experience with narration for both PDF and EPUB documents. It can use any OpenAI compatible TTS endpoint, including [Kokoro-FastAPI](https://github.com/remsky/Kokoro-FastAPI).
+OpenReader WebUI is a document reader with Text-to-Speech capabilities, offering a TTS read along experience with narration for both PDF and EPUB documents. It can use any OpenAI compatible TTS endpoint, including [Kokoro-FastAPI](https://github.com/remsky/Kokoro-FastAPI) and [Orpheus-FastAPI](https://github.com/Lex-au/Orpheus-FastAPI)
+
+> Highly available demo currently available at [https://openreader.richardr.dev/](https://openreader.richardr.dev/)
 
 - 🎯 **TTS API Integration**: 
-  - Compatible with OpenAI text to speech API and GPT-4o Mini TTS, Kokoro-FastAPI TTS, or any other compatible service
-  - Support for multiple TTS models (tts-1, tts-1-hd, gpt-4o-mini-tts, kokoro)
-  - Custom model support for experimental or self-hosted models
-  - Model-specific instructions support (for gpt-4o-mini-tts)
+  - Compatible with OpenAI text to speech API and GPT-4o Mini TTS, Kokoro-FastAPI TTS, Orpheus FastAPI or any other compatible service
+  - Support for TTS models (tts-1, tts-1-hd, gpt-4o-mini-tts, kokoro, and custom)
 - 💾 **Local-First Architecture**: Uses IndexedDB browser storage for documents
 - 🛜 **Optional Server-side documents**: Manually upload documents to the next backend for all users to download
 - 📖 **Read Along Experience**: Follow along with highlighted text as the TTS narrates
 - 📄 **Document formats**: EPUB, PDF, DOCX (with libreoffice installed)
-- 🎧 **Audiobook Creation**: Create and export audiobooks from PDF and ePub files with m4b format
+- 🎧 **Audiobook Creation**: Create and export audiobooks from PDF and ePub files **(in m4b format with ffmpeg and aac TTS output)**
 - 📲 **Mobile Support**: Works on mobile devices, and can be added as a PWA web app
 - 🎨 **Customizable Experience**: 
   - 🔑 Set TTS API base URL (and optional API key)
-  - 🤖 Choose from multiple TTS models or use custom models
   - 🎯 Set model-specific instructions for GPT-4o Mini TTS
   - 🏎️ Adjustable playback speed
   - 📐 Customize PDF text extraction margins
   - 🗣️ Multiple voice options (checks `/v1/audio/voices` endpoint)
   - 🎨 Multiple app theme options
-  
+
+> Orpheus-FastAPI will only work through a [fork of Orpheus-FastAPI](https://github.com/richardr1126/LlamaCpp-Orpheus-FastAPI)
 
 ### 🛠️ Work in progress
 - [x] **Audiobook creation and download** (m4b format)
-- [x] **Get PDFs on iOS 17 and below working 🤞**
 - [x] **Support for GPT-4o Mini TTS with instructions**
-- [ ] **End-to-end Testing**: More playwright tests (in progress)
-- [ ] **More document formats**: .txt, .md
-- [ ] **Support more TTS APIs**: ElevenLabs, etc.
+- [x] **Intial e2e testing**: More playwright tests (in progress)
+- [x] **Orpheus-FastAPI support**: (in progress, submitted PR to Orpheus-FastAPI)
+- [ ] **More document formats**: .txt, .md, native .docx support
+- [ ] **Support non-OpenAI TTS APIs**: ElevenLabs, etc.
 - [ ] **Accessibility Improvements**
 
 ## 🐳 Docker Quick Start
+
+### Prerequisites
+- Recent version of Docker installed on your machine
+- A TTS API server (Kokoro-FastAPI, Orpheus-FastAPI, or OpenAI API)
 
 ```bash
 docker run --name openreader-webui \
@@ -69,11 +71,17 @@ Visit [http://localhost:3003](http://localhost:3003) to run the app and set your
 
 ### ⬆️ Update Docker Image
 ```bash
-docker stop openreader-webui && docker rm openreader-webui
+docker stop openreader-webui && \
+docker rm openreader-webui && \
 docker pull ghcr.io/richardr1126/openreader-webui:latest
 ```
 
 ### Adding to a Docker Compose (i.e. with open-webui or Kokoro-FastAPI)
+
+> Note: This is an example of how to add OpenReader WebUI to a docker-compose file. You can add it to your existing docker-compose file or create a new one in this directory. Then run `docker-compose up --build` to start the services.
+
+```bash
+
 Create or add to a `docker-compose.yml`:
 ```yaml
 volumes:
@@ -91,11 +99,6 @@ services:
       - docstore:/app/docstore
     restart: unless-stopped
 ```
-
-## [**Demo**](https://openreader.richardr.dev/)
-
-
-https://github.com/user-attachments/assets/262b9a01-c608-4fee-893c-9461dd48c99b
 
 ## Dev Installation
 
@@ -147,7 +150,7 @@ For feature requests or ideas you have for the project, please use the [Discussi
 
 ## 🙋‍♂️ Support and issues
 
-For general questions, you can reach out to me on [Bluesky](https://bsky.app/profile/richardr.dev). If you encounter issues, please open an issue on GitHub following the template (which is very simple).
+If you encounter issues, please open an issue on GitHub following the template (which is very light).
 
 ## 👥 Contributing
 
@@ -173,7 +176,7 @@ Contributions are welcome! Fork the repository and submit a pull request with yo
   - [react-pdf](https://github.com/wojtekmaj/react-pdf)
   - [pdf.js](https://mozilla.github.io/pdf.js/)
 - **EPUB:**
-  - [react-reader](https://github.com/happyr/react-reader)
+  - [react-reader](https://github.com/gerhardsletten/react-reader)
   - [epubjs](https://github.com/futurepress/epub.js/)
 - **UI:** 
   - [Tailwind CSS](https://tailwindcss.com)

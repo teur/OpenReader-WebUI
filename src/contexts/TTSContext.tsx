@@ -23,6 +23,7 @@ import {
   useRef,
   useMemo,
   ReactNode,
+  ReactElement
 } from 'react';
 import { Howl } from 'howler';
 import toast from 'react-hot-toast';
@@ -73,7 +74,7 @@ interface TTSContextType {
   setCurrDocPages: (num: number | undefined) => void;
   setSpeedAndRestart: (speed: number) => void;
   setVoiceAndRestart: (voice: string) => void;
-  skipToLocation: (location: string | number) => void;
+  skipToLocation: (location: string | number, shouldPause?: boolean) => void;
   registerLocationChangeHandler: (handler: (location: string | number) => void) => void;  // EPUB-only: Handles chapter navigation
   setIsEPUB: (isEPUB: boolean) => void;
 }
@@ -89,7 +90,7 @@ const TTSContext = createContext<TTSContextType | undefined>(undefined);
  * @param {ReactNode} props.children - Child components to be wrapped by the provider
  * @returns {JSX.Element} TTSProvider component
  */
-export function TTSProvider({ children }: { children: ReactNode }) {
+export function TTSProvider({ children }: { children: ReactNode }): ReactElement {
   // Configuration context consumption
   const {
     apiKey: openApiKey,
@@ -197,15 +198,25 @@ export function TTSProvider({ children }: { children: ReactNode }) {
   }, [activeHowl]);
 
   /**
+   * Pauses the current audio playback
+   * Used for external control of playback state
+   */
+  const pause = useCallback(() => {
+    abortAudio();
+    setIsPlaying(false);
+  }, [abortAudio]);
+
+  /**
    * Navigates to a specific location in the document
    * Works for both PDF pages and EPUB locations
    * 
    * @param {string | number} location - The target location to navigate to
    * @param {boolean} keepPlaying - Whether to maintain playback state
    */
-  const skipToLocation = useCallback((location: string | number) => {
+  const skipToLocation = useCallback((location: string | number, shouldPause = false) => {
     // Reset state for new content in correct order
     abortAudio();
+    if (shouldPause) setIsPlaying(false);
     setCurrentIndex(0);
     setSentences([]);
     setCurrDocPage(location);
@@ -340,15 +351,6 @@ export function TTSProvider({ children }: { children: ReactNode }) {
         return false;
       }
     });
-  }, [abortAudio]);
-
-  /**
-   * Pauses the current audio playback
-   * Used for external control of playback state
-   */
-  const pause = useCallback(() => {
-    abortAudio();
-    setIsPlaying(false);
   }, [abortAudio]);
 
 

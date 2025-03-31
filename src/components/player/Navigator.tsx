@@ -5,13 +5,13 @@ import { Button } from '@headlessui/react';
 export const Navigator = ({ currentPage, numPages, skipToLocation }: {
   currentPage: number;
   numPages: number | undefined;
-  skipToLocation: (location: string | number) => void;
+  skipToLocation: (location: string | number, shouldPause?: boolean) => void;
 }) => {
   return (
     <div className="flex items-center space-x-1">
       {/* Page back */}
       <Button
-        onClick={() => skipToLocation(currentPage - 1)}
+        onClick={() => skipToLocation(currentPage - 1, true)}
         disabled={currentPage <= 1}
         className="relative p-2 rounded-full text-foreground hover:bg-offbase data-[hover]:bg-offbase data-[active]:bg-offbase/80 transition-colors duration-200 focus:outline-none disabled:opacity-50"
         aria-label="Previous page"
@@ -30,7 +30,7 @@ export const Navigator = ({ currentPage, numPages, skipToLocation }: {
 
       {/* Page forward */}
       <Button
-        onClick={() => skipToLocation(currentPage + 1)}
+        onClick={() => skipToLocation(currentPage + 1, true)}
         disabled={currentPage >= (numPages || 1)}
         className="relative p-2 rounded-full text-foreground hover:bg-offbase data-[hover]:bg-offbase data-[active]:bg-offbase/80 transition-colors duration-200 focus:outline-none disabled:opacity-50"
         aria-label="Next page"
