@@ -1,0 +1,22 @@
+services:
+  openreader-webui:
+    # image: ghcr.io/richardr1126/openreader-webui
+    build:
+      context: .
+    restart: unless-stopped
+    ports:
+      - "3003:3003"
+    environment:
+      - API_BASE=http://kokoro-fastapi-gpu:8880/v1
+  kokoro-fastapi-gpu:
+    image: ghcr.io/remsky/kokoro-fastapi-gpu
+    restart: unless-stopped
+    ports:
+      - "8880:8880"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
