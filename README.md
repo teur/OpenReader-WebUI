@@ -19,7 +19,7 @@ OpenReader WebUI is a document reader with Text-to-Speech capabilities, offering
 - 💾 **Local-First Architecture**: Uses IndexedDB browser storage for documents
 - 🛜 **Optional Server-side documents**: Manually upload documents to the next backend for all users to download
 - 📖 **Read Along Experience**: Follow along with highlighted text as the TTS narrates
-- 📄 **Document formats**: EPUB, PDF, DOCX (with libreoffice installed)
+- 📄 **Document formats**: EPUB, PDF, TXT, MD, DOCX (with libreoffice installed)
 - 🎧 **Audiobook Creation**: Create and export audiobooks from PDF and ePub files **(in m4b format with ffmpeg and aac TTS output)**
 - 📲 **Mobile Support**: Works on mobile devices, and can be added as a PWA web app
 - 🎨 **Customizable Experience**: 
@@ -35,7 +35,8 @@ OpenReader WebUI is a document reader with Text-to-Speech capabilities, offering
 - [x] **Support for GPT-4o Mini TTS with instructions**
 - [x] **Intial e2e testing**: More playwright tests (in progress)
 - [x] **Orpheus-FastAPI support**: (in progress, submitted PR to Orpheus-FastAPI)
-- [ ] **More document formats**: .txt, .md, native .docx support
+- [x] **More document formats**: .txt, .md added
+- [ ] **Native .docx support** (currently requires libreoffice)
 - [ ] **Support non-OpenAI TTS APIs**: ElevenLabs, etc.
 - [ ] **Accessibility Improvements**
 
@@ -181,9 +182,13 @@ This project would not be possible without standing on the shoulders of these gi
 - **EPUB:**
   - [react-reader](https://github.com/gerhardsletten/react-reader)
   - [epubjs](https://github.com/futurepress/epub.js/)
+- **Markdown/Text:**
+  - [react-markdown](https://github.com/remarkjs/react-markdown)
+  - [remark-gfm](https://github.com/remarkjs/remark-gfm)
 - **UI:** 
   - [Tailwind CSS](https://tailwindcss.com)
   - [Headless UI](https://headlessui.com)
+  - [@tailwindcss/typography](https://tailwindcss.com/docs/typography-plugin)
 - **TTS:** (tested on)
   - [Kokoro FastAPI TTS](https://github.com/remsky/Kokoro-FastAPI/tree/v0.0.5post1-stable)
   - [Orpheus FastAPI TTS](https://github.com/Lex-au/Orpheus-FastAPI)
