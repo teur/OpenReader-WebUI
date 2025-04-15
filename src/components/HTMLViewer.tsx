@@ -28,7 +28,7 @@ export function HTMLViewer({ className = '' }: HTMLViewerProps) {
         <TTSPlayer />
       </div>
       <div className="flex-1 overflow-auto">
-        <div className={`px-4 ${isTxtFile ? 'whitespace-pre-wrap font-mono text-sm' : 'prose dark:prose-invert'}`}>
+        <div className={`px-4 ${isTxtFile ? 'whitespace-pre-wrap font-mono text-sm' : 'prose prose-base'}`}>
           {isTxtFile ? (
             currDocData
           ) : (
