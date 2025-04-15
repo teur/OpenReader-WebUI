@@ -30,8 +30,6 @@ OpenReader WebUI is a document reader with Text-to-Speech capabilities, offering
   - 🗣️ Multiple voice options (checks `/v1/audio/voices` endpoint)
   - 🎨 Multiple app theme options
 
-> Orpheus-FastAPI will only work through a [fork of Orpheus-FastAPI](https://github.com/richardr1126/LlamaCpp-Orpheus-FastAPI)
-
 ### 🛠️ Work in progress
 - [x] **Audiobook creation and download** (m4b format)
 - [x] **Support for GPT-4o Mini TTS with instructions**
@@ -80,7 +78,6 @@ docker pull ghcr.io/richardr1126/openreader-webui:latest
 
 > Note: This is an example of how to add OpenReader WebUI to a docker-compose file. You can add it to your existing docker-compose file or create a new one in this directory. Then run `docker-compose up --build` to start the services.
 
-```bash
 
 Create or add to a `docker-compose.yml`:
 ```yaml
@@ -106,9 +103,11 @@ services:
 - Node.js & npm (recommended: use [nvm](https://github.com/nvm-sh/nvm))
 Optionally required for different features:
 - [FFmpeg](https://ffmpeg.org) (required for audiobook m4b creation only)
+  - On Linux: `sudo apt install ffmpeg`
+  - On MacOS: `brew install ffmpeg`
 - [libreoffice](https://www.libreoffice.org) (required for DOCX files)
-  - On Linux: `sudo apt install ffmpeg libreoffice`
-  - On MacOS: `brew install ffmpeg libreoffice`
+  - On Linux: `sudo apt install libreoffice`
+  - On MacOS: `brew install libreoffice`
 
 ### Steps
 
@@ -158,14 +157,18 @@ Contributions are welcome! Fork the repository and submit a pull request with yo
 
 ## ❤️ Acknowledgements
 
-- [Kokoro-FastAPI](https://github.com/remsky/Kokoro-FastAPI) for the API wrapper
-- [react-pdf](https://github.com/wojtekmaj/react-pdf)
-- [react-reader](https://github.com/happyr/react-reader)
-- [Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M) for text-to-speech
+This project would not be possible without standing on the shoulders of these giants:
+
+- [Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M) model
+- [Orpheus-TTS](https://huggingface.co/collections/canopylabs/orpheus-tts-67d9ea3f6c05a941c06ad9d2) model
+- [Kokoro-FastAPI](https://github.com/remsky/Kokoro-FastAPI)
+- [Orpheus-FastAPI](https://github.com/Lex-au/Orpheus-FastAPI)
+- [react-pdf](https://github.com/wojtekmaj/react-pdf) npm package
+- [react-reader](https://github.com/happyr/react-reader) npm package
 
 ## Docker Supported Architectures
 - linux/amd64 (x86_64)
-- linux/arm64 (Apple Silicon)
+- linux/arm64 (Apple Silicon, Raspberry Pi, SBCs, etc.)
 
 ## Stack
 
@@ -182,8 +185,9 @@ Contributions are welcome! Fork the repository and submit a pull request with yo
   - [Tailwind CSS](https://tailwindcss.com)
   - [Headless UI](https://headlessui.com)
 - **TTS:** (tested on)
-  - [OpenAI API](https://platform.openai.com/docs/api-reference/text-to-speech)
   - [Kokoro FastAPI TTS](https://github.com/remsky/Kokoro-FastAPI/tree/v0.0.5post1-stable)
+  - [Orpheus FastAPI TTS](https://github.com/Lex-au/Orpheus-FastAPI)
+  - [OpenAI API](https://platform.openai.com/docs/api-reference/text-to-speech)
 - **NLP:** [compromise](https://github.com/spencermountain/compromise) NLP library for sentence splitting
 
 ## License
