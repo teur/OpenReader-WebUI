@@ -31,6 +31,7 @@ const generateDefaultFolderName = (doc1: DocumentListDocument, doc2: DocumentLis
     if (significant) {
       if (significant === 'pdf') return 'PDFs';
       if (significant === 'epub') return 'EPUBs';
+      if (significant === 'txt' || significant === 'md') return 'Documents';
       return `${significant.charAt(0).toUpperCase()}${significant.slice(1)}`;
     }
   }
@@ -61,6 +62,9 @@ export function DocumentList() {
     epubDocs,
     removeEPUBDocument: removeEPUB,
     isEPUBLoading,
+    htmlDocs,
+    removeHTMLDocument: removeHTML,
+    isHTMLLoading,
   } = useDocuments();
 
   useEffect(() => {
@@ -112,6 +116,13 @@ export function DocumentList() {
       lastModified: doc.lastModified,
       type: 'epub' as const,
     })),
+    ...htmlDocs.map(doc => ({
+      id: doc.id,
+      name: doc.name,
+      size: doc.size,
+      lastModified: doc.lastModified,
+      type: 'html' as const,
+    })),
   ];
 
   const sortDocuments = useCallback((docs: DocumentListDocument[]) => {
@@ -143,8 +154,10 @@ export function DocumentList() {
     try {
       if (documentToDelete.type === 'pdf') {
         await removePDF(documentToDelete.id);
-      } else {
+      } else if (documentToDelete.type === 'epub') {
         await removeEPUB(documentToDelete.id);
+      } else if (documentToDelete.type === 'html') {
+        await removeHTML(documentToDelete.id);
       }
 
       // Remove from folders if document is in one
@@ -159,7 +172,7 @@ export function DocumentList() {
     } catch (err) {
       console.error('Failed to remove document:', err);
     }
-  }, [documentToDelete, removePDF, removeEPUB]);
+  }, [documentToDelete, removePDF, removeEPUB, removeHTML]);
 
   const handleDragStart = useCallback((doc: DocumentListDocument) => {
     if (!doc.folderId) {
@@ -272,7 +285,7 @@ export function DocumentList() {
     }
   }, [createFolder]);
 
-  if (isPDFLoading || isEPUBLoading) {
+  if (isPDFLoading || isEPUBLoading || isHTMLLoading) {
     return <div className="w-full text-center text-muted">Loading documents...</div>;
   }
 

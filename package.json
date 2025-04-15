@@ -26,14 +26,17 @@
     "react-dom": "^19.0.0",
     "react-dropzone": "^14.3.8",
     "react-hot-toast": "^2.5.2",
+    "react-markdown": "^10.1.0",
     "react-pdf": "^9.2.1",
     "react-reader": "^2.0.12",
+    "remark-gfm": "^4.0.1",
     "string-similarity": "^4.0.4",
     "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@playwright/test": "^1.50.1",
+    "@tailwindcss/typography": "^0.5.16",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

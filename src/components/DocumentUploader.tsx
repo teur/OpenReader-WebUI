@@ -12,7 +12,11 @@ interface DocumentUploaderProps {
 }
 
 export function DocumentUploader({ className = '' }: DocumentUploaderProps) {
-  const { addPDFDocument: addPDF, addEPUBDocument: addEPUB } = useDocuments();
+  const { 
+    addPDFDocument: addPDF, 
+    addEPUBDocument: addEPUB,
+    addHTMLDocument: addHTML 
+  } = useDocuments();
   const [isUploading, setIsUploading] = useState(false);
   const [isConverting, setIsConverting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,6 +52,8 @@ export function DocumentUploader({ className = '' }: DocumentUploaderProps) {
         await addPDF(file);
       } else if (file.type === 'application/epub+zip') {
         await addEPUB(file);
+      } else if (file.type === 'text/plain' || file.type === 'text/markdown' || file.name.endsWith('.md')) {
+        await addHTML(file);
       } else if (isDev && file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
         setIsUploading(false);
         setIsConverting(true);
@@ -61,13 +67,15 @@ export function DocumentUploader({ className = '' }: DocumentUploaderProps) {
       setIsUploading(false);
       setIsConverting(false);
     }
-  }, [addPDF, addEPUB]);
+  }, [addHTML, addPDF, addEPUB]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
       'application/pdf': ['.pdf'],
       'application/epub+zip': ['.epub'],
+      'text/plain': ['.txt'],
+      'text/markdown': ['.md'],
       ...(isDev ? {
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx']
       } : {})
@@ -105,7 +113,7 @@ export function DocumentUploader({ className = '' }: DocumentUploaderProps) {
               {isDragActive ? 'Drop your file here' : 'Drop your file here, or click to select'}
             </p>
             <p className="text-xs sm:text-sm text-muted">
-              {isDev ? 'PDF, EPUB, and DOCX files are accepted' : 'PDF and EPUB files are accepted'}
+              {isDev ? 'PDF, EPUB, TXT, MD, or DOCX files are accepted' : 'PDF, EPUB, TXT, or MD files are accepted'}
             </p>
             {error && <p className="mt-2 text-sm text-red-500">{error}</p>}
           </>

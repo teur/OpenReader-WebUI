@@ -8,6 +8,7 @@ import { EPUBProvider } from '@/contexts/EPUBContext';
 import { TTSProvider } from '@/contexts/TTSContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { ConfigProvider } from '@/contexts/ConfigContext';
+import { HTMLProvider } from '@/contexts/HTMLContext';
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
@@ -17,7 +18,9 @@ export function Providers({ children }: { children: ReactNode }) {
           <TTSProvider>
             <PDFProvider>
               <EPUBProvider>
-                {children}
+                <HTMLProvider>
+                  {children}
+                </HTMLProvider>
               </EPUBProvider>
             </PDFProvider>
           </TTSProvider>

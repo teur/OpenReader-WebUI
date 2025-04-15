@@ -3,7 +3,8 @@
 import { createContext, useContext, ReactNode } from 'react';
 import { usePDFDocuments } from '@/hooks/pdf/usePDFDocuments';
 import { useEPUBDocuments } from '@/hooks/epub/useEPUBDocuments';
-import { PDFDocument, EPUBDocument } from '@/types/documents';
+import { useHTMLDocuments } from '@/hooks/html/useHTMLDocuments';
+import { PDFDocument, EPUBDocument, HTMLDocument } from '@/types/documents';
 
 interface DocumentContextType {
   // PDF Documents
@@ -18,11 +19,19 @@ interface DocumentContextType {
   removeEPUBDocument: (id: string) => Promise<void>;
   isEPUBLoading: boolean;
 
+  // HTML Documents
+  htmlDocs: HTMLDocument[];
+  addHTMLDocument: (file: File) => Promise<string>;
+  removeHTMLDocument: (id: string) => Promise<void>;
+  isHTMLLoading: boolean;
+
   refreshPDFs: () => Promise<void>;
   refreshEPUBs: () => Promise<void>;
+  refreshHTML: () => Promise<void>;
 
   clearPDFs: () => Promise<void>;
   clearEPUBs: () => Promise<void>;
+  clearHTML: () => Promise<void>;
 }
 
 const DocumentContext = createContext<DocumentContextType | undefined>(undefined);
@@ -46,6 +55,15 @@ export function DocumentProvider({ children }: { children: ReactNode }) {
     clearDocuments: clearEPUBs
   } = useEPUBDocuments();
 
+  const {
+    documents: htmlDocs,
+    addDocument: addHTMLDocument,
+    removeDocument: removeHTMLDocument,
+    isLoading: isHTMLLoading,
+    refresh: refreshHTML,
+    clearDocuments: clearHTML
+  } = useHTMLDocuments();
+
   return (
     <DocumentContext.Provider value={{
       pdfDocs,
@@ -56,10 +74,16 @@ export function DocumentProvider({ children }: { children: ReactNode }) {
       addEPUBDocument,
       removeEPUBDocument,
       isEPUBLoading,
+      htmlDocs,
+      addHTMLDocument,
+      removeHTMLDocument,
+      isHTMLLoading,
       refreshPDFs,
       refreshEPUBs,
+      refreshHTML,
       clearPDFs,
-      clearEPUBs
+      clearEPUBs,
+      clearHTML
     }}>
       {children}
     </DocumentContext.Provider>

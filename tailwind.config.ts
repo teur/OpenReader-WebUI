@@ -1,4 +1,6 @@
 import type { Config } from "tailwindcss";
+//@plugin "@tailwindcss/typography";
+import typography from "@tailwindcss/typography";
 
 export default {
   content: [
@@ -44,5 +46,5 @@ export default {
       },
     },
   },
-  plugins: [],
+  plugins: [typography],
 } satisfies Config;

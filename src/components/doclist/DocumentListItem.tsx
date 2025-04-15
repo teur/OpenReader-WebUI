@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { DragEvent } from 'react';
 import { Button } from '@headlessui/react';
-import { PDFIcon, EPUBIcon } from '@/components/icons/Icons';
+import { PDFIcon, EPUBIcon, FileIcon } from '@/components/icons/Icons';
 import { DocumentListDocument } from '@/types/documents';
 
 interface DocumentListItemProps {
@@ -52,7 +52,7 @@ export function DocumentListItem({
           className="document-link flex items-center align-center space-x-4 w-full truncate hover:bg-base rounded-lg p-0.5 sm:p-1 transition-colors"
         >
           <div className="flex-shrink-0">
-            {doc.type === 'pdf' ? <PDFIcon /> : <EPUBIcon />}
+            {doc.type === 'pdf' ? <PDFIcon /> : doc.type === 'epub' ? <EPUBIcon /> : <FileIcon />}
           </div>
           <div className="flex flex-col min-w-0 transform transition-transform duration-200 ease-in-out hover:scale-[1.02] w-full truncate">
             <p className="text-sm sm:text-md text-foreground font-medium truncate">{doc.name}</p>

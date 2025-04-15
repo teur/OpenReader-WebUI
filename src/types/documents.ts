@@ -1,4 +1,4 @@
-export type DocumentType = 'pdf' | 'epub' | 'docx';
+export type DocumentType = 'pdf' | 'epub' | 'docx' | 'html';
 
 export interface BaseDocument {
   id: string;
@@ -13,6 +13,11 @@ export interface BaseDocument {
 export interface PDFDocument extends BaseDocument {
   type: 'pdf';
   data: ArrayBuffer;
+}
+
+export interface HTMLDocument extends BaseDocument {
+  type: 'html';
+  data: string; // Store as string since it's text content
 }
 
 export interface EPUBDocument extends BaseDocument {

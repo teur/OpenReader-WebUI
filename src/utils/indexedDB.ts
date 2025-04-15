@@ -1,9 +1,10 @@
-import { PDFDocument, EPUBDocument, DocumentListState } from '@/types/documents';
+import { PDFDocument, EPUBDocument, HTMLDocument, DocumentListState } from '@/types/documents';
 
 const DB_NAME = 'openreader-db';
-const DB_VERSION = 2;  // Increased version number
+const DB_VERSION = 3;  // Increased version for new store
 const PDF_STORE_NAME = 'pdf-documents';
 const EPUB_STORE_NAME = 'epub-documents';
+const HTML_STORE_NAME = 'html-documents';
 const CONFIG_STORE_NAME = 'config';
 
 export interface Config {
@@ -47,6 +48,11 @@ class IndexedDBService {
         if (!db.objectStoreNames.contains(PDF_STORE_NAME)) {
           console.log('Creating PDF documents store...');
           db.createObjectStore(PDF_STORE_NAME, { keyPath: 'id' });
+        }
+
+        if (!db.objectStoreNames.contains(HTML_STORE_NAME)) {
+          console.log('Creating HTML documents store...');
+          db.createObjectStore(HTML_STORE_NAME, { keyPath: 'id' });
         }
 
         if (!db.objectStoreNames.contains(EPUB_STORE_NAME)) {
@@ -201,6 +207,156 @@ class IndexedDBService {
 
       } catch (error) {
         console.error('Error in removeDocument transaction:', error);
+        reject(error);
+      }
+    });
+  }
+
+  // Add HTML Document Methods
+  async addHTMLDocument(document: HTMLDocument): Promise<void> {
+    if (!this.db) {
+      await this.init();
+    }
+
+    return new Promise((resolve, reject) => {
+      try {
+        console.log('Adding HTML document to IndexedDB:', document.name);
+        const transaction = this.db!.transaction([HTML_STORE_NAME], 'readwrite');
+        const store = transaction.objectStore(HTML_STORE_NAME);
+
+        const request = store.put({
+          ...document,
+          data: document.data
+        });
+
+        request.onerror = (event) => {
+          const error = (event.target as IDBRequest).error;
+          console.error('Error adding HTML document:', error);
+          reject(error);
+        };
+
+        transaction.oncomplete = () => {
+          console.log('HTML document added successfully:', document.name);
+          resolve();
+        };
+      } catch (error) {
+        console.error('Error in addHTMLDocument transaction:', error);
+        reject(error);
+      }
+    });
+  }
+
+  async getHTMLDocument(id: string): Promise<HTMLDocument | undefined> {
+    if (!this.db) {
+      await this.init();
+    }
+
+    return new Promise((resolve, reject) => {
+      try {
+        console.log('Fetching HTML document:', id);
+        const transaction = this.db!.transaction([HTML_STORE_NAME], 'readonly');
+        const store = transaction.objectStore(HTML_STORE_NAME);
+        const request = store.get(id);
+
+        request.onerror = (event) => {
+          const error = (event.target as IDBRequest).error;
+          console.error('Error fetching HTML document:', error);
+          reject(error);
+        };
+
+        request.onsuccess = () => {
+          console.log('HTML Document fetch result:', request.result ? 'found' : 'not found');
+          resolve(request.result);
+        };
+      } catch (error) {
+        console.error('Error in getHTMLDocument transaction:', error);
+        reject(error);
+      }
+    });
+  }
+
+  async getAllHTMLDocuments(): Promise<HTMLDocument[]> {
+    if (!this.db) {
+      await this.init();
+    }
+
+    return new Promise((resolve, reject) => {
+      try {
+        console.log('Fetching all HTML documents');
+        const transaction = this.db!.transaction([HTML_STORE_NAME], 'readonly');
+        const store = transaction.objectStore(HTML_STORE_NAME);
+        const request = store.getAll();
+
+        request.onerror = (event) => {
+          const error = (event.target as IDBRequest).error;
+          console.error('Error fetching all HTML documents:', error);
+          reject(error);
+        };
+
+        request.onsuccess = () => {
+          console.log('Retrieved HTML documents count:', request.result?.length || 0);
+          resolve(request.result || []);
+        };
+      } catch (error) {
+        console.error('Error in getAllHTMLDocuments transaction:', error);
+        reject(error);
+      }
+    });
+  }
+
+  async removeHTMLDocument(id: string): Promise<void> {
+    if (!this.db) {
+      await this.init();
+    }
+
+    return new Promise((resolve, reject) => {
+      try {
+        console.log('Removing HTML document:', id);
+        const transaction = this.db!.transaction([HTML_STORE_NAME], 'readwrite');
+        const store = transaction.objectStore(HTML_STORE_NAME);
+        const request = store.delete(id);
+
+        request.onerror = (event) => {
+          const error = (event.target as IDBRequest).error;
+          console.error('Error removing HTML document:', error);
+          reject(error);
+        };
+
+        transaction.oncomplete = () => {
+          console.log('HTML document removed successfully:', id);
+          resolve();
+        };
+      } catch (error) {
+        console.error('Error in removeHTMLDocument transaction:', error);
+        reject(error);
+      }
+    });
+  }
+
+  async clearHTMLDocuments(): Promise<void> {
+    if (!this.db) {
+      await this.init();
+    }
+
+    return new Promise((resolve, reject) => {
+      try {
+        console.log('Clearing all HTML documents');
+        const transaction = this.db!.transaction([HTML_STORE_NAME], 'readwrite');
+        const store = transaction.objectStore(HTML_STORE_NAME);
+        const request = store.clear();
+
+        request.onerror = (event) => {
+          const error = (event.target as IDBRequest).error;
+          console.error('Error clearing HTML documents:', error);
+          reject(error);
+        };
+
+        transaction.oncomplete = () => {
+          console.log('All HTML documents cleared successfully');
+          resolve();
+        };
+      } catch (error) {
+        console.error('Error in clearHTMLDocuments transaction:', error);
         reject(error);
       }
     });

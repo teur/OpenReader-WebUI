@@ -11,12 +11,6 @@ import { ProgressPopup } from '@/components/ProgressPopup';
 
 const isDev = process.env.NEXT_PUBLIC_NODE_ENV !== 'production' || process.env.NODE_ENV == null;
 
-interface DocViewSettingsProps {
-  isOpen: boolean;
-  setIsOpen: (isOpen: boolean) => void;
-  epub?: boolean;
-}
-
 const viewTypes = [
   { id: 'single', name: 'Single Page' },
   { id: 'dual', name: 'Two Pages' },
@@ -28,7 +22,12 @@ const audioFormats = [
   { id: 'm4b', name: 'M4B' },
 ];
 
-export function DocumentSettings({ isOpen, setIsOpen, epub }: DocViewSettingsProps) {
+export function DocumentSettings({ isOpen, setIsOpen, epub, html }: {
+  isOpen: boolean,
+  setIsOpen: (isOpen: boolean) => void,
+  epub?: boolean,
+  html?: boolean
+}) {
   const {
     viewType,
     skipBlank,
@@ -203,7 +202,7 @@ export function DocumentSettings({ isOpen, setIsOpen, epub }: DocViewSettingsPro
                   </div>}
 
                   <div className="space-y-4">
-                    {!epub && <div className="space-y-6">
+                    {!epub && !html && <div className="space-y-6">
                       <div className="space-y-2">
                         <label className="block text-sm font-medium text-foreground">
                           Text extraction margins
@@ -347,7 +346,7 @@ export function DocumentSettings({ isOpen, setIsOpen, epub }: DocViewSettingsPro
 
                     </div>}
 
-                    <div className="space-y-1">
+                    {!html && <div className="space-y-1">
                       <label className="flex items-center space-x-2">
                         <input
                           type="checkbox"
@@ -360,7 +359,7 @@ export function DocumentSettings({ isOpen, setIsOpen, epub }: DocViewSettingsPro
                       <p className="text-sm text-muted pl-6">
                         Automatically skip pages with no text content
                       </p>
-                    </div>
+                    </div>}
                     {epub && (
                       <div className="space-y-1">
                         <label className="flex items-center space-x-2">
